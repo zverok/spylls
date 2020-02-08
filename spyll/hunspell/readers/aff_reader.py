@@ -23,7 +23,7 @@ class AffReader:
             if field == 'sfx' or field == 'pfx':
                 if not field in data:
                     data[field] = []
-                data[field].append(val)
+                data[field].extend(val)
             else:
                 data[field] = val
 
@@ -68,9 +68,13 @@ class AffReader:
         flag, crossproduct, count = values
         lines = self._read_array(kind.upper(), int(count))
 
+        kind_class = aff.Suffix if kind == 'sfx' else aff.Prefix
+
         # TODO: additional flags could be present or absent
-        variants = [
-            aff.AffixVariant(
+        return [
+            kind_class(
+                flag=flag,
+                crossproduct=(crossproduct == 'Y'),
                 strip=('' if strip == '0' else strip),
                 add=add,
                 condition=cond,
@@ -78,8 +82,6 @@ class AffReader:
             )
             for _, strip, add, cond in lines
         ]
-        kind_class = aff.Suffix if kind == 'sfx' else aff.Prefix
-        return kind_class(flag=flag, crossproduct=(crossproduct == 'Y'), variants=variants)
 
     def _parse_flags(self, string):
         return set(list(string))

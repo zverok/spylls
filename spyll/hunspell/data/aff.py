@@ -4,17 +4,13 @@ from typing import List, Set, Dict, Tuple, Optional, NewType
 Flag = NewType('Flag', str)
 
 @dataclass
-class AffixVariant:
+class Affix:
+    flag: Flag
+    crossproduct: bool
     strip: str
     add: str
     condition: str
     flags: Set[Flag]
-
-@dataclass
-class Affix:
-    flag: Flag
-    crossproduct: bool
-    variants: List[AffixVariant]
 
 class Prefix(Affix):
     pass

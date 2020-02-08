@@ -41,24 +41,12 @@ def test_everything():
     ]
 
     assert aff.sfx == [
-        a.Suffix(
-            flag='H',
-            crossproduct=False,
-            variants=[
-                a.AffixVariant(strip='y', add='ieth', condition='y', flags={}),
-                a.AffixVariant(strip='', add='th', condition='[^y]', flags={}),
-            ]
-        )
+        a.Suffix(flag='H', crossproduct=False, strip='y', add='ieth', condition='y', flags={}),
+        a.Suffix(flag='H', crossproduct=False, strip='', add='th', condition='[^y]', flags={})
     ]
 
     assert aff.pfx == [
-        a.Prefix(
-            flag='F',
-            crossproduct=True,
-            variants=[
-                a.AffixVariant(strip='', add='con', condition='.', flags={})
-            ]
-        )
+        a.Prefix(flag='F', crossproduct=True, strip='', add='con', condition='.', flags={})
     ]
 
 def test_encoding():
