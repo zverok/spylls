@@ -60,3 +60,17 @@ def test_everything():
             ]
         )
     ]
+
+def test_encoding():
+  pass
+
+def test_long_flags():
+  reader = AffReader('tests/fixtures/long_flags.aff')
+  aff = reader()
+
+def test_numeric_flags():
+  reader = AffReader('tests/fixtures/long_flags.aff')
+  aff = reader()
+
+def test_utf8_flags():
+  pass
