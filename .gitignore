@@ -1,0 +1,5 @@
+*.egg-info
+tmp
+.cache
+**/__pycache__
+dictionaries
