@@ -10,7 +10,7 @@ class Affix:
     strip: str
     add: str
     condition: str
-    flags: Set[Flag]
+    flags: Set[Flag] = field(default_factory=set)
 
 class Prefix(Affix):
     pass
