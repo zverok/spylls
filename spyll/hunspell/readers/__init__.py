@@ -1,7 +1,11 @@
-from spyll.hunspell.readers.file_reader import FileReader
-from spyll.hunspell.readers.aff_reader import AffReader
+from .file_reader import FileReader
+from .aff_reader import AffReader
+from .dic_reader import DicReader
+from .util import *
 
 __all__ = [
     "FileReader",
-    "AffReader"
+    "AffReader",
+    "DicReader",
+    "parse_flags"
 ]

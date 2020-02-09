@@ -2,7 +2,7 @@ import re
 import dataclasses
 import typing as t
 
-from spyll.hunspell.readers import FileReader
+from spyll.hunspell.readers import FileReader, util
 from spyll.hunspell.data import Aff
 from spyll.hunspell.data import aff
 
@@ -11,6 +11,7 @@ class AffReader:
 
     def __init__(self, path_or_io):
         self.source = FileReader(path_or_io)
+        self.flag_format = 'short'
 
     def __call__(self):
         data = {}
@@ -20,6 +21,8 @@ class AffReader:
             if field == 'try':
                 field = 'try_'
             val = self._read_directive(field, name, *parts)
+            if field == 'flags':
+                self.flag_format = field
             if field == 'sfx' or field == 'pfx':
                 if not field in data:
                     data[field] = []
@@ -29,6 +32,7 @@ class AffReader:
 
         return Aff(**data)
 
+    # TODO: all Flag-typed directives should be read via util.parse_flags
     def _read_directive(self, field, name, *values):
         f = self.FIELDS[field]
         value = values[0]
@@ -51,7 +55,10 @@ class AffReader:
             return [ln[0] for ln in self._read_array(name, int(value))]
         elif f.type == t.List[t.Tuple[int, t.Set[str]]]:
             lines = self._read_array(name, int(value))
-            return [(i + 1, self._parse_flags(ln[0])) for i, ln in enumerate(lines)]
+            return [
+                (i + 1, util.parse_flags(ln[0], flag_format=self.flag_format))
+                for i, ln in enumerate(lines)
+            ]
         else:
             return tuple(values)
 
@@ -82,6 +89,3 @@ class AffReader:
             )
             for _, strip, add, cond in lines
         ]
-
-    def _parse_flags(self, string):
-        return set(list(string))

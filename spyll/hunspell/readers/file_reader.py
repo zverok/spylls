@@ -10,6 +10,8 @@ class FileReader:
     elif isinstance(path_or_io, io.TextIOBase):
       self.path = None
       self.io = path_or_io
+    else:
+      raise ValueError(f"Expected path or IO, got {type(path_or_io)}")
 
     self.skip_lines = 0
     self.reset_encoding(encoding=encoding)
