@@ -20,6 +20,10 @@ class AffReader:
             field = name.lower()
             if field == 'try':
                 field = 'try_'
+            # TODO: This is temp, to test on "real" dictionaries without understanding all
+            # the fields. Maybe for ver. 0.0.1 it is acceptable, but should at least be debug-logged.
+            if field not in self.FIELDS:
+                continue
             val = self._read_directive(field, name, *parts)
             if field == 'flags':
                 self.flag_format = field
@@ -56,7 +60,7 @@ class AffReader:
         elif f.type == t.List[t.Tuple[int, t.Set[str]]]:
             lines = self._read_array(name, int(value))
             return [
-                (i + 1, util.parse_flags(ln[0], flag_format=self.flag_format))
+                (i + 1, util.parse_flags(ln[0], format=self.flag_format))
                 for i, ln in enumerate(lines)
             ]
         else:

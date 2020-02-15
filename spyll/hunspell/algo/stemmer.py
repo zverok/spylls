@@ -13,6 +13,8 @@ class Stemmer:
             flag: list(prefs) for flag, prefs in itertools.groupby(prefixes, key=lambda s: s.flag)
         }
 
+    # TODO: In fact, we should yield all the options, so the generator can be lazily consumed
+    # and checked option-by-option through a dictionary
     def __call__(self, word):
         res = [Result(word)] # "Whole word" is always existing option
         for stem, suf in self.desuffix(word):
@@ -29,6 +31,8 @@ class Stemmer:
 
     def desuffix(self, word):
         res = []
+        # TODO: A suffix can have flag "I can have this additional suffixe(s) attached";
+        # this should be checked, too.
         for flag, sufs in self.suffixes.items():
             for suf in sufs:
                 if word.endswith(suf.add):

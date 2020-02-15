@@ -22,7 +22,7 @@ class Suffix(Affix):
 class Aff:
     # General
     set: str='UTF-8'
-    flag: str='short' # TODO: Enum, in fact
+    flag: str='short' # TODO: Enum of possible values, in fact
     af: List[Tuple[int, Set[str]]] = field(default_factory=list)
 
     # Suggestions
