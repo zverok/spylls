@@ -50,7 +50,7 @@ class AffReader:
             if field=='set':
                 self.source.reset_encoding(value)
             return value
-        elif f.type == aff.Flag:
+        elif f.type == t.Optional[aff.Flag]:
             return aff.Flag(value)
         elif f.type == t.List[t.Tuple[str, str]]:
             lines = self._read_array(name, int(value))
@@ -81,15 +81,23 @@ class AffReader:
 
         kind_class = aff.Suffix if kind == 'sfx' else aff.Prefix
 
-        # TODO: additional flags could be present or absent
-        return [
-            kind_class(
-                flag=flag,
-                crossproduct=(crossproduct == 'Y'),
-                strip=('' if strip == '0' else strip),
-                add=add,
-                condition=cond,
-                flags={}
+        res = []
+
+        for _, strip, add, *rest in lines:
+            cond = rest[0]
+            if '/' in add:
+                add, flags = add.split('/')
+            else:
+                flags = []
+            res.append(
+                kind_class(
+                    flag=flag,
+                    crossproduct=(crossproduct == 'Y'),
+                    strip=('' if strip == '0' else strip),
+                    add=('' if add == '0' else add),
+                    condition=cond,
+                    flags=set(flags)
+                )
             )
-            for _, strip, add, cond in lines
-        ]
+
+        return res

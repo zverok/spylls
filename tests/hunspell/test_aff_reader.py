@@ -15,6 +15,7 @@ def test_everything():
     assert aff.forbiddenword == a.Flag('-')
     assert aff.nosuggest == a.Flag('X')
     assert aff.maxcpdsugs == 0
+    assert aff.compoundmin == 1
 
     assert aff.rep == [
         ("^Ca$", "Ça"),

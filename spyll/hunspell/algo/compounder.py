@@ -11,6 +11,11 @@ class Part:
     word: str
     pos: Pos
 
+# TODO: Things to consider:
+# * lazy return (yield) variants
+# * order of variants (same as in hunspell)
+# * some other settings of compounding: duplicated/triplicated letters, number of syllables in
+#   root (hungarian) and so forth.
 class Compounder:
     def __init__(self, min_length=1, max_words=None):
         self.min_length = min_length

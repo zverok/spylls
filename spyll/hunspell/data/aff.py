@@ -28,7 +28,7 @@ class Aff:
     # Suggestions
     key: List[str] = field(default_factory=list) # in reader: "short" array (split by pipe)
     try_: str=''
-    nosuggest: Flag=''
+    nosuggest: Optional[Flag] = None
     maxcpdsugs: int=0
     rep: List[Tuple[str, str]] = field(default_factory=list)
     map: List[str] = field(default_factory=list)
@@ -36,8 +36,20 @@ class Aff:
     # Stemming
     pfx: List[Prefix] = field(default_factory=list)
     sfx: List[Suffix] = field(default_factory=list)
-    circumfix: Flag=''
-    needaffix: Flag=''
-    forbiddenword: Flag=''
+    circumfix: Optional[Flag] = None
+    needaffix: Optional[Flag] = None
+    pseudoroot: Optional[Flag] = None
+    forbiddenword: Optional[Flag] = None
 
-    # TODO: Compounding, IO, morphology
+    # Compounding
+    compoundrule: List[str] = field(default_factory=list)
+    compoundmin: int=3
+    compoundflag: Optional[Flag] = None
+    compoundbegin: Optional[Flag] = None
+    compoundmiddle: Optional[Flag] = None
+    compoundlast: Optional[Flag] = None
+    onlyincompound: Optional[Flag] = None
+    compoundpermitflag: Optional[Flag] = None
+    compoundforbidflag: Optional[Flag] = None
+
+    # TODO: IO, morphology
