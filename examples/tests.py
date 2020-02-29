@@ -65,7 +65,7 @@ test2('conditionalprefix')      # + prefix allowed depending on suffix
 test2('circumfix')              # + mark prefix "it is possible if has a suffix" -- FIXME: weirdly works without special CIRCUFIXFLAG processing...
 
 # TODO: better comments!
-test2('needaffix')             # + "this affix needs affix" flag
+test2('needaffix')              # + "this affix needs affix" flag
 test2('needaffix2')             # + "this affix needs affix" flag
 test2('needaffix3')             # + "this affix needs affix" flag
 test2('needaffix4')             # + "this affix needs affix" flag
@@ -81,12 +81,21 @@ test2('onlyincompound')         # + some of word is ONLY can be in compound
 
 test2('compoundaffix')          # + in compound, prefix only at begin, suffix only at end
 test2('compoundaffix2')         # + affix with permit flag allowed inside!
-test2('compoundaffix3')
+test2('compoundaffix3')         # + forbid flag rewrites any permissions ("do not use in compounds at all!")
+
+test2('compoundrule')
+test2('compoundrule2')
+test2('compoundrule3')
+test2('compoundrule4')
+test2('compoundrule5')
+# test2('compoundrule6') # FIXME: works, but takes too long
+# test2('compoundrule7') # - "long" flags
+# test2('compoundrule8') # - "numeric" flags
 
 # # Edge cases and bugs
 # # =================
 # # test2('slash')                # - slash in words -- screened with \ in dictionary
 
 print("\n----------")
-test_word2('compoundaffix2', "foosufbar")
+test_word2('compoundrule', "ba")
 

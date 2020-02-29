@@ -34,9 +34,11 @@ class FileReader:
       # skipping only makes sense when it was reopened
       for i in range(self.skip_lines): self.io.readline()
 
+  COMMENT_RE = re.compile(r'\#.+$')
+
   def readlines(self):
     ln = self.io.readline()
     while ln != '':
       self.skip_lines += 1
-      yield re.sub(r'\#.+$', '', ln).strip()
+      yield self.COMMENT_RE.sub('', ln).strip()
       ln = self.io.readline()

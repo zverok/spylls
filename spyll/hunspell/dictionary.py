@@ -1,4 +1,5 @@
 import itertools
+import re
 
 from dataclasses import dataclass
 from typing import List
@@ -22,6 +23,10 @@ class FlagOr:
 class FlagNot:
     operand: str
 
+@dataclass
+class FlagNever:
+    pass
+
 def flags_match(statement, flags):
     if not statement or not flags:
         return True
@@ -32,6 +37,8 @@ def flags_match(statement, flags):
         return all([flags_match(o, flags) for o in statement.operands])
     elif type(statement) == FlagNot:
         return not flags_match(statement.operand, flags)
+    elif type(statement) == FlagNever:
+        return False
     else: # just singular flag
         return statement in flags
 
@@ -46,6 +53,9 @@ def or_(*operands):
 def not_(operand):
     return None if not operand else FlagNot(operand=operand)
 
+def never_():
+    return FlagNever()
+
 def guess_capitalization(word):
     if word.lower() == word:
         return Cap.NO
@@ -58,10 +68,25 @@ def guess_capitalization(word):
     else:
         return Cap.HUH
 
+class CompoundRule:
+    def __init__(self, text):
+        self.flags = set(re.sub(r'[\*\?]', '', text))
+        self.re = re.compile(text)
+
+    def __call__(self, flag_sets):
+        relevant_flags = [self.flags.intersection(f) for f in flag_sets]
+        for fc in itertools.product(*relevant_flags):
+            if self.re.fullmatch(''.join(fc)):
+                return True
+
+        return False
+
 class Dictionary:
     def __init__(self, path):
         self.aff = AffReader(path + '.aff')()
         self.dic = DicReader(path + '.dic', encoding = self.aff.set, flag_format = self.aff.flag)()
+        self.words = {stem: list(words) for stem, words in itertools.groupby(self.dic.words, lambda w: w.stem)}
+        self.words_l = {stem.lower(): list(words) for stem, words in itertools.groupby(self.dic.words, lambda w: w.stem)}
         self.stemmer = Stemmer(
             prefixes = self.aff.pfx,
             suffixes = self.aff.sfx,
@@ -70,6 +95,7 @@ class Dictionary:
             compoundforbid = self.aff.compoundforbidflag
         )
         self.compounder = cpd.Compounder(min_length = self.aff.compoundmin)
+        self.compoundrules = [CompoundRule(r) for r in self.aff.compoundrule]
 
     def lookup(self, word):
         if self.forbiddenword(word):
@@ -97,6 +123,13 @@ class Dictionary:
             # 1. COMPOUNDFLAG: this word can be in compound
             # 2. COMPOUNDBEG/MIDDLE/END
             # 3. COMPOUNDRULE: words with those flags make compounds
+            if self.compoundrules:
+                wf = [self.words.get(p.word, []) for p in variant]
+                for wfs in itertools.product(*wf):
+                    flag_sets = [w.flags for w in wfs]
+                    if any([r(flag_sets) for r in self.compoundrules]):
+                        res.append(wfs)
+
             forms = [self._lookup_forms(p.word, compoundpos=p.pos) for p in variant]
             for combination in itertools.product(*forms):
                 res.append(combination)
@@ -106,26 +139,30 @@ class Dictionary:
 
     def _lookup_forms(self, word, allcap=False, compoundpos=None):
         res = []
-        # TODO: when compoundpos is present, only first word can have prefix, only last word
-        # can have suffix (though, there ARE affixes allowed inside compounds by special flag)
         for form in self.stemmer(word, compoundpos=compoundpos):
-            # print(form)
-            for w in self.dic.words:
-                found = w.stem == form.stem
-                if allcap:
-                    found = found or w.stem.lower() == form.stem.lower()
-                if found and self._is_compatible(w, form, compoundpos=compoundpos):
+            for w in self.words.get(form.stem, []):
+                if self._is_compatible(w, form, compoundpos=compoundpos):
                     res.append(form)
+
+            if not form.stem in self.words:
+                for w in self.words_l.get(form.stem.lower(), []):
+                    if self._is_compatible(w, form, compoundpos=compoundpos):
+                        res.append(form)
 
         return res
 
     def compounding_flags(self, form, compoundpos):
+        # If no compounding flags are defined, we add special "never match" flag to
+        # something that tries to be part of compound
+        #
+        # FIXME: honestly, can be handled in lookup: just don't try if there is no
+        # compoundflag/compoundbegin
         if compoundpos == cpd.Pos.BEGIN:
-            return or_(self.aff.compoundflag, self.aff.compoundbegin)
+            return or_(self.aff.compoundflag, self.aff.compoundbegin) or never_()
         elif compoundpos == cpd.Pos.END:
-            return or_(self.aff.compoundflag, self.aff.compoundlast)
+            return or_(self.aff.compoundflag, self.aff.compoundlast) or never_()
         elif compoundpos == cpd.Pos.MIDDLE:
-            return or_(self.aff.compoundflag, self.aff.compoundmiddle)
+            return or_(self.aff.compoundflag, self.aff.compoundmiddle) or never_()
         elif compoundpos is None:
             return not_(self.aff.onlyincompound)
 
@@ -141,11 +178,10 @@ class Dictionary:
             return and_(*flags)
 
     def forbiddenword(self, word):
-        # print(word, self.aff.forbiddenword, self.dic.words)
         if not self.aff.forbiddenword:
             return False
-        for w in self.dic.words:
-            if w.stem == word and self.aff.forbiddenword in w.flags:
+        for w in self.words.get(word, []):
+            if self.aff.forbiddenword in w.flags:
                 return True
         return False
 
