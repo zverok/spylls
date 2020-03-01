@@ -44,6 +44,7 @@ class Aff:
     # Compounding
     compoundrule: List[str] = field(default_factory=list)
     compoundmin: int=3
+    compoundwordsmax: Optional[int]=None
     compoundflag: Optional[Flag] = None
     compoundbegin: Optional[Flag] = None
     compoundmiddle: Optional[Flag] = None

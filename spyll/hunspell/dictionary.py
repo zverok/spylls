@@ -1,4 +1,5 @@
 import itertools
+import functools
 import re
 
 from dataclasses import dataclass
@@ -70,13 +71,24 @@ def guess_capitalization(word):
 
 class CompoundRule:
     def __init__(self, text):
+        # TODO: proper flag parsing! Long is (aa)(bb)*(cc), numeric is (1001)(1002)*(1003)
         self.flags = set(re.sub(r'[\*\?]', '', text))
+        parts = re.findall(r'[^*?][*?]?', text)
         self.re = re.compile(text)
+        self.partial_re = re.compile(functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1]))
 
     def __call__(self, flag_sets):
         relevant_flags = [self.flags.intersection(f) for f in flag_sets]
         for fc in itertools.product(*relevant_flags):
             if self.re.fullmatch(''.join(fc)):
+                return True
+
+        return False
+
+    def partial(self, flag_sets):
+        relevant_flags = [self.flags.intersection(f) for f in flag_sets]
+        for fc in itertools.product(*relevant_flags):
+            if self.partial_re.fullmatch(''.join(fc)):
                 return True
 
         return False
@@ -94,7 +106,10 @@ class Dictionary:
             compoundpermit = self.aff.compoundpermitflag,
             compoundforbid = self.aff.compoundforbidflag
         )
-        self.compounder = cpd.Compounder(min_length = self.aff.compoundmin)
+        self.compounder = cpd.Compounder(
+            min_length = self.aff.compoundmin,
+            checker = lambda words: self.is_compound_start(words)
+        )
         self.compoundrules = [CompoundRule(r) for r in self.aff.compoundrule]
 
     def lookup(self, word):
@@ -183,6 +198,21 @@ class Dictionary:
         for w in self.words.get(word, []):
             if self.aff.forbiddenword in w.flags:
                 return True
+        return False
+
+    def is_compound_start(self, words):
+        # 1. just separate compounding flag:
+        if any(self._lookup_forms(words[-1].word, compoundpos=words[-1].pos)):
+            return True
+
+        # 2. part of compoundrule
+        if self.compoundrules:
+            wf = [self.words.get(w.word, []) for w in words]
+            for wfs in itertools.product(*wf):
+                flag_sets = [w.flags for w in wfs]
+                if any([r.partial(flag_sets) for r in self.compoundrules]):
+                    return True
+
         return False
 
     def _is_compatible(self, dic_word, stem_form, compoundpos):

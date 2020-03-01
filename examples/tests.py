@@ -87,8 +87,8 @@ test2('compoundrule')
 test2('compoundrule2')
 test2('compoundrule3')
 test2('compoundrule4')
-test2('compoundrule5')
-# test2('compoundrule6') # FIXME: works, but takes too long
+test('compoundrule5')
+test2('compoundrule6') # FIXME: works, but takes too long
 # test2('compoundrule7') # - "long" flags
 # test2('compoundrule8') # - "numeric" flags
 
@@ -97,5 +97,5 @@ test2('compoundrule5')
 # # test2('slash')                # - slash in words -- screened with \ in dictionary
 
 print("\n----------")
-test_word2('compoundrule', "ba")
+test_word2('compoundrule6', "aabbbc")
 
