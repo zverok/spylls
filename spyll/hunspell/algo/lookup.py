@@ -85,8 +85,8 @@ def have_compatible_flags(
 
     # Check affix flags
     if not paradigm.suffix and not paradigm.prefix:
-        if aff.needaffix and not aff.needaffix in all_flags: return False
-        if aff.pseudoroot and not aff.pseudoroot in all_flags: return False
+        if aff.needaffix and aff.needaffix in all_flags: return False
+        if aff.pseudoroot and aff.pseudoroot in all_flags: return False
 
     if paradigm.prefix and not paradigm.prefix.flag in all_flags: return False
     if paradigm.suffix and not paradigm.suffix.flag in all_flags: return False
@@ -105,7 +105,7 @@ def have_compatible_flags(
         elif compoundpos == CompoundPos.MIDDLE:
             if not aff.compoundmiddle or not aff.compoundmiddle in all_flags: return False
     else:
-        if aff.onlyincompound and not aff.onlyincompound in all_flags: return False
+        if aff.onlyincompound and aff.onlyincompound in all_flags: return False
 
     return True
 

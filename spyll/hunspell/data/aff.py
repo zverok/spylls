@@ -38,12 +38,14 @@ class Suffix(Affix):
             cond = ''
         self.regexp = re.compile(cond + self.add + '$')
 
+@dataclass
 class CompoundRule:
-    def __init__(self, text):
+    text: str
+    def __post_init__(self):
         # TODO: proper flag parsing! Long is (aa)(bb)*(cc), numeric is (1001)(1002)*(1003)
-        self.flags = set(re.sub(r'[\*\?]', '', text))
-        parts = re.findall(r'[^*?][*?]?', text)
-        self.re = re.compile(text)
+        self.flags = set(re.sub(r'[\*\?]', '', self.text))
+        parts = re.findall(r'[^*?][*?]?', self.text)
+        self.re = re.compile(self.text)
         self.partial_re = re.compile(functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1]))
 
     def fullmatch(self, flag_sets):

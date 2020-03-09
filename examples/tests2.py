@@ -127,11 +127,11 @@ report('compoundrule3')
 report('compoundrule4')
 report('compoundrule5')
 report('compoundrule6') # FIXME: works, but takes too long
-report('compoundrule7') # - "long" flags
-report('compoundrule8') # - "numeric" flags
+# report('compoundrule7') # - "long" flags
+# report('compoundrule8') # - "numeric" flags
 
 # # Edge cases and bugs
 # # =================
 # # report('slash')                # - slash in words -- screened with \ in dictionary
 
-# test_word2('base', 'created', True)
+test_word2('compoundrule7', '10th', True)
