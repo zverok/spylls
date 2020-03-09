@@ -87,7 +87,7 @@ test2('compoundrule')
 test2('compoundrule2')
 test2('compoundrule3')
 test2('compoundrule4')
-test('compoundrule5')
+test2('compoundrule5')
 test2('compoundrule6') # FIXME: works, but takes too long
 # test2('compoundrule7') # - "long" flags
 # test2('compoundrule8') # - "numeric" flags

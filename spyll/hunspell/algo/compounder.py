@@ -37,15 +37,3 @@ class Compounder:
             for rest in self._split(word[point:], words):
                 res.append([beg, *rest])
         return res
-
-
-        # res = [] if begin else [[Part(word, Pos.END)]]
-        # if len(word) < self.min_length * 2 or (max and max == 1):
-        #     return res
-
-        # max = max - 1 if max else None
-        # for point in range(self.min_length, len(word) - self.min_length + 1):
-        #     beg = Part(word[0:point], Pos.BEGIN if begin else Pos.MIDDLE)
-        #     for rest in self._split(word[point:], begin=False, max=max):
-        #         res.append([beg, *rest])
-        # return res
