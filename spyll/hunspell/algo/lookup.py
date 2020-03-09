@@ -1,7 +1,7 @@
 import itertools
 import collections
 from enum import Enum
-from typing import List, Iterator, Union, Optional, Any
+from typing import List, Iterator, Union, Optional, Any, Tuple
 
 from spyll.hunspell import data
 
@@ -21,7 +21,7 @@ def lookup(aff: data.Aff, dic: data.Dic, word: str) -> bool:
 
 def analyze(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Union[Paradigm, Compound]]:
     if aff.forbiddenword and any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
-        return
+        return iter(())
 
     res = analyze_nocap(aff, dic, word)
 
@@ -35,7 +35,7 @@ def analyze(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Union[Paradigm,
 
     return res
 
-def analyze_nocap(aff: data.Aff, dic: data.Dic, word: str, allcap: bool = False) -> Iterator[Paradigm]:
+def analyze_nocap(aff: data.Aff, dic: data.Dic, word: str, allcap: bool = False) -> Iterator[Union[Paradigm, Compound]]:
     return itertools.chain(
         analyze_affixed(aff, dic, word, allcap = allcap),
         analyze_compound(aff, dic, word)
@@ -63,12 +63,12 @@ def analyze_compound(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Compou
     if aff.compoundbegin or aff.compoundflag:
         by_flags = split_compound_by_flags(aff, dic, word)
     else:
-        by_flags = []
+        by_flags = iter(())
 
     if aff.compoundrules:
         by_rules = split_compound_by_rules(aff, dic, word, compoundrules=aff.compoundrules)
     else:
-        by_rules = []
+        by_rules = iter(())
 
     return itertools.chain(by_flags, by_rules)
 
@@ -77,7 +77,7 @@ def have_compatible_flags(
     aff: data.Aff,
     dictionary_word: data.dic.Word,
     paradigm: Paradigm,
-    compoundpos: CompoundPos) -> bool:
+    compoundpos: Optional[CompoundPos]) -> bool:
 
     all_flags = dictionary_word.flags
     if paradigm.prefix: all_flags = all_flags.union(paradigm.prefix.flags)
@@ -101,7 +101,7 @@ def have_compatible_flags(
         if compoundpos == CompoundPos.BEGIN:
             if not aff.compoundbegin or not aff.compoundbegin in all_flags: return False
         elif compoundpos == CompoundPos.END:
-            if not aff.compoundend or not aff.compoundend in all_flags: return False
+            if not aff.compoundlast or not aff.compoundlast in all_flags: return False
         elif compoundpos == CompoundPos.MIDDLE:
             if not aff.compoundmiddle or not aff.compoundmiddle in all_flags: return False
     else:
@@ -175,7 +175,7 @@ def _desuffix(
     aff: data.Aff,
     word: str,
     extra_flag: Optional[str]=None,
-    compoundpos: Optional[CompoundPos]=None) -> Iterator[Paradigm]:
+    compoundpos: Optional[CompoundPos]=None) -> Iterator[Tuple[str, data.aff.Suffix]]:
 
     if compoundpos is None or compoundpos == CompoundPos.END:
         checkpermit = False
@@ -196,7 +196,7 @@ def _deprefix(
     aff: data.Aff,
     word: str,
     extra_flag: Optional[str]=None,
-    compoundpos: Optional[CompoundPos]=None) -> Iterator[Paradigm]:
+    compoundpos: Optional[CompoundPos]=None) -> Iterator[Tuple[str, data.aff.Prefix]]:
 
     if compoundpos is None or compoundpos == CompoundPos.BEGIN:
         checkpermit = False
@@ -252,7 +252,7 @@ def split_compound_by_rules(
     aff: data.Aff,
     dic: data.Dic,
     word_rest: str,
-    compoundrules: List[Any],
+    compoundrules: List[data.aff.CompoundRule],
     prev_parts: List[data.dic.Word] = []) -> Iterator[List[Paradigm]]:
 
     # If it is middle of compounding process "the rest of the word is the whole last part" is always
