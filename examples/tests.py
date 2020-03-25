@@ -83,12 +83,13 @@ test2('compoundaffix')          # + in compound, prefix only at begin, suffix on
 test2('compoundaffix2')         # + affix with permit flag allowed inside!
 test2('compoundaffix3')         # + forbid flag rewrites any permissions ("do not use in compounds at all!")
 
+# TODO: comment on them
 test2('compoundrule')
 test2('compoundrule2')
 test2('compoundrule3')
 test2('compoundrule4')
 test2('compoundrule5')
-test2('compoundrule6') # FIXME: works, but takes too long
+test2('compoundrule6')
 # test2('compoundrule7') # - "long" flags
 # test2('compoundrule8') # - "numeric" flags
 

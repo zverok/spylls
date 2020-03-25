@@ -57,6 +57,9 @@ def analyze_affixed(
 
         if not found:
             for w in dic.homonyms(form.stem, ignorecase=True):
+                # If the dictionary word is not lowercase, we accept only exactly that
+                # case (above), or ALLCAPS
+                if not allcap and guess_capitalization(w.stem) != Cap.NO: continue
                 if have_compatible_flags(aff, w, form, compoundpos=compoundpos): yield form
 
 def analyze_compound(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Compound]:
@@ -167,6 +170,8 @@ def deprefix(
 
     for stem, pref in _deprefix(aff, word, extra_flag=extra_flag, compoundpos=compoundpos):
         yield Paradigm(stem, prefix=pref)
+
+        # TODO: Only if compoundpreffixes are allowed in *.aff
         if not extra_flag: # only one level depth
             for form2 in deprefix(aff, stem, extra_flag=pref.flag, compoundpos=compoundpos):
                 yield form2._replace(prefix2=pref)

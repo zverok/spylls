@@ -25,28 +25,6 @@ def readlist(path):
     # we ignore "incomplete tokenization" feature
     return [ln for ln in open(path).read().splitlines() if ln[-1:] != '.' and ln != '']
 
-# def test(name):
-#     path = f'tests/fixtures/hunspell-orig/{name}'
-#     d = Dictionary(path)
-#     good = readlist(path + '.good')
-#     bad = readlist(path + '.wrong')
-
-#     print(name)
-#     print("Good: ")
-#     for w in good: test_word(d, w)
-
-#     print("Bad: ")
-#     for w in bad: test_word(d, w)
-
-# def report(name):
-#     path = f'tests/fixtures/hunspell-orig/{name}'
-#     d = Dictionary(path)
-#     good = readlist(path + '.good')
-#     bad = readlist(path + '.wrong')
-
-#     print(f"{name}: good {count_found(d, good)} of {len(good)}, bad {count_found(d, bad)} of {len(bad)}")
-
-
 def test(name):
     path = f'tests/fixtures/hunspell-orig/{name}'
     aff = AffReader(path + '.aff')()
@@ -121,12 +99,13 @@ report('compoundaffix')          # + in compound, prefix only at begin, suffix o
 report('compoundaffix2')         # + affix with permit flag allowed inside!
 report('compoundaffix3')         # + forbid flag rewrites any permissions ("do not use in compounds at all!")
 
+# TODO: Explanations!
 report('compoundrule')
 report('compoundrule2')
 report('compoundrule3')
 report('compoundrule4')
 report('compoundrule5')
-report('compoundrule6') # FIXME: works, but takes too long
+report('compoundrule6')
 # report('compoundrule7') # - "long" flags
 # report('compoundrule8') # - "numeric" flags
 
@@ -134,4 +113,4 @@ report('compoundrule6') # FIXME: works, but takes too long
 # # =================
 # # report('slash')                # - slash in words -- screened with \ in dictionary
 
-test_word2('compoundrule7', '10th', True)
+test_word2('allcaps', 'Openoffice.org', True)
