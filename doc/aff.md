@@ -15,9 +15,9 @@ AF: array of alias for flag set. position makes its name (number), string lists 
 
 ## Suggestion
 
-KEY abc|edf|foobarbaz -- use "neighbour" chars to replace
+KEY abc|edf|foobarbaz -- use "neighbour" chars to replace (in fact, it is keyboard layout?)
   da, fr, hu
-TRY abfsd -- try the words different by one char (?), frequency order
+TRY abfsd -- when trying to insert one (probably forgotten) char, try them in this order
   everywhere
 NOSUGGEST flag -- don't suggest word
   everywhere
@@ -26,7 +26,7 @@ MAXCPDSUGS -- max num of suggested compounds
 MAXNGRAMSUGS -- max number of n-grams (?)
   —
 MAXDIFF [0-10] -- for n-gram based
-  —
+  hi_IN
 ONLYMAXDIFF -- remove bad n-grams
   —
 NOSPLITSUGS -- don't suggest splits

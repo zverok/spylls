@@ -102,11 +102,12 @@ class Aff:
 
     # Suggestions
     key: List[str] = field(default_factory=list) # in reader: "short" array (split by pipe)
-    try_: str=''
+    try_: str='' # actually just TRY, but conflicts with Python keyword
     nosuggest: Optional[Flag] = None
     maxcpdsugs: int=0
     rep: List[Tuple[str, str]] = field(default_factory=list)
-    map: List[str] = field(default_factory=list)
+    map: List[Set[str]] = field(default_factory=list)
+    maxdiff: int=-1
 
     # Stemming
     pfx: List[Prefix] = field(default_factory=list)
