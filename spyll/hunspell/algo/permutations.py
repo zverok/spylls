@@ -1,4 +1,30 @@
 import re
+import itertools
+
+from typing import Iterator
+
+from spyll.hunspell import data
+
+def permutations(word: str, aff: data.Aff) -> Iterator[str]:
+    return itertools.chain(
+        [word.upper()],             # suggestions for an uppercase word (html -> HTML)
+        replchars(word, aff.rep),   # perhaps we made a typical fault of spelling
+        mapchars(word, aff.map),    # perhaps we made chose the wrong char from a related set
+        swapchar(word),             # did we swap the order of chars by mistake
+        longswapchar(word),         # did we swap the order of non adjacent chars by mistake
+        badcharkey(word, aff.key),  # did we just hit the wrong key in place of a good char (case and keyboard)
+        extrachar(word),            # did we add a char that should not be there
+        forgotchar(word, aff.try_), # did we forgot a char
+        movechar(word),             # did we move a char
+        badchar(word, aff.try_),    # did we just hit the wrong key in place of a good char
+        doubletwochars(word),       # did we double two characters
+
+        # # perhaps we forgot to hit space and two words ran together
+        # # (dictionary word pairs have top priority here, so
+        # # we always suggest them, in despite of nosplitsugs, and
+        # # drop compound word and other suggestions)
+        # pmt.twowords(word, use_dash='-' in aff.try_ or 'a' in aff.try_)
+    )
 
 # suggestions for a typical fault of spelling, that
 # differs with more, than 1 letter from the right form.

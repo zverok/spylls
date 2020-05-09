@@ -1,10 +1,8 @@
 import re
 import os.path
 
-# from spyll.hunspell.readers import AffReader, DicReader
-# from spyll.hunspell.algo import suggest
-
-from spyll.hunspell.dictionary import Dictionary
+from spyll.hunspell.readers import AffReader, DicReader
+from spyll.hunspell.algo import ngram_suggest
 
 def readlist(path):
     if not os.path.isfile(path):
@@ -14,14 +12,15 @@ def readlist(path):
 
 def test(name):
     path = f'tests/fixtures/hunspell-orig/{name}'
-    dictionary = Dictionary(path)
+    aff = AffReader(path + '.aff')()
+    dic = DicReader(path + '.dic', encoding = aff.set, flag_format = aff.flag)()
     bad = readlist(path + '.wrong')
     sug = list(map(lambda s: re.split(r',\s*', s), readlist(path + '.sug')))
     return [
         {
             'word': word,
             'expected': sug[i],
-            'got': list(dictionary.suggest(word))
+            'got': list(ngram_suggest.nsuggest(aff, dic, word))
         } for i, word in enumerate(bad)
     ]
 

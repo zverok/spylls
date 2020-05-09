@@ -108,6 +108,7 @@ class Aff:
     rep: List[Tuple[str, str]] = field(default_factory=list)
     map: List[Set[str]] = field(default_factory=list)
     maxdiff: int=-1
+    onlymaxdiff: bool=False
 
     # Stemming
     pfx: List[Prefix] = field(default_factory=list)
