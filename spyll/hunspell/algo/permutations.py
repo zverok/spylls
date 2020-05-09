@@ -51,7 +51,8 @@ def mapchars(word, maptable):
             for option in options:
                 pos = word.find(option, start)
                 if pos != -1:
-                    for other in options - option:
+                    for other in options:
+                        if other == option: continue
                         replaced = word[:pos] + other + word[pos+len(option):]
                         yield replaced
                         for variant in mapchars_internal(replaced, pos + 1):

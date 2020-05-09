@@ -1,9 +1,6 @@
 import re
 import os.path
 
-# from spyll.hunspell.readers import AffReader, DicReader
-# from spyll.hunspell.algo import suggest
-
 from spyll.hunspell.dictionary import Dictionary
 
 def readlist(path):
@@ -20,7 +17,7 @@ def test(name):
     return [
         {
             'word': word,
-            'expected': sug[i],
+            'expected': sug[i] if i < len(sug) else [],
             'got': list(dictionary.suggest(word))
         } for i, word in enumerate(bad)
     ]
@@ -36,3 +33,8 @@ def report(name):
             print(f"  {data['word']}: {data['expected']} vs {data['got']}")
 
 report('base')
+report('sug')
+report('sug2')
+
+report('map')
+report('rep')

@@ -3,7 +3,7 @@ import io
 import sys
 
 class FileReader:
-  def __init__(self, path_or_io, encoding='ASCII'):
+  def __init__(self, path_or_io, encoding='Windows-1252'):
     if isinstance(path_or_io, str):
       self.path = path_or_io
       self.io = open(path_or_io, 'r', encoding=encoding, errors='ignore')

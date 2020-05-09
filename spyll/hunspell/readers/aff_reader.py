@@ -40,9 +40,7 @@ class AffReader:
     def _read_directive(self, field, name, *values):
         f = self.FIELDS[field]
         value = values[0]
-        if field == 'key':
-            return value.split('|')
-        elif field == 'sfx' or field == 'pfx':
+        if field == 'sfx' or field == 'pfx':
             return self._read_affix(field, values)
         elif f.type == int:
             return int(value)
@@ -62,6 +60,12 @@ class AffReader:
             return [
                 (i + 1, util.parse_flags(ln[0], format=self.flag_format))
                 for i, ln in enumerate(lines)
+            ]
+        elif f.type == t.List[t.Set[str]]:
+            lines = self._read_array(name, int(value))
+            return [
+                list(map(lambda s: re.sub(r'[()]', '', s), re.findall(r'(\([^()]+?\)|[^()])', ln[0])))
+                for ln in lines
             ]
         else:
             return tuple(values)

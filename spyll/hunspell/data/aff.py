@@ -96,12 +96,12 @@ class FSA:
 @dataclass
 class Aff:
     # General
-    set: str='UTF-8'
+    set: str='Windows-1252'
     flag: str='short' # TODO: Enum of possible values, in fact
     af: List[Tuple[int, Set[str]]] = field(default_factory=list)
 
     # Suggestions
-    key: List[str] = field(default_factory=list) # in reader: "short" array (split by pipe)
+    key: str=''
     try_: str='' # actually just TRY, but conflicts with Python keyword
     nosuggest: Optional[Flag] = None
     maxcpdsugs: int=0
