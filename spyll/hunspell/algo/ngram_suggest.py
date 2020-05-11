@@ -46,9 +46,11 @@ def ngram_suggest(dictionary, word: str, *, maxdiff, onlymaxdiff=False) -> Itera
     # keeping track of the MAX_ROOTS most similar root words
     root_scores = ScoredArray(MAX_ROOTS)
     for dword in dictionary.roots():
+        if abs(len(dword.stem) - len(word)) > 4: continue
         # TODO: large skip_exceptions block
         # if lots of conditions: continue
         # Should be in fact encapsulated by dictionary
+
         root_scores.push(dword, root_score(word, dword.stem))
 
     threshold = detect_threshold(word)
@@ -118,9 +120,9 @@ def detect_threshold(word: str) -> float:
         for pos in range(sp, len(word), 4):
             mangled[pos] = '*'
 
-        mangled = ''.join(mangled).lower()
+        mangled_word = ''.join(mangled).lower()
 
-        thresh += sm.ngram(len(word), word, mangled, any_mismatch = True)
+        thresh += sm.ngram(len(word), word, mangled_word, any_mismatch = True)
 
     return thresh / 3 - 1
 

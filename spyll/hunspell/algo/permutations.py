@@ -1,11 +1,11 @@
 import re
 import itertools
 
-from typing import Iterator
+from typing import Iterator, Union, List, Tuple, Set
 
 from spyll.hunspell import data
 
-def permutations(word: str, aff: data.Aff) -> Iterator[str]:
+def permutations(word: str, aff: data.Aff) -> Iterator[Union[str, Tuple[str, str]]]:
     return itertools.chain(
         [word.upper()],             # suggestions for an uppercase word (html -> HTML)
         replchars(word, aff.rep),   # perhaps we made a typical fault of spelling
@@ -23,25 +23,30 @@ def permutations(word: str, aff: data.Aff) -> Iterator[str]:
         # (dictionary word pairs have top priority here, so
         # we always suggest them, in despite of nosplitsugs, and
         # drop compound word and other suggestions)
-        twowords(word, use_dash=aff.use_dash())
+        twowords(word)
     )
 
 # suggestions for a typical fault of spelling, that
 # differs with more, than 1 letter from the right form.
 #
 # uses .aff's file REP table
-def replchars(word, reptable):
+def replchars(word: str, reptable: List[Tuple[str, str]]) -> Iterator[Union[str, Tuple[str, str]]]:
     if len(word) < 2 or not reptable: return
 
     for (pattern, replacement) in reptable:
         # TODO: compiled at aff loading
         for match in re.compile(pattern).finditer(word):
-            yield word[:match.start()] + replacement + word[match.end():]
+            suggestion = word[:match.start()] + replacement.replace('_', ' ') + word[match.end():]
+            yield suggestion
+            if ' ' in suggestion:
+                # In two lines to trick mypy
+                w1, w2 = suggestion.split(' ', 2)
+                yield (w1, w2)
 
 # suggestions for when chose the wrong char out of a related set
 #
 # uses aff.map -- list of sets of potentially similar chars
-def mapchars(word, maptable):
+def mapchars(word: str, maptable: List[Set[str]]) -> Iterator[str]:
     if len(word) < 2 or not maptable: return
 
     def mapchars_internal(word, start=0):
@@ -62,7 +67,7 @@ def mapchars(word, maptable):
         yield variant
 
 # error is adjacent letter were swapped
-def swapchar(word):
+def swapchar(word: str) -> Iterator[str]:
     if len(word) < 2: return
 
     for i in range(0, len(word) - 1):
@@ -78,13 +83,13 @@ def swapchar(word):
 MAX_CHAR_DISTANCE = 4
 
 # error is not adjacent letter were swapped
-def longswapchar(word):
+def longswapchar(word: str) -> Iterator[str]:
     for first in range(0, len(word) - 2):
         for second in range(first + 2, min(first + MAX_CHAR_DISTANCE, len(word))):
             yield word[:first] + word[second] + word[first+1:second] + word[first] + word[second+1:]
 
 # error is wrong char in place of correct one (case and keyboard related version)
-def badcharkey(word, layout):
+def badcharkey(word: str, layout: str) -> Iterator[str]:
     for i in range(0, len(word)):
         c = word[i]
         before = word[:i]
@@ -102,7 +107,7 @@ def badcharkey(word, layout):
             yield before + layout[pos+1] + after
 
 # error is word has an extra letter it does not need
-def extrachar(word):
+def extrachar(word: str) -> Iterator[str]:
     if len(word) < 2: return
 
     for i in range(0, len(word)):
@@ -118,7 +123,7 @@ def forgotchar(word, trystring):
             yield word[:i] + c + word[i:]
 
 # error is a letter was moved
-def movechar(word):
+def movechar(word: str) -> Iterator[str]:
     if len(word) < 2: return
 
     for frompos in range(0, len(word)):
@@ -130,7 +135,7 @@ def movechar(word):
             yield word[:topos] + word[frompos] + word[topos:frompos] + word[frompos+1:]
 
 # error is wrong char in place of correct one
-def badchar(word, trystring):
+def badchar(word: str, trystring: str) -> Iterator[str]:
     if not trystring: return
 
     for c in trystring:
@@ -142,7 +147,7 @@ def badchar(word, trystring):
 # (for example vacation -> vacacation)
 # The recognized pattern with regex back-references:
 # "(.)(.)\1\2\1" or "..(.)(.)\1\2"
-def doubletwochars(word):
+def doubletwochars(word: str) -> Iterator[str]:
     if len(word) < 5: return
 
     # TODO: 1) for vacacation yields "vacation" twice, hunspell's algo kinda wiser
@@ -151,22 +156,19 @@ def doubletwochars(word):
         if word[i-2] == word[i] and word[i-3] == word[i-1]:
             yield word[:i-1] + word[i+1:]
 
-# error is should have been two words
-# return value is true, if there is a dictionary word pair,
-# or there was already a good suggestion before calling
-# this function.
-def twowords(word, use_dash):
+def splitword(word: str, use_dash: bool) -> Iterator[str]:
     for i in range(1, len(word)-1):
-        # TODO: hunspell's logic for first two statements is
-        # "if it worked, drop all other suggestions"
-        # Probably worth just moving those two to the FIRST check!
-
         # the whole phrase is in the dictionary
         yield word[:i] + ' ' + word[i:]
+
         # the dashed word is in the dictionary
         if use_dash:
             yield word[:i] + '-' + word[i:]
 
-        # TODO: here the "client" should check the pair, and if both are OK, suggest both
-        # "word1 word2" and "word1-word2" -- the second depending on use_dash
+# error is should have been two words
+# return value is true, if there is a dictionary word pair,
+# or there was already a good suggestion before calling
+# this function.
+def twowords(word: str) -> Iterator[Tuple[str, str]]:
+    for i in range(1, len(word)-1):
         yield (word[:i], word[i:])

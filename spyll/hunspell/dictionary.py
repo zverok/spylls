@@ -1,4 +1,4 @@
-from typing import List, Iterator
+from typing import List, Iterator, Set, Union, Tuple, cast
 
 from spyll.hunspell import data, readers
 from spyll.hunspell.algo import lookup, permutations, ngram_suggest
@@ -8,8 +8,10 @@ class Dictionary:
         self.aff = readers.AffReader(path + '.aff')()
         self.dic = readers.DicReader(path + '.dic', encoding = self.aff.set, flag_format = self.aff.flag)()
 
-    def roots(self) -> List[data.dic.Word]:
-        return self.dic.words
+    def roots(self, *, with_forbidden=False) -> Iterator[data.dic.Word]:
+        for word in self.dic.words:
+            if with_forbidden or not self.aff.forbiddenword in word.flags:
+                yield word
 
     def forms_for(self, word: data.dic.Word):
         # word without prefixes/suffixes is also present...
@@ -38,23 +40,33 @@ class Dictionary:
         return res
 
     def lookup(self, word: str) -> bool:
-        return lookup.lookup(self.aff, self.dic, word)
+        return any(lookup.analyze(self.aff, self.dic, word))
 
-    def suggest(self, word: str) -> Iterator[str]:
-        seen = set()
+    def suggest(self, word: str) -> Iterator[Union[str, Tuple[str, str]]]:
+        seen: Set[Union[str, Tuple[str, str]]] = set()
         found = False
-        for sug in permutations.permutations(word, self.aff):
+
+        for sug in permutations.splitword(word, use_dash=self.aff.use_dash()):
             if not sug in seen:
                 seen.add(sug)
-                if type(sug) == tuple:
-                    if all(self.lookup(s) for s in sug):
-                        yield ' '.join(sug)
-                        if aff.use_dash():
-                            yield '-'.join(sug)
+                if self.lookup(sug):
+                    yield sug
+                    found = True
+
+        if found: return
+
+        for sug2 in permutations.permutations(word, self.aff):
+            if not sug2 in seen:
+                seen.add(sug2)
+                if type(sug2) is tuple:
+                    if all(self.lookup(s) for s in sug2):
+                        yield ' '.join(sug2)
+                        if self.aff.use_dash():
+                            yield '-'.join(sug2)
                         found = True
-                else:
-                    if self.lookup(sug):
-                        yield sug
+                elif type(sug2) is str:
+                    if self.lookup(cast(str, sug2)):
+                        yield sug2
                         found = True
 
         if found: return

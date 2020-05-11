@@ -16,9 +16,6 @@ Paradigm = collections.namedtuple('Paradigm',
 
 Compound = List[Paradigm]
 
-def lookup(aff: data.Aff, dic: data.Dic, word: str) -> bool:
-    return any(analyze(aff, dic, word))
-
 def analyze(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Union[Paradigm, Compound]]:
     if aff.forbiddenword and any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
         return iter(())
