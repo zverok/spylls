@@ -19,11 +19,11 @@ def permutations(word: str, aff: data.Aff) -> Iterator[str]:
         badchar(word, aff.try_),    # did we just hit the wrong key in place of a good char
         doubletwochars(word),       # did we double two characters
 
-        # # perhaps we forgot to hit space and two words ran together
-        # # (dictionary word pairs have top priority here, so
-        # # we always suggest them, in despite of nosplitsugs, and
-        # # drop compound word and other suggestions)
-        # pmt.twowords(word, use_dash='-' in aff.try_ or 'a' in aff.try_)
+        # perhaps we forgot to hit space and two words ran together
+        # (dictionary word pairs have top priority here, so
+        # we always suggest them, in despite of nosplitsugs, and
+        # drop compound word and other suggestions)
+        twowords(word, use_dash=aff.use_dash())
     )
 
 # suggestions for a typical fault of spelling, that

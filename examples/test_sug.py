@@ -37,4 +37,7 @@ report('sug')
 report('sug2')
 
 report('map')
-report('rep')
+report('maputf')
+# report('rep') -- wrong order?..
+
+# report('ngram_utf_fix') -- order?..

@@ -42,12 +42,22 @@ class Dictionary:
 
     def suggest(self, word: str) -> Iterator[str]:
         seen = set()
+        found = False
         for sug in permutations.permutations(word, self.aff):
-            if not sug in seen and self.lookup(sug):
-                    yield sug
-                    seen.add(sug)
+            if not sug in seen:
+                seen.add(sug)
+                if type(sug) == tuple:
+                    if all(self.lookup(s) for s in sug):
+                        yield ' '.join(sug)
+                        if aff.use_dash():
+                            yield '-'.join(sug)
+                        found = True
+                else:
+                    if self.lookup(sug):
+                        yield sug
+                        found = True
 
-        if seen: return
+        if found: return
 
         for sug in ngram_suggest.ngram_suggest(self, word, maxdiff=self.aff.maxdiff, onlymaxdiff=self.aff.onlymaxdiff):
             if not sug in seen:

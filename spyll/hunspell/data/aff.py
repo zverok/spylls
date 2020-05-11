@@ -142,3 +142,6 @@ class Aff:
 
         for pref in self.pfx:
             self.prefixes.put(pref.add, pref)
+
+    def use_dash(self) -> bool:
+        return '-' in self.try_ or 'a' in self.try_
