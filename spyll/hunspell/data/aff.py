@@ -3,9 +3,12 @@ import functools
 import itertools
 
 from dataclasses import dataclass, field
-from typing import List, Set, Dict, Tuple, Optional, NewType
+from typing import List, Set, Tuple, Optional, NewType
+
+from spyll.hunspell.algo.fsa import FSA
 
 Flag = NewType('Flag', str)
+
 
 @dataclass
 class Affix:
@@ -16,37 +19,47 @@ class Affix:
     condition: str
     flags: Set[Flag] = field(default_factory=set)
 
+
 @dataclass
 class Prefix(Affix):
     def __post_init__(self):
         cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
-        if self.strip: cond_parts = cond_parts[len(self.strip):]
+        if self.strip:
+            cond_parts = cond_parts[len(self.strip):]
+
         if cond_parts and cond_parts != ['.']:
             cond = '(?=' + ''.join(cond_parts) + ')'
         else:
             cond = ''
         self.regexp = re.compile('^' + self.add + cond)
 
+
 @dataclass
 class Suffix(Affix):
     def __post_init__(self):
         cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
-        if self.strip: cond_parts = cond_parts[:-len(self.strip)]
+        if self.strip:
+            cond_parts = cond_parts[:-len(self.strip)]
+
         if cond_parts and cond_parts != ['.']:
             cond = '(?<=' + ''.join(cond_parts) + ')'
         else:
             cond = ''
         self.regexp = re.compile(cond + self.add + '$')
 
+
 @dataclass
 class CompoundRule:
     text: str
+
     def __post_init__(self):
         # TODO: proper flag parsing! Long is (aa)(bb)*(cc), numeric is (1001)(1002)*(1003)
         self.flags = set(re.sub(r'[\*\?]', '', self.text))
         parts = re.findall(r'[^*?][*?]?', self.text)
         self.re = re.compile(self.text)
-        self.partial_re = re.compile(functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1]))
+        self.partial_re = re.compile(
+            functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1])
+        )
 
     def fullmatch(self, flag_sets):
         relevant_flags = [self.flags.intersection(f) for f in flag_sets]
@@ -62,53 +75,23 @@ class CompoundRule:
             for fc in itertools.product(*relevant_flags)
         )
 
-class Leaf:
-    def __init__(self):
-        self.payloads = []
-        self.children = {}
-
-class FSA:
-    def __init__(self, ):
-        self.root = Leaf()
-
-    def put(self, path, payload):
-        cur = self.root
-        for p in path:
-            if p in cur.children:
-                cur.children[p]
-            else:
-                cur.children[p] = Leaf()
-
-            cur = cur.children[p]
-
-        cur.payloads.append(payload)
-
-    def lookup(self, path):
-        for path, leaf in self.traverse(self.root, path):
-            for payload in leaf.payloads: yield payload
-
-    def traverse(self, cur, path, traversed = []):
-        yield (traversed, cur)
-        if not path or path[0] not in cur.children: return
-        for p, leaf in self.traverse(cur.children[path[0]], path[1:], [*traversed, path[0]]):
-            yield (p, leaf)
 
 @dataclass
 class Aff:
     # General
-    set: str='Windows-1252'
-    flag: str='short' # TODO: Enum of possible values, in fact
+    set: str = 'Windows-1252'
+    flag: str = 'short'  # TODO: Enum of possible values, in fact
     af: List[Tuple[int, Set[str]]] = field(default_factory=list)
 
     # Suggestions
-    key: str=''
-    try_: str='' # actually just TRY, but conflicts with Python keyword
+    key: str = ''
+    try_: str = ''  # actually just TRY, but conflicts with Python keyword
     nosuggest: Optional[Flag] = None
-    maxcpdsugs: int=0
+    maxcpdsugs: int = 0
     rep: List[Tuple[str, str]] = field(default_factory=list)
     map: List[Set[str]] = field(default_factory=list)
-    maxdiff: int=-1
-    onlymaxdiff: bool=False
+    maxdiff: int = -1
+    onlymaxdiff: bool = False
 
     # Stemming
     pfx: List[Prefix] = field(default_factory=list)
@@ -120,8 +103,8 @@ class Aff:
 
     # Compounding
     compoundrule: List[str] = field(default_factory=list)
-    compoundmin: int=3
-    compoundwordsmax: Optional[int]=None
+    compoundmin: int = 3
+    compoundwordsmax: Optional[int] = None
     compoundflag: Optional[Flag] = None
     compoundbegin: Optional[Flag] = None
     compoundmiddle: Optional[Flag] = None

@@ -1,10 +1,11 @@
-from enum import Enum, auto
+from enum import Enum
+from typing import List, Optional, Tuple, cast
 
 LCS = Enum('LCS', 'UP LEFT UPLEFT')
 
-def commoncharacterpositions(s1, s2):
+
+def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
     num = 0
-    diff = 0
     diffpos = []
 
     # TODO: if complexprefixes
@@ -16,7 +17,7 @@ def commoncharacterpositions(s1, s2):
         else:
             diffpos.append(i)
 
-    if len(diffpos) == 2: # two string differ only by exactly two chars swaped
+    if len(diffpos) == 2:   # two string differ only by exactly two chars swaped
         p1, p2 = diffpos
         swap = len(s1) == len(s2) and s1[p1] == s2[p2] and s1[p2] == s2[p1]
     else:
@@ -24,7 +25,8 @@ def commoncharacterpositions(s1, s2):
 
     return (num, swap)
 
-def leftcommonsubstring(s1, s2):
+
+def leftcommonsubstring(s1: str, s2: str) -> float:
     s2 = s2.lower()
     for (i, (c1, c2)) in enumerate(zip(s1, s2)):
         if c1 != c2:
@@ -32,7 +34,10 @@ def leftcommonsubstring(s1, s2):
 
     return min(len(s1), len(s2))
 
-def ngram(n, s1, s2, *, weighted=False, any_mismatch=False, longer_worse=False):
+
+def ngram(n: int, s1: str, s2: str, *,
+          weighted=False, any_mismatch=False, longer_worse=False) -> float:
+
     l2 = len(s2)
     if (l2 == 0):
         return 0
@@ -63,34 +68,35 @@ def ngram(n, s1, s2, *, weighted=False, any_mismatch=False, longer_worse=False):
     else:
         return nscore
 
-def lcslen(s1, s2):
-  result = lcs(s1, s2);
-  if not result:
-    return 0;
 
-  i = len(s1)
-  j = n = len(s2)
+def lcslen(s1: str, s2: str) -> int:
+    result = lcs(s1, s2)
+    if not result:
+        return 0
 
-  res = 0
-  while (i != 0) and (j != 0):
-    if result[i * (n + 1) + j] == LCS.UPLEFT:
-      res += 1
-      i -= 1
-      j -= 1
-    elif result[i * (n + 1) + j] == LCS.UP:
-      i -= 1
-    else:
-      j -= 1
+    i = len(s1)
+    j = n = len(s2)
 
-  return res
+    res = 0
+    while (i != 0) and (j != 0):
+        if result[i * (n + 1) + j] == LCS.UPLEFT:
+            res += 1
+            i -= 1
+            j -= 1
+        elif result[i * (n + 1) + j] == LCS.UP:
+            i -= 1
+        else:
+            j -= 1
 
-def lcs(s1, s2):
+    return res
+
+
+def lcs(s1: str, s2: str) -> List[Optional[LCS]]:
     m = len(s1)
     n = len(s2)
 
-    c = [None] * ((m + 1) * (n + 1))
-    b = [None] * ((m + 1) * (n + 1))
-
+    c: List[Optional[int]] = [None] * ((m + 1) * (n + 1))
+    b: List[Optional[LCS]] = [None] * ((m + 1) * (n + 1))
 
     for i in range(m+1):
         c[i * (n + 1)] = 0
@@ -100,9 +106,9 @@ def lcs(s1, s2):
     for i in range(1, m+1):
         for j in range(1, n+1):
             if s1[i - 1] == s2[j - 1]:
-                c[i * (n + 1) + j] = c[(i - 1) * (n + 1) + j - 1] + 1
+                c[i * (n + 1) + j] = cast(int, c[(i - 1) * (n + 1) + j - 1]) + 1
                 b[i * (n + 1) + j] = LCS.UPLEFT
-            elif c[(i - 1) * (n + 1) + j] >= c[i * (n + 1) + j - 1]:
+            elif cast(int, c[(i - 1) * (n + 1) + j]) >= cast(int, c[i * (n + 1) + j - 1]):
                 c[i * (n + 1) + j] = c[(i - 1) * (n + 1) + j]
                 b[i * (n + 1) + j] = LCS.UP
             else:

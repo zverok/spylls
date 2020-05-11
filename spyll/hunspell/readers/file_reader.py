@@ -1,44 +1,45 @@
 import re
 import io
-import sys
+
 
 class FileReader:
-  def __init__(self, path_or_io, encoding='Windows-1252'):
-    if isinstance(path_or_io, str):
-      self.path = path_or_io
-      self.io = open(path_or_io, 'r', encoding=encoding, errors='ignore')
-    elif isinstance(path_or_io, io.TextIOBase):
-      self.path = None
-      self.io = path_or_io
-    else:
-      raise ValueError(f"Expected path or IO, got {type(path_or_io)}")
+    COMMENT_RE = re.compile(r'\#.+$')
 
-    self.skip_lines = 0
-    self.reset_encoding(encoding=encoding)
+    def __init__(self, path_or_io, encoding='Windows-1252'):
+        if isinstance(path_or_io, str):
+            self.path = path_or_io
+            self.io = open(path_or_io, 'r', encoding=encoding, errors='ignore')
+        elif isinstance(path_or_io, io.TextIOBase):
+            self.path = None
+            self.io = path_or_io
+        else:
+            raise ValueError(f"Expected path or IO, got {type(path_or_io)}")
 
-  def __iter__(self):
-    return self
+        self.skip_lines = 0
+        self.reset_encoding(encoding=encoding)
 
-  def __next__(self):
-    return self.iter.__next__()
+    def __iter__(self):
+        return self
 
-  def reset_encoding(self, encoding):
-    # was initialized with StringIO or something, can't reopen.
-    # FIXME: Isn't there a method to reopen the stream by its variable, yet?..
-    if self.path is not None:
-      self.io = open(self.path, 'r', encoding=encoding, errors='ignore')
+    def __next__(self):
+        return self.iter.__next__()
 
-    self.iter = filter(lambda l: l[1] != '', enumerate(self.readlines(), 1))
+    def reset_encoding(self, encoding):
+        # was initialized with StringIO or something, can't reopen.
+        # FIXME: Isn't there a method to reopen the stream by its variable, yet?..
+        if self.path is not None:
+            self.io = open(self.path, 'r', encoding=encoding, errors='ignore')
 
-    if self.path is not None:
-      # skipping only makes sense when it was reopened
-      for i in range(self.skip_lines): self.io.readline()
+        self.iter = filter(lambda l: l[1] != '', enumerate(self.readlines(), 1))
 
-  COMMENT_RE = re.compile(r'\#.+$')
+        if self.path is not None:
+            # skipping only makes sense when it was reopened
+            for i in range(self.skip_lines):
+                self.io.readline()
 
-  def readlines(self):
-    ln = self.io.readline()
-    while ln != '':
-      self.skip_lines += 1
-      yield self.COMMENT_RE.sub('', ln).strip()
-      ln = self.io.readline()
+    def readlines(self):
+        ln = self.io.readline()
+        while ln != '':
+            self.skip_lines += 1
+            yield self.COMMENT_RE.sub('', ln).strip()
+            ln = self.io.readline()

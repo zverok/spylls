@@ -6,6 +6,7 @@ from spyll.hunspell.readers import FileReader, util
 from spyll.hunspell.data import Aff
 from spyll.hunspell.data import aff
 
+
 class AffReader:
     FIELDS = {field.name: field for field in dataclasses.fields(Aff)}
 
@@ -21,14 +22,15 @@ class AffReader:
             if field == 'try':
                 field = 'try_'
             # TODO: This is temp, to test on "real" dictionaries without understanding all
-            # the fields. Maybe for ver. 0.0.1 it is acceptable, but should at least be debug-logged.
+            # the fields. Maybe for ver. 0.0.1 it is acceptable, but should at least be
+            # debug-logged.
             if field not in self.FIELDS:
                 continue
             val = self._read_directive(field, name, *parts)
             if field == 'flags':
                 self.flag_format = field
             if field == 'sfx' or field == 'pfx':
-                if not field in data:
+                if field not in data:
                     data[field] = []
                 data[field].extend(val)
             else:
@@ -45,7 +47,7 @@ class AffReader:
         elif f.type == int:
             return int(value)
         elif f.type == str:
-            if field=='set':
+            if field == 'set':
                 self.source.reset_encoding(value)
             return value
         elif f.type == t.Optional[aff.Flag]:
@@ -64,7 +66,10 @@ class AffReader:
         elif f.type == t.List[t.Set[str]]:
             lines = self._read_array(name, int(value))
             return [
-                list(map(lambda s: re.sub(r'[()]', '', s), re.findall(r'(\([^()]+?\)|[^()])', ln[0])))
+                list(
+                    map(lambda s: re.sub(r'[()]', '', s),
+                        re.findall(r'(\([^()]+?\)|[^()])', ln[0]))
+                )
                 for ln in lines
             ]
         else:

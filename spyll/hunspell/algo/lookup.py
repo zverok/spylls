@@ -1,7 +1,7 @@
 import itertools
 import collections
 from enum import Enum
-from typing import List, Iterator, Union, Optional, Any, Tuple
+from typing import List, Iterator, Union, Optional, Tuple
 
 from spyll.hunspell import data
 
@@ -10,11 +10,12 @@ CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
 Cap = Enum('Cap', 'NO INIT ALL HUHINIT HUH')
 
 Paradigm = collections.namedtuple('Paradigm',
-    ['stem', 'prefix', 'suffix', 'prefix2', 'suffix2'],
-    defaults=[None, None, None, None]
-)
+                                  ['stem', 'prefix', 'suffix', 'prefix2', 'suffix2'],
+                                  defaults=[None, None, None, None]
+                                  )
 
 Compound = List[Paradigm]
+
 
 def analyze(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Union[Paradigm, Compound]]:
     if aff.forbiddenword and any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
@@ -32,18 +33,25 @@ def analyze(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Union[Paradigm,
 
     return res
 
-def analyze_nocap(aff: data.Aff, dic: data.Dic, word: str, allcap: bool = False) -> Iterator[Union[Paradigm, Compound]]:
+
+def analyze_nocap(
+        aff: data.Aff,
+        dic: data.Dic,
+        word: str,
+        allcap: bool = False) -> Iterator[Union[Paradigm, Compound]]:
+
     return itertools.chain(
-        analyze_affixed(aff, dic, word, allcap = allcap),
+        analyze_affixed(aff, dic, word, allcap=allcap),
         analyze_compound(aff, dic, word)
     )
 
+
 def analyze_affixed(
-    aff: data.Aff,
-    dic: data.Dic,
-    word: str,
-    allcap: bool=False,
-    compoundpos: Optional[CompoundPos]=None) -> Iterator[Paradigm]:
+        aff: data.Aff,
+        dic: data.Dic,
+        word: str,
+        allcap: bool = False,
+        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
 
     for form in split_affixes(aff, word, compoundpos=compoundpos):
         found = False
@@ -56,8 +64,11 @@ def analyze_affixed(
             for w in dic.homonyms(form.stem, ignorecase=True):
                 # If the dictionary word is not lowercase, we accept only exactly that
                 # case (above), or ALLCAPS
-                if not allcap and guess_capitalization(w.stem) != Cap.NO: continue
-                if have_compatible_flags(aff, w, form, compoundpos=compoundpos): yield form
+                if not allcap and guess_capitalization(w.stem) != Cap.NO:
+                    continue
+                if have_compatible_flags(aff, w, form, compoundpos=compoundpos):
+                    yield form
+
 
 def analyze_compound(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Compound]:
     if aff.compoundbegin or aff.compoundflag:
@@ -74,38 +85,49 @@ def analyze_compound(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Compou
 
 
 def have_compatible_flags(
-    aff: data.Aff,
-    dictionary_word: data.dic.Word,
-    paradigm: Paradigm,
-    compoundpos: Optional[CompoundPos]) -> bool:
+        aff: data.Aff,
+        dictionary_word: data.dic.Word,
+        paradigm: Paradigm,
+        compoundpos: Optional[CompoundPos]) -> bool:
 
     all_flags = dictionary_word.flags
-    if paradigm.prefix: all_flags = all_flags.union(paradigm.prefix.flags)
-    if paradigm.suffix: all_flags = all_flags.union(paradigm.suffix.flags)
+    if paradigm.prefix:
+        all_flags = all_flags.union(paradigm.prefix.flags)
+    if paradigm.suffix:
+        all_flags = all_flags.union(paradigm.suffix.flags)
 
     # Check affix flags
     if not paradigm.suffix and not paradigm.prefix:
-        if aff.needaffix and aff.needaffix in all_flags: return False
-        if aff.pseudoroot and aff.pseudoroot in all_flags: return False
+        if aff.needaffix and aff.needaffix in all_flags:
+            return False
+        if aff.pseudoroot and aff.pseudoroot in all_flags:
+            return False
 
-    if paradigm.prefix and not paradigm.prefix.flag in all_flags: return False
-    if paradigm.suffix and not paradigm.suffix.flag in all_flags: return False
+    if paradigm.prefix and paradigm.prefix.flag not in all_flags:
+        return False
+    if paradigm.suffix and paradigm.suffix.flag not in all_flags:
+        return False
 
     # Check compound flags
 
     # FIXME: "neither of compounding flags present and we still try compound" will fail here,
     # but we shouldn't even try
     if compoundpos:
-        if aff.compoundflag and aff.compoundflag in all_flags: return True
+        if aff.compoundflag and aff.compoundflag in all_flags:
+            return True
 
         if compoundpos == CompoundPos.BEGIN:
-            if not aff.compoundbegin or not aff.compoundbegin in all_flags: return False
+            if not aff.compoundbegin or aff.compoundbegin not in all_flags:
+                return False
         elif compoundpos == CompoundPos.END:
-            if not aff.compoundlast or not aff.compoundlast in all_flags: return False
+            if not aff.compoundlast or aff.compoundlast not in all_flags:
+                return False
         elif compoundpos == CompoundPos.MIDDLE:
-            if not aff.compoundmiddle or not aff.compoundmiddle in all_flags: return False
+            if not aff.compoundmiddle or aff.compoundmiddle not in all_flags:
+                return False
     else:
-        if aff.onlyincompound and aff.onlyincompound in all_flags: return False
+        if aff.onlyincompound and aff.onlyincompound in all_flags:
+            return False
 
     return True
 
@@ -113,27 +135,31 @@ def have_compatible_flags(
 # Affixes-related algorithms
 # --------------------------
 
+
 def split_affixes(
-    aff: data.Aff,
-    word: str,
-    compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
+        aff: data.Aff,
+        word: str,
+        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
 
     result = _split_affixes(aff, word, compoundpos=compoundpos)
 
     if aff.needaffix:
         for r in result:
-            if not only_affix_need_affix(r, aff.needaffix): yield r
+            if not only_affix_need_affix(r, aff.needaffix):
+                yield r
     else:
         # FIXME: WTF???
         # return result
-        for r in result: yield r
+        for r in result:
+            yield r
+
 
 def _split_affixes(
-    aff: data.Aff,
-    word: str,
-    compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
+        aff: data.Aff,
+        word: str,
+        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
 
-    yield Paradigm(word) # "Whole word" is always existing option
+    yield Paradigm(word)    # "Whole word" is always existing option
 
     for form in desuffix(aff, word, compoundpos=compoundpos):
         yield form
@@ -146,89 +172,104 @@ def _split_affixes(
                 if form2.suffix.crossproduct:
                     yield form2._replace(prefix=form.prefix)
 
+
 def desuffix(
-    aff: data.Aff,
-    word: str,
-    extra_flag: Optional[str]=None,
-    compoundpos: Optional[CompoundPos]=None) -> Iterator[Paradigm]:
+        aff: data.Aff,
+        word: str,
+        extra_flag: Optional[str] = None,
+        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
 
     for stem, suf in _desuffix(aff, word, extra_flag=extra_flag, compoundpos=compoundpos):
         yield Paradigm(stem, suffix=suf)
 
-        if not extra_flag: # only one level depth
+        if not extra_flag:  # only one level depth
             for form2 in desuffix(aff, stem, extra_flag=suf.flag, compoundpos=compoundpos):
                 yield form2._replace(suffix2=suf)
 
+
 def deprefix(
-    aff: data.Aff,
-    word: str,
-    extra_flag: Optional[str]=None,
-    compoundpos: Optional[CompoundPos]=None) -> Iterator[Paradigm]:
+        aff: data.Aff,
+        word: str,
+        extra_flag: Optional[str] = None,
+        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
 
     for stem, pref in _deprefix(aff, word, extra_flag=extra_flag, compoundpos=compoundpos):
         yield Paradigm(stem, prefix=pref)
 
         # TODO: Only if compoundpreffixes are allowed in *.aff
-        if not extra_flag: # only one level depth
+        if not extra_flag:  # only one level depth
             for form2 in deprefix(aff, stem, extra_flag=pref.flag, compoundpos=compoundpos):
                 yield form2._replace(prefix2=pref)
 
+
 def _desuffix(
-    aff: data.Aff,
-    word: str,
-    extra_flag: Optional[str]=None,
-    compoundpos: Optional[CompoundPos]=None) -> Iterator[Tuple[str, data.aff.Suffix]]:
+        aff: data.Aff,
+        word: str,
+        extra_flag: Optional[str] = None,
+        compoundpos: Optional[CompoundPos] = None) -> Iterator[Tuple[str, data.aff.Suffix]]:
 
     if compoundpos is None or compoundpos == CompoundPos.END:
         checkpermit = False
     else:
         # No possibility any suffix will be OK
-        if not aff.compoundpermitflag: return
+        if not aff.compoundpermitflag:
+            return
         checkpermit = True
 
     for suf in aff.suffixes.lookup(word[::-1]):
-        if extra_flag and not extra_flag in suf.flags: continue
-        if checkpermit and not aff.compoundpermitflag in suf.flags: continue
-        if compoundpos is not None and aff.compoundforbidflag in suf.flags: continue
+        if extra_flag and extra_flag not in suf.flags:
+            continue
+        if checkpermit and aff.compoundpermitflag not in suf.flags:
+            continue
+        if compoundpos is not None and aff.compoundforbidflag in suf.flags:
+            continue
 
         if suf.regexp.search(word):
             yield (suf.regexp.sub(suf.strip, word), suf)
 
+
 def _deprefix(
-    aff: data.Aff,
-    word: str,
-    extra_flag: Optional[str]=None,
-    compoundpos: Optional[CompoundPos]=None) -> Iterator[Tuple[str, data.aff.Prefix]]:
+        aff: data.Aff,
+        word: str,
+        extra_flag: Optional[str] = None,
+        compoundpos: Optional[CompoundPos] = None) -> Iterator[Tuple[str, data.aff.Prefix]]:
 
     if compoundpos is None or compoundpos == CompoundPos.BEGIN:
         checkpermit = False
     else:
         # No possibility any prefix will be OK
-        if not aff.compoundpermitflag: return
+        if not aff.compoundpermitflag:
+            return
         checkpermit = True
 
     for pref in aff.prefixes.lookup(word):
-        if extra_flag and not extra_flag in pref.flags: continue
-        if checkpermit and not aff.compoundpermitflag in pref.flags: continue
-        if compoundpos is not None and aff.compoundforbidflag in pref.flags: continue
+        if extra_flag and extra_flag not in pref.flags:
+            continue
+        if checkpermit and aff.compoundpermitflag not in pref.flags:
+            continue
+        if compoundpos is not None and aff.compoundforbidflag in pref.flags:
+            continue
 
         if pref.regexp.search(word):
             yield (pref.regexp.sub(pref.strip, word), pref)
 
+
 def only_affix_need_affix(form, flag):
     all_affixes = list(filter(None, [form.prefix, form.prefix2, form.suffix, form.suffix2]))
-    if not all_affixes: return False
+    if not all_affixes:
+        return False
     needaffs = [aff for aff in all_affixes if flag in aff.flags]
     return len(all_affixes) == len(needaffs)
 
 # Compounding details
 # -------------------
 
+
 def split_compound_by_flags(
-    aff: data.Aff,
-    dic: data.Dic,
-    word_rest: str,
-    prev_parts: List[Paradigm] = []) -> Iterator[List[Paradigm]]:
+        aff: data.Aff,
+        dic: data.Dic,
+        word_rest: str,
+        prev_parts: List[Paradigm] = []) -> Iterator[List[Paradigm]]:
 
     # If it is middle of compounding process "the rest of the word is the whole last part" is always
     # possible
@@ -237,7 +278,7 @@ def split_compound_by_flags(
             yield [paradigm]
 
     if len(word_rest) < aff.compoundmin * 2 or \
-        (aff.compoundwordsmax and len(prev_parts) >= aff.compoundwordsmax):
+            (aff.compoundwordsmax and len(prev_parts) >= aff.compoundwordsmax):
         return
 
     compoundpos = CompoundPos.BEGIN if not prev_parts else CompoundPos.MIDDLE
@@ -250,12 +291,13 @@ def split_compound_by_flags(
             for rest in split_compound_by_flags(aff, dic, word_rest[pos:], parts):
                 yield [paradigm, *rest]
 
+
 def split_compound_by_rules(
-    aff: data.Aff,
-    dic: data.Dic,
-    word_rest: str,
-    compoundrules: List[data.aff.CompoundRule],
-    prev_parts: List[data.dic.Word] = []) -> Iterator[List[Paradigm]]:
+        aff: data.Aff,
+        dic: data.Dic,
+        word_rest: str,
+        compoundrules: List[data.aff.CompoundRule],
+        prev_parts: List[data.dic.Word] = []) -> Iterator[List[Paradigm]]:
 
     # If it is middle of compounding process "the rest of the word is the whole last part" is always
     # possible
@@ -267,7 +309,7 @@ def split_compound_by_rules(
                 yield [Paradigm(homonym)]
 
     if len(word_rest) < aff.compoundmin * 2 or \
-        (aff.compoundwordsmax and len(prev_parts) >= aff.compoundwordsmax):
+            (aff.compoundwordsmax and len(prev_parts) >= aff.compoundwordsmax):
         return
 
     for pos in range(aff.compoundmin, len(word_rest) - aff.compoundmin + 1):
@@ -277,13 +319,18 @@ def split_compound_by_rules(
             flag_sets = [w.flags for w in parts]
             compoundrules = [r for r in compoundrules if r.partial_match(flag_sets)]
             if compoundrules:
-                for rest in split_compound_by_rules(aff, dic, word_rest[pos:], compoundrules=compoundrules, prev_parts=parts):
+                by_rules = split_compound_by_rules(
+                            aff, dic, word_rest[pos:],
+                            compoundrules=compoundrules, prev_parts=parts
+                        )
+                for rest in by_rules:
                     yield [Paradigm(beg), *rest]
 
 # Utility algorithms
 # ------------------
 
-def guess_capitalization(word):
+
+def guess_capitalization(word: str) -> Cap:
     if word.lower() == word:
         return Cap.NO
     elif word[:1].lower() + word[1:] == word.lower():
