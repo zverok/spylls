@@ -92,6 +92,7 @@ class Aff:
     map: List[Set[str]] = field(default_factory=list)
     maxdiff: int = -1
     onlymaxdiff: bool = False
+    maxngramsugs: int = 4
 
     # Stemming
     pfx: List[Prefix] = field(default_factory=list)

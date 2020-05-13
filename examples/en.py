@@ -24,3 +24,6 @@ print(f'Suggest good: {time.time() - t}')
 t = time.time()
 print(list(d.suggest('crroapted')))
 print(f'Suggest bad: {time.time() - t}')
+
+print(list(d.suggest('hwihc')))
+print(list(d.suggest('Hwihc')))

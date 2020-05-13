@@ -4,10 +4,9 @@ from enum import Enum
 from typing import List, Iterator, Union, Optional, Tuple
 
 from spyll.hunspell import data
+import spyll.hunspell.algo.capitalization as cap
 
 CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
-
-Cap = Enum('Cap', 'NO INIT ALL HUHINIT HUH')
 
 Paradigm = collections.namedtuple('Paradigm',
                                   ['stem', 'prefix', 'suffix', 'prefix2', 'suffix2'],
@@ -23,12 +22,12 @@ def analyze(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Union[Paradigm,
 
     res = analyze_nocap(aff, dic, word)
 
-    captype = guess_capitalization(word)
+    captype = cap.guess(word)
 
     # Capitalized: accept this form, and lowercase
-    if captype == Cap.INIT:
+    if captype == cap.Cap.INIT:
         res = itertools.chain(res, analyze_nocap(aff, dic, word.lower()))
-    elif captype == Cap.ALL:
+    elif captype == cap.Cap.ALL:
         res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(), allcap=True))
 
     return res
@@ -64,7 +63,7 @@ def analyze_affixed(
             for w in dic.homonyms(form.stem, ignorecase=True):
                 # If the dictionary word is not lowercase, we accept only exactly that
                 # case (above), or ALLCAPS
-                if not allcap and guess_capitalization(w.stem) != Cap.NO:
+                if not allcap and cap.guess(w.stem) != cap.Cap.NO:
                     continue
                 if have_compatible_flags(aff, w, form, compoundpos=compoundpos):
                     yield form
@@ -148,10 +147,7 @@ def split_affixes(
             if not only_affix_need_affix(r, aff.needaffix):
                 yield r
     else:
-        # FIXME: WTF???
-        # return result
-        for r in result:
-            yield r
+        yield from result
 
 
 def _split_affixes(
@@ -161,8 +157,7 @@ def _split_affixes(
 
     yield Paradigm(word)    # "Whole word" is always existing option
 
-    for form in desuffix(aff, word, compoundpos=compoundpos):
-        yield form
+    yield from desuffix(aff, word, compoundpos=compoundpos)
 
     for form in deprefix(aff, word, compoundpos=compoundpos):
         yield form
@@ -325,19 +320,3 @@ def split_compound_by_rules(
                         )
                 for rest in by_rules:
                     yield [Paradigm(beg), *rest]
-
-# Utility algorithms
-# ------------------
-
-
-def guess_capitalization(word: str) -> Cap:
-    if word.lower() == word:
-        return Cap.NO
-    elif word[:1].lower() + word[1:] == word.lower():
-        return Cap.INIT
-    elif word.upper() == word:
-        return Cap.ALL
-    elif word[:1].lower() != word[:1]:
-        return Cap.HUHINIT
-    else:
-        return Cap.HUH

@@ -32,7 +32,7 @@ def permutations(word: str, aff: data.Aff) -> Iterator[Union[str, Tuple[str, str
 
 
 # suggestions for a typical fault of spelling, that
-# differs with more, than 1 letter from the right form.
+# differs with more than 1 letter from the right form.
 #
 # uses .aff's file REP table
 def replchars(word: str, reptable: List[Tuple[str, str]]) -> Iterator[Union[str, Tuple[str, str]]]:
@@ -45,9 +45,7 @@ def replchars(word: str, reptable: List[Tuple[str, str]]) -> Iterator[Union[str,
             suggestion = word[:match.start()] + replacement.replace('_', ' ') + word[match.end():]
             yield suggestion
             if ' ' in suggestion:
-                # In two lines to trick mypy
-                w1, w2 = suggestion.split(' ', 2)
-                yield (w1, w2)
+                yield suggestion.split(' ', 2)
 
 
 # suggestions for when chose the wrong char out of a related set
@@ -113,12 +111,12 @@ def badcharkey(word: str, layout: str) -> Iterator[str]:
             continue
 
         pos = layout.find(c)
-        if pos == -1:
-            continue
-        if pos > 0 and layout[pos-1] != '|':
-            yield before + layout[pos-1] + after
-        if pos + 1 < len(layout) and layout[pos+1] != '|':
-            yield before + layout[pos+1] + after
+        while pos != -1:
+            if pos > 0 and layout[pos-1] != '|':
+                yield before + layout[pos-1] + after
+            if pos + 1 < len(layout) and layout[pos+1] != '|':
+                yield before + layout[pos+1] + after
+            pos = layout.find(c, pos+1)
 
 
 # error is word has an extra letter it does not need

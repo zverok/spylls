@@ -98,7 +98,7 @@ def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> 
         yield guess
 
 
-def filter_guesses(guesses: List[Tuple[str, float]], *, onlymaxdiff=True):
+def filter_guesses(guesses: List[Tuple[str, float]], *, onlymaxdiff=True) -> Iterator[str]:
     same = False
     found = 0
 
@@ -125,6 +125,7 @@ def detect_threshold(word: str) -> float:
     # mangle original word three differnt ways
     # and score them to generate a minimum acceptable score
     thresh = 0.0
+
     for sp in range(1, 4):
         mangled = list(word)
         for pos in range(sp, len(word), 4):
@@ -138,13 +139,13 @@ def detect_threshold(word: str) -> float:
 
 
 def root_score(word1: str, word2: str) -> float:
-    leftcommon = sm.leftcommonsubstring(word1, word2)
+    leftcommon = sm.leftcommonsubstring(word1, word2.lower())
     return sm.ngram(3, word1, word2.lower(), longer_worse=True) + leftcommon
 
 
 def first_affix_score(word1: str, word2: str) -> float:
     leftcommon = sm.leftcommonsubstring(word1, word2)
-    return sm.ngram(len(word1), word1, word2.lower(), any_mismatch=True) + leftcommon
+    return sm.ngram(len(word1), word1, word2, any_mismatch=True) + leftcommon
 
 
 def detailed_affix_score(word1: str, word2: str, fact: float) -> Optional[float]:
@@ -159,9 +160,9 @@ def detailed_affix_score(word1: str, word2: str, fact: float) -> Optional[float]
     re += sm.ngram(2, word2, word1.lower(), any_mismatch=True, weighted=True)
 
     ngram_score = sm.ngram(4, word1, word2, any_mismatch=True)
-    leftcommon_score = sm.leftcommonsubstring(word1, word2)
+    leftcommon_score = sm.leftcommonsubstring(word1, word2.lower())
 
-    cps, is_swap = sm.commoncharacterpositions(word1, word2)
+    cps, is_swap = sm.commoncharacterpositions(word1, word2.lower())
 
     return (
         # length of longest common subsequent minus length difference

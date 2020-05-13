@@ -8,10 +8,7 @@ def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
     num = 0
     diffpos = []
 
-    # TODO: if complexprefixes
-    t = s2.lower()
-
-    for (i, (c1, c2)) in enumerate(zip(s1, t)):
+    for (i, (c1, c2)) in enumerate(zip(s1, s2)):
         if c1 == c2:
             num += 1
         else:
@@ -27,7 +24,6 @@ def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
 
 
 def leftcommonsubstring(s1: str, s2: str) -> float:
-    s2 = s2.lower()
     for (i, (c1, c2)) in enumerate(zip(s1, s2)):
         if c1 != c2:
             return i
