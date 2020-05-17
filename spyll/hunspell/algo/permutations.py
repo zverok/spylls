@@ -11,6 +11,7 @@ MAX_CHAR_DISTANCE = 4
 
 def permutations(word: str, aff: data.Aff) -> Iterator[Union[str, Tuple[str, str]]]:
     return itertools.chain(
+        [word],                      # source word itself is also a valid permutation
         [word.upper()],              # suggestions for an uppercase word (html -> HTML)
         replchars(word, aff.rep),    # typical fault of spelling
         mapchars(word, aff.map),     # wrong char from a related set
@@ -196,4 +197,4 @@ def splitword(word: str, use_dash: bool) -> Iterator[str]:
 # this function.
 def twowords(word: str) -> Iterator[Tuple[str, str]]:
     for i in range(1, len(word)-1):
-        yield (word[:i], word[i:])
+        yield [word[:i], word[i:]]

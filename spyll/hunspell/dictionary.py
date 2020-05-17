@@ -59,52 +59,35 @@ class Dictionary:
     def lookup_nocap(self, word: str) -> bool:
         return any(lookup.analyze_nocap(self.aff, self.dic, word))
 
-    def suggest(self, word: str) -> Iterator[Union[str, Tuple[str, str]]]:
+    def suggest(self, word: str) -> Iterator[str]:
+        captype, variants = cap.variants(word)
         found = False
         seen = set()
-        for sug in self.suggest_permute(word):
-            found = True
-            if sug not in seen:
-                yield sug
-                seen.add(sug)
+
+        for variant in variants:
+            for sug in self.suggest_permute(variant):
+                found = True
+                sug = cap.coerce(sug, captype)
+                if sug not in seen:
+                    yield sug
+                    seen.add(sug)
+
 
         if found or self.aff.maxngramsugs == 0:
             return
 
         ngramsugs = 0
-        for sug in ngram_suggest.ngram_suggest(
-                    self, word, maxdiff=self.aff.maxdiff, onlymaxdiff=self.aff.onlymaxdiff):
-            yield sug
-            ngramsugs += 1
-            if ngramsugs >= self.aff.maxngramsugs:
-                break
+        for variant in variants:
+            for sug in ngram_suggest.ngram_suggest(
+                        self, word, maxdiff=self.aff.maxdiff, onlymaxdiff=self.aff.onlymaxdiff):
+                if sug not in seen:
+                    yield cap.coerce(sug, captype)
+                    seen.add(sug)
+                ngramsugs += 1
+                if ngramsugs >= self.aff.maxngramsugs:
+                    break
 
-    def suggest_permute(self, word: str) -> Iterator[Union[str, Tuple[str, str]]]:
-        captype = cap.guess(word)
-
-        if captype == cap.Cap.NO:
-            for sug in self.suggest_permute_nocap(word):
-                yield sug
-        elif captype == cap.Cap.INIT:
-            for sug in itertools.chain(self.suggest_permute_nocap(word), self.suggest_permute_nocap(word.lower())):
-                yield cap.upperfirst(sug)
-        elif captype == cap.Cap.HUHINIT:
-            for sug in itertools.chain(self.suggest_permute_nocap(word), self.suggest_permute_nocap(cap.lowerfirst(word))):
-                yield cap.upperfirst(sug)
-            for sug in self.suggest_permute_nocap(word.lower()):
-                yield sug.capitalize()
-            # TODO: also here and below, consider the theory FooBar meant Foo Bar
-        elif captype == cap.Cap.HUH:
-            for sug in self.suggest_permute_nocap(word.lower()):
-                yield sug
-        elif captype == cap.Cap.ALL:
-            for sug in self.suggest_permute_nocap(word.lower()):
-                yield sug.upper()
-            for sug in self.suggest_permute_nocap(cap.upperfirst(word.lower())):
-                yield sug.upper()
-
-
-    def suggest_permute_nocap(self, word: str) -> Iterator[Union[str, Tuple[str, str]]]:
+    def suggest_permute(self, word: str) -> Iterator[str]:
         seen: Set[Union[str, Tuple[str, str]]] = set()
         found = False
 

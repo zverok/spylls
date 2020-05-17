@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Tuple, List
 
 Cap = Enum('Cap', 'NO INIT ALL HUHINIT HUH')
 
@@ -14,11 +15,11 @@ def guess(word: str) -> Cap:
     else:
         return Cap.HUH
 
-def apply(word: str, cap: Cap) -> str:
-    if cap == Cap.NO:
-        return word.lower()
-    elif cap == Cap.INIT:
-        return word.capitalize()
+def coerce(word: str, cap: Cap) -> str:
+    # if cap == Cap.NO:
+    #     return word.lower()
+    if cap == Cap.INIT or cap == Cap.HUHINIT:
+        return upperfirst(word)
     elif cap == Cap.ALL:
         return word.upper()
     else:
@@ -35,3 +36,18 @@ def lowerfirst(word: str) -> str:
 
 def upperfirst(word: str) -> str:
     return word[0].upper() + word[1:]
+
+def variants(word: str) -> Tuple[Cap, List[str]]:
+    captype = guess(word)
+
+    if captype == Cap.NO:
+        return (captype, [word])
+    elif captype == Cap.INIT:
+        return (captype, [word, word.lower()])
+    elif captype == Cap.HUHINIT:
+        return (captype, [word, lowerfirst(word), word.lower(), word.lower().capitalize()])
+        # TODO: also here and below, consider the theory FooBar meant Foo Bar
+    elif captype == Cap.HUH:
+        return (captype, [word, word.lower()])
+    elif captype == Cap.ALL:
+        return (captype, [word, word.lower(), word.lower().capitalize()])
