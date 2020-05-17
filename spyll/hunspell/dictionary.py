@@ -1,5 +1,4 @@
 from typing import Iterator, Set, Union, Tuple, cast
-import itertools
 
 from spyll.hunspell import data, readers
 from spyll.hunspell.algo import lookup, permutations, ngram_suggest
@@ -72,7 +71,6 @@ class Dictionary:
                     yield sug
                     seen.add(sug)
 
-
         if found or self.aff.maxngramsugs == 0:
             return
 
@@ -114,4 +112,3 @@ class Dictionary:
                     if self.lookup_nocap(cast(str, sug2)):
                         yield sug2
                         found = True
-
