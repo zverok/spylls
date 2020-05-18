@@ -63,13 +63,22 @@ class Dictionary:
         found = False
         seen = set()
 
+        def handle_found(suggestion):
+            cased_suggestion = cap.coerce(suggestion, captype)
+            if suggestion != cased_suggestion and self.is_forbidden(cased_suggestion):
+                cased_suggestion = suggestion
+            if cased_suggestion not in seen:
+                seen.add(cased_suggestion)
+                return cased_suggestion
+            else:
+                return None
+
         for variant in variants:
             for sug in self.suggest_permute(variant):
-                found = True
-                sug = cap.coerce(sug, captype)
-                if sug not in seen:
+                sug = handle_found(sug)
+                if sug:
+                    found = True
                     yield sug
-                    seen.add(sug)
 
         if found or self.aff.maxngramsugs == 0:
             return
@@ -78,12 +87,20 @@ class Dictionary:
         for variant in variants:
             for sug in ngram_suggest.ngram_suggest(
                         self, word, maxdiff=self.aff.maxdiff, onlymaxdiff=self.aff.onlymaxdiff):
-                if sug not in seen:
-                    yield cap.coerce(sug, captype)
-                    seen.add(sug)
-                ngramsugs += 1
-                if ngramsugs >= self.aff.maxngramsugs:
-                    break
+                sug = handle_found(sug)
+                if sug:
+                    yield sug
+                    ngramsugs += 1
+                    if ngramsugs >= self.aff.maxngramsugs:
+                        break
+
+
+    def is_forbidden(self, word: str) -> bool:
+        if not self.aff.forbiddenword:
+            return False
+
+        return any(self.aff.forbiddenword in w.flags for w in self.dic.homonyms(word))
+
 
     def suggest_permute(self, word: str) -> Iterator[str]:
         seen: Set[Union[str, Tuple[str, str]]] = set()

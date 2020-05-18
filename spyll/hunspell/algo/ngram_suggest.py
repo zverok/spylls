@@ -1,4 +1,5 @@
 from typing import Iterator, Tuple, TypeVar, Generic, List, Optional
+from operator import itemgetter
 
 from spyll.hunspell import data
 import spyll.hunspell.algo.string_metrics as sm
@@ -74,7 +75,7 @@ def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> 
 
     # now we are done generating guesses
     # sort in order of decreasing score
-    guesses = sorted(guess_scores.result(), key=lambda g: -g[1])
+    guesses = sorted(guess_scores.result(), key=itemgetter(1), reverse=True)
 
     guesses2 = []
 
@@ -92,7 +93,7 @@ def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> 
             sc = score + 2000
         guesses2.append((value, sc))
 
-    guesses2 = sorted(guesses2, key=lambda g: -g[1])
+    guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
 
     for guess in filter_guesses(guesses2, onlymaxdiff=onlymaxdiff):
         yield guess

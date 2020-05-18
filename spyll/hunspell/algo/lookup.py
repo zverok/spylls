@@ -95,6 +95,9 @@ def have_compatible_flags(
     if paradigm.suffix:
         all_flags = all_flags.union(paradigm.suffix.flags)
 
+    if aff.forbiddenword and aff.forbiddenword in dictionary_word.flags:
+        return False
+
     # Check affix flags
     if not paradigm.suffix and not paradigm.prefix:
         if aff.needaffix and aff.needaffix in all_flags:
