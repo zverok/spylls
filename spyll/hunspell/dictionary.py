@@ -1,7 +1,8 @@
 from typing import Iterator, Set, Union, Tuple, cast
+import itertools
 
 from spyll.hunspell import data, readers
-from spyll.hunspell.algo import lookup, permutations, ngram_suggest
+from spyll.hunspell.algo import lookup, permutations, suggest, ngram_suggest
 import spyll.hunspell.algo.capitalization as cap
 
 
@@ -16,7 +17,7 @@ class Dictionary:
             if with_forbidden or self.aff.forbiddenword not in word.flags:
                 yield word
 
-    def forms_for(self, word: data.dic.Word):
+    def forms_for(self, word: data.dic.Word, candidate: str):
         # word without prefixes/suffixes is also present...
         # TODO: unless it is forbidden :)
         res = [word.stem]
@@ -24,12 +25,12 @@ class Dictionary:
         suffixes = [
             suf
             for suf in self.aff.sfx
-            if suf.flag in word.flags and word.stem.endswith(suf.strip)
+            if suf.flag in word.flags and word.stem.endswith(suf.strip) and candidate.endswith(suf.add)
         ]
         prefixes = [
             pref
             for pref in self.aff.pfx
-            if pref.flag in word.flags and word.stem.startswith(pref.strip)
+            if pref.flag in word.flags and word.stem.startswith(pref.strip) and candidate.startswith(pref.add)
         ]
 
         for suf in suffixes:
@@ -58,74 +59,11 @@ class Dictionary:
     def lookup_nocap(self, word: str) -> bool:
         return any(lookup.analyze_nocap(self.aff, self.dic, word))
 
-    def suggest(self, word: str) -> Iterator[str]:
-        captype, variants = cap.variants(word)
-        found = False
-        seen = set()
-
-        def handle_found(suggestion):
-            cased_suggestion = cap.coerce(suggestion, captype)
-            if suggestion != cased_suggestion and self.is_forbidden(cased_suggestion):
-                cased_suggestion = suggestion
-            if cased_suggestion not in seen:
-                seen.add(cased_suggestion)
-                return cased_suggestion
-            else:
-                return None
-
-        for variant in variants:
-            for sug in self.suggest_permute(variant):
-                sug = handle_found(sug)
-                if sug:
-                    found = True
-                    yield sug
-
-        if found or self.aff.maxngramsugs == 0:
-            return
-
-        ngramsugs = 0
-        for variant in variants:
-            for sug in ngram_suggest.ngram_suggest(
-                        self, word, maxdiff=self.aff.maxdiff, onlymaxdiff=self.aff.onlymaxdiff):
-                sug = handle_found(sug)
-                if sug:
-                    yield sug
-                    ngramsugs += 1
-                    if ngramsugs >= self.aff.maxngramsugs:
-                        break
-
-
     def is_forbidden(self, word: str) -> bool:
         if not self.aff.forbiddenword:
             return False
 
         return any(self.aff.forbiddenword in w.flags for w in self.dic.homonyms(word))
 
-
-    def suggest_permute(self, word: str) -> Iterator[str]:
-        seen: Set[Union[str, Tuple[str, str]]] = set()
-        found = False
-
-        for sug in permutations.splitword(word, use_dash=self.aff.use_dash()):
-            if sug not in seen:
-                seen.add(sug)
-                if self.lookup_nocap(sug):
-                    yield sug
-                    found = True
-
-        if found:
-            return
-
-        for sug2 in permutations.permutations(word, self.aff):
-            if tuple(sug2) not in seen:
-                seen.add(tuple(sug2))
-                if type(sug2) is list:
-                    if all(self.lookup_nocap(s) for s in sug2):
-                        yield ' '.join(sug2)
-                        if self.aff.use_dash():
-                            yield '-'.join(sug2)
-                        found = True
-                elif type(sug2) is str:
-                    if self.lookup_nocap(cast(str, sug2)):
-                        yield sug2
-                        found = True
+    def suggest(self, word: str) -> Iterator[str]:
+        yield from suggest.suggest(self, word)

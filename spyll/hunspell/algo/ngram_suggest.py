@@ -68,7 +68,7 @@ def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> 
     # possible suggestions
     guess_scores = ScoredArray[str](MAX_GUESSES)
     for (root, _) in root_scores.result():
-        for form in dictionary.forms_for(root):
+        for form in dictionary.forms_for(root, word):
             score = first_affix_score(word, form.lower())
             if score > threshold:
                 guess_scores.push(form, score)

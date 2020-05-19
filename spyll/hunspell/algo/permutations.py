@@ -181,20 +181,10 @@ def doubletwochars(word: str) -> Iterator[str]:
             yield word[:i-1] + word[i+1:]
 
 
-def splitword(word: str, use_dash: bool) -> Iterator[str]:
-    for i in range(1, len(word)-1):
-        # the whole phrase is in the dictionary
-        yield word[:i] + ' ' + word[i:]
-
-        # the dashed word is in the dictionary
-        if use_dash:
-            yield word[:i] + '-' + word[i:]
-
-
 # error is should have been two words
 # return value is true, if there is a dictionary word pair,
 # or there was already a good suggestion before calling
 # this function.
 def twowords(word: str) -> Iterator[Tuple[str, str]]:
-    for i in range(1, len(word)-1):
+    for i in range(1, len(word)):
         yield [word[:i], word[i:]]
