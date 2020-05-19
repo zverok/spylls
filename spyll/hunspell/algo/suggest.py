@@ -18,6 +18,8 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
         cased_suggestion = cap.coerce(suggestion, captype)
         if suggestion != cased_suggestion and dic.is_forbidden(cased_suggestion):
             cased_suggestion = suggestion
+        if dic.is_forbidden(cased_suggestion):
+            return None
         if ignore_included and any(s in cased_suggestion for s in seen) or cased_suggestion in seen:
             return None
 
@@ -58,15 +60,14 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
         return
 
     ngramsugs = 0
-    for variant in variants:
-        for sug in ngram_suggest.ngram_suggest(
-                    dic, word, maxdiff=dic.aff.maxdiff, onlymaxdiff=dic.aff.onlymaxdiff):
-            sug = handle_found(sug, ignore_included=True)
-            if sug:
-                yield sug, 'ngram'
-            ngramsugs += 1
-            if ngramsugs >= dic.aff.maxngramsugs:
-                break
+    for sug in ngram_suggest.ngram_suggest(
+                dic, word.lower(), maxdiff=dic.aff.maxdiff, onlymaxdiff=dic.aff.onlymaxdiff):
+        sug = handle_found(sug, ignore_included=True)
+        if sug:
+            yield sug, 'ngram'
+        ngramsugs += 1
+        if ngramsugs >= dic.aff.maxngramsugs:
+            break
 
 def very_good_permutations(dic, word: str) -> Iterator[str]:
     for sug in pmt.twowords(word):

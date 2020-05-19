@@ -17,6 +17,21 @@ class Dictionary:
             if with_forbidden or self.aff.forbiddenword not in word.flags:
                 yield word
 
+    def lookup(self, word: str) -> bool:
+        return any(lookup.analyze(self.aff, self.dic, word))
+
+    def lookup_nocap(self, word: str) -> bool:
+        return any(lookup.analyze_nocap(self.aff, self.dic, word))
+
+    def is_forbidden(self, word: str) -> bool:
+        if not self.aff.forbiddenword:
+            return False
+
+        return any(self.aff.forbiddenword in w.flags for w in self.dic.homonyms(word))
+
+    def suggest(self, word: str) -> Iterator[str]:
+        yield from suggest.suggest(self, word)
+
     def forms_for(self, word: data.dic.Word, candidate: str):
         # word without prefixes/suffixes is also present...
         # TODO: unless it is forbidden :)
@@ -53,17 +68,3 @@ class Dictionary:
 
         return res
 
-    def lookup(self, word: str) -> bool:
-        return any(lookup.analyze(self.aff, self.dic, word))
-
-    def lookup_nocap(self, word: str) -> bool:
-        return any(lookup.analyze_nocap(self.aff, self.dic, word))
-
-    def is_forbidden(self, word: str) -> bool:
-        if not self.aff.forbiddenword:
-            return False
-
-        return any(self.aff.forbiddenword in w.flags for w in self.dic.homonyms(word))
-
-    def suggest(self, word: str) -> Iterator[str]:
-        yield from suggest.suggest(self, word)

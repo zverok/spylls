@@ -125,7 +125,7 @@ def detect_threshold(word: str) -> float:
     # find minimum threshold for a passable suggestion
     # mangle original word three differnt ways
     # and score them to generate a minimum acceptable score
-    thresh = 0.0
+    thresh = 0
 
     for sp in range(1, 4):
         mangled = list(word)
@@ -136,7 +136,7 @@ def detect_threshold(word: str) -> float:
 
         thresh += sm.ngram(len(word), word, mangled_word, any_mismatch=True)
 
-    return thresh / 3 - 1
+    return thresh // 3 - 1
 
 
 def root_score(word1: str, word2: str) -> float:

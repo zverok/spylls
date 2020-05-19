@@ -17,9 +17,6 @@ Compound = List[Paradigm]
 
 
 def analyze(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Union[Paradigm, Compound]]:
-    if aff.forbiddenword and any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
-        return iter(())
-
     res = analyze_nocap(aff, dic, word)
 
     captype = cap.guess(word)
@@ -38,6 +35,9 @@ def analyze_nocap(
         dic: data.Dic,
         word: str,
         allcap: bool = False) -> Iterator[Union[Paradigm, Compound]]:
+
+    if aff.forbiddenword and any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
+        return iter(())
 
     return itertools.chain(
         analyze_affixed(aff, dic, word, allcap=allcap),
