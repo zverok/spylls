@@ -1,9 +1,7 @@
-from typing import Iterator, Set, Union, Tuple, cast
-import itertools
+from typing import Iterator
 
 from spyll.hunspell import data, readers
-from spyll.hunspell.algo import lookup, permutations, suggest, ngram_suggest
-import spyll.hunspell.algo.capitalization as cap
+from spyll.hunspell.algo import lookup, suggest
 
 
 class Dictionary:
@@ -32,6 +30,26 @@ class Dictionary:
     def suggest(self, word: str) -> Iterator[str]:
         yield from suggest.suggest(self, word)
 
+    def suffixes_for(self, word):
+        res = []
+        for flag in word.flags:
+            if flag in self.aff.sfx:
+                for suf in self.aff.sfx[flag]:
+                    if suf.cond_regexp.search(word.stem):
+                        res.append(suf)
+                        break
+        return res
+
+    def prefixes_for(self, word):
+        res = []
+        for flag in word.flags:
+            if flag in self.aff.pfx:
+                for pref in self.aff.pfx[flag]:
+                    if pref.cond_regexp.search(word.stem):
+                        res.append(pref)
+                        break
+        return res
+
     def forms_for(self, word: data.dic.Word, candidate: str):
         # word without prefixes/suffixes is also present...
         # TODO: unless it is forbidden :)
@@ -39,13 +57,13 @@ class Dictionary:
 
         suffixes = [
             suf
-            for suf in self.aff.sfx
-            if suf.flag in word.flags and word.stem.endswith(suf.strip) and candidate.endswith(suf.add)
+            for suf in self.suffixes_for(word)
+            if candidate.endswith(suf.add)
         ]
         prefixes = [
             pref
-            for pref in self.aff.pfx
-            if pref.flag in word.flags and word.stem.startswith(pref.strip) and candidate.startswith(pref.add)
+            for pref in self.prefixes_for(word)
+            if candidate.startswith(pref.add)
         ]
 
         for suf in suffixes:
@@ -67,4 +85,3 @@ class Dictionary:
             res.append(pref.add + root)
 
         return res
-

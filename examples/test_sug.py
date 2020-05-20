@@ -1,5 +1,6 @@
 import re
 import os.path
+from collections import Counter
 
 from spyll.hunspell.dictionary import Dictionary
 
@@ -26,11 +27,16 @@ def report(name):
     print(name)
 
     result = test(name)
+    counter = Counter()
     for data in result:
         if data['expected'] == data['got']:
-            print(f"  {data['word']}: +")
+            # print(f"  {data['word']}: +")
+            counter['good'] += 1
         else:
             print(f"  {data['word']}: {data['expected']} vs {data['got']}")
+            counter['bad'] += 1
+    print('  --')
+    print(f"  good: {counter['good']}, bad: {counter['bad']}")
 
 report('base')
 report('base_utf')
@@ -60,19 +66,21 @@ report('i58202')
 # report('checksharps') -- CHECKSHARPS+KEEPCASE means "upcase sharp s" is prohibited :facepalm:
 # report('checksharpsutf')
 
-report('allcaps')
-report('allcaps2')
-report('allcaps_utf')
-report('breakdefault')
+# report('allcaps')
+# report('allcaps2')
+# report('allcaps_utf')
+# report('breakdefault')
 # report('forceucase')
 # report('keepcase')
 # report('nosuggest')
-# report('oconv')
 # report('onlyincompound')
 # report('opentaal_forbiddenword1')
 # report('opentaal_forbiddenword2')
 # report('opentaal_keepcase')
+
+# report('ph')
 # report('ph2')
 # report('phone')
-# report('ph')
+
+# report('oconv')
 # report('utf8_nonbmp')

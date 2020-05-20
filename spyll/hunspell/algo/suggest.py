@@ -1,11 +1,13 @@
 from itertools import chain, product
-from typing import Iterator, Set, Union, Tuple, cast
+from typing import Iterator, Tuple
 
 from spyll.hunspell.algo import ngram_suggest, permutations as pmt, capitalization as cap
+
 
 def suggest(dic, word: str) -> Iterator[str]:
     for sug, _ in suggest_debug(dic, word):
         yield sug
+
 
 def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
     good = False
@@ -53,7 +55,6 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
         for sug, source in questionable_permutations(dic, variant):
             sug = handle_found(sug)
             if sug:
-                found = True
                 yield sug, source
 
     if very_good or good or dic.aff.maxngramsugs == 0:
@@ -69,12 +70,14 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
         if ngramsugs >= dic.aff.maxngramsugs:
             break
 
+
 def very_good_permutations(dic, word: str) -> Iterator[str]:
     for sug in pmt.twowords(word):
         if dic.lookup_nocap(' '.join(sug)):
             yield ' '.join(sug), 'spaceword'
         if dic.aff.use_dash() and dic.lookup_nocap('-'.join(sug)):
             yield '-'.join(sug), 'spaceword'
+
 
 def good_permutations(dic, word: str) -> Iterator[str]:
     iterator = chain(
@@ -92,6 +95,7 @@ def good_permutations(dic, word: str) -> Iterator[str]:
         elif type(sug) is str:
             if dic.lookup_nocap(sug):
                 yield sug, source
+
 
 def questionable_permutations(dic, word: str) -> Iterator[str]:
     iterator = chain(

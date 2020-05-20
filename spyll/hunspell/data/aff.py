@@ -32,6 +32,7 @@ class Prefix(Affix):
         else:
             cond = ''
         self.regexp = re.compile('^' + self.add + cond)
+        self.cond_regexp = re.compile('^' + self.condition)
 
 
 @dataclass
@@ -46,6 +47,7 @@ class Suffix(Affix):
         else:
             cond = ''
         self.regexp = re.compile(cond + self.add + '$')
+        self.cond_regexp = re.compile(self.condition + '$')
 
 
 @dataclass
@@ -95,8 +97,8 @@ class Aff:
     maxngramsugs: int = 4
 
     # Stemming
-    pfx: List[Prefix] = field(default_factory=list)
-    sfx: List[Suffix] = field(default_factory=list)
+    pfx: List[Prefix] = field(default_factory=dict)
+    sfx: List[Suffix] = field(default_factory=dict)
     circumfix: Optional[Flag] = None
     needaffix: Optional[Flag] = None
     pseudoroot: Optional[Flag] = None
@@ -121,11 +123,14 @@ class Aff:
 
         self.suffixes = FSA()
         self.prefixes = FSA()
-        for suf in self.sfx:
-            self.suffixes.put(suf.add[::-1], suf)
 
-        for pref in self.pfx:
-            self.prefixes.put(pref.add, pref)
+        for _, sufs in self.sfx.items():
+            for suf in sufs:
+                self.suffixes.put(suf.add[::-1], suf)
+
+        for _, prefs in self.pfx.items():
+            for pref in prefs:
+                self.prefixes.put(pref.add, pref)
 
     def use_dash(self) -> bool:
         return '-' in self.try_ or 'a' in self.try_

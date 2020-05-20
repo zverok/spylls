@@ -31,8 +31,8 @@ class AffReader:
                 self.flag_format = field
             if field == 'sfx' or field == 'pfx':
                 if field not in data:
-                    data[field] = []
-                data[field].extend(val)
+                    data[field] = {}
+                data[field][val[0].flag] = val
             else:
                 data[field] = val
 
