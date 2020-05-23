@@ -128,13 +128,11 @@ class Aff:
         self.suffixes = CharTrie()
         self.prefixes = CharTrie()
 
-        for _, sufs in self.sfx.items():
-            for suf in sufs:
-                self.suffixes[suf.add[::-1]] = suf
+        for add, sufs in itertools.groupby(itertools.chain.from_iterable(self.sfx.values()), lambda suf: suf.add[::-1]):
+            self.suffixes[add] = list(sufs)
 
-        for _, prefs in self.pfx.items():
-            for pref in prefs:
-                self.prefixes[pref.add] = pref
+        for add, prefs in itertools.groupby(itertools.chain.from_iterable(self.pfx.values()), lambda pref: pref.add):
+            self.prefixes[add] = list(prefs)
 
     def use_dash(self) -> bool:
         return '-' in self.try_ or 'a' in self.try_

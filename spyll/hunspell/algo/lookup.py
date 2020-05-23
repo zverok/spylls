@@ -228,16 +228,17 @@ def _desuffix(
             return
         checkpermit = True
 
-    for _, suf in aff.suffixes.prefixes(word[::-1]):
-        if extra_flag and extra_flag not in suf.flags:
-            continue
-        if checkpermit and aff.compoundpermitflag not in suf.flags:
-            continue
-        if compoundpos is not None and aff.compoundforbidflag in suf.flags:
-            continue
+    for _, sufs in aff.suffixes.prefixes(word[::-1]):
+        for suf in sufs:
+            if extra_flag and extra_flag not in suf.flags:
+                continue
+            if checkpermit and aff.compoundpermitflag not in suf.flags:
+                continue
+            if compoundpos is not None and aff.compoundforbidflag in suf.flags:
+                continue
 
-        if suf.regexp.search(word):
-            yield (suf.regexp.sub(suf.strip, word), suf)
+            if suf.regexp.search(word):
+                yield (suf.regexp.sub(suf.strip, word), suf)
 
 
 def _deprefix(
@@ -254,16 +255,17 @@ def _deprefix(
             return
         checkpermit = True
 
-    for _, pref in aff.prefixes.prefixes(word):
-        if extra_flag and extra_flag not in pref.flags:
-            continue
-        if checkpermit and aff.compoundpermitflag not in pref.flags:
-            continue
-        if compoundpos is not None and aff.compoundforbidflag in pref.flags:
-            continue
+    for _, prefs in aff.prefixes.prefixes(word):
+        for pref in prefs:
+            if extra_flag and extra_flag not in pref.flags:
+                continue
+            if checkpermit and aff.compoundpermitflag not in pref.flags:
+                continue
+            if compoundpos is not None and aff.compoundforbidflag in pref.flags:
+                continue
 
-        if pref.regexp.search(word):
-            yield (pref.regexp.sub(pref.strip, word), pref)
+            if pref.regexp.search(word):
+                yield (pref.regexp.sub(pref.strip, word), pref)
 
 
 def only_affix_need_affix(form, flag):

@@ -1,60 +1,50 @@
 import os.path
 
-from spyll.hunspell.readers import AffReader, DicReader
-from spyll.hunspell.algo import lookup
+from spyll.hunspell.dictionary import Dictionary
 
-def test_word(aff, dic, w, detailed=False):
-    found = lookup.analyze(aff, dic, w)
-    if detailed:
-        print(f'  {w}: {list(found)}')
-    else:
-        print(f'  {w}: {len(list(found))}')
-
-def test_word2(dname, w, detailed=False):
-    path = f'tests/fixtures/hunspell-orig/{dname}'
-    aff = AffReader(path + '.aff')()
-    dic = DicReader(path + '.dic', encoding = aff.set, flag_format = aff.flag)()
-    test_word(aff, dic, w, detailed=detailed)
-
-def count_found(dic, words):
-    return [True for word in words if len(dic.lookup(word)) > 0].count(True)
-
-def readlist(path):
+def readlist(path, ignoredot=True):
     if not os.path.isfile(path):
         return []
     # we ignore "incomplete tokenization" feature
-    return [ln for ln in open(path).read().splitlines() if ln[-1:] != '.' and ln != '']
+    return [ln for ln in open(path).read().splitlines() if not ignoredot or ln[-1:] != '.']
 
 def test(name):
     path = f'tests/fixtures/hunspell-orig/{name}'
-    aff = AffReader(path + '.aff')()
-    dic = DicReader(path + '.dic', encoding = aff.set, flag_format = aff.flag)()
+    dictionary = Dictionary(path)
     good = readlist(path + '.good')
     bad = readlist(path + '.wrong')
     return {
-        'good': {word: lookup.lookup(aff, dic, word) for word in good},
-        'bad': {word: lookup.lookup(aff, dic, word) for word in bad},
+        'good': {word: dictionary.lookup(word) for word in good},
+        'bad': {word: dictionary.lookup(word) for word in bad},
     }
 
 def report(name):
-    print(name)
+    # print(name)
 
     result = test(name)
     good = result['good']
     nogood = [word for word, res in good.items() if not res]
-    if nogood:
-        print(f"  Good: {len(good) - len(nogood)} of {len(good)}")
-        print(f"    not found: {', '.join(nogood)}")
-    else:
-        print(f"  Good: {len(good)}")
 
     bad = result['bad']
     nobad = [word for word, res in bad.items() if res]
-    if nobad:
-        print(f"  Bad: {len(nobad)} of {len(bad)}")
-        print(f"    found: {', '.join(nobad)}")
+
+    summary = f"{name}: "
+    if nogood:
+        summary += f"good fail ({len(nogood)} of {len(good)})"
     else:
-        print(f"  Bad: {len(bad)}")
+        summary += f"good OK ({len(good)})"
+
+    if bad:
+        if nobad:
+            summary += f", bad fail ({len(nobad)} of {len(bad)})"
+        else:
+            summary += f", bad OK ({len(bad)})"
+
+    print(summary)
+    if nogood:
+        print(f"  Good words not found: {', '.join(nogood)}")
+    if nobad:
+        print(f"  Bad words found: {', '.join(nobad)}")
 
 
 report('base')                   # + basic suffixes/prefixes + capitalization
@@ -63,7 +53,7 @@ report('base_utf')               # ± special chars, 1 fail with turkish "i" cap
 report('affixes')                # + just simple affixes
 
 report('allcaps')                # + fully capitalized forms: UNICEF'S ('s suffix) and OPENOFFICE.ORG (find OpenOffice.org in dictionary)
-# report('allcaps2')               # + forbiddenword marks possible, but wrong form
+report('allcaps2')               # + forbiddenword marks possible, but wrong form
 report('allcaps3')               # + more capitalization + suffix examples
 report('allcaps_utf')            # +
 
@@ -94,6 +84,7 @@ report('fullstrip')              # + removes entire word text by suffix.
 # ===========
 report('compoundflag')           # + basic "it can be compounding"
 report('onlyincompound')         # + some of word is ONLY can be in compound
+report('onlyincompound2')
 
 report('compoundaffix')          # + in compound, prefix only at begin, suffix only at end
 report('compoundaffix2')         # + affix with permit flag allowed inside!
@@ -109,8 +100,86 @@ report('compoundrule6')
 # report('compoundrule7') # - "long" flags
 # report('compoundrule8') # - "numeric" flags
 
-# # Edge cases and bugs
-# # =================
-# # report('slash')                # - slash in words -- screened with \ in dictionary
+# Edge cases and bugs
+# =================
+# report('slash')                # - slash in words -- screened with \ in dictionary
+# report('timelimit')
 
-test_word2('allcaps', 'Openoffice.org', True)
+report('1592880')
+report('1975530')
+report('2970240')
+report('2970242')
+report('2999225')
+report('i35725')
+report('i53643')
+report('i54633')
+report('i54980')
+report('i58202')
+
+report('alias2')
+report('alias3')
+report('alias')
+
+report('breakdefault')
+report('break')
+report('breakoff')
+
+report('checkcompoundcase2')
+report('checkcompoundcase')
+report('checkcompoundcaseutf')
+report('checkcompounddup')
+report('checkcompoundpattern2')
+report('checkcompoundpattern3')
+report('checkcompoundpattern4')
+report('checkcompoundpattern')
+report('checkcompoundrep')
+report('checkcompoundtriple')
+report('checksharps')
+report('checksharpsutf')
+
+report('compoundforbid')
+report('dotless_i')
+report('encoding')
+
+# report('flag')
+# report('flaglong')
+# report('flagnum')
+# report('flagutf8')
+
+report('fogemorpheme')
+report('forbiddenword')
+report('forceucase')
+report('germancompounding')
+report('germancompoundingold')
+report('hu')
+report('iconv2')
+report('iconv')
+report('ignore')
+report('ignoresug')
+report('ignoreutf')
+report('IJ')
+report('keepcase')
+report('korean')
+report('morph')
+report('nepali')
+report('ngram_utf_fix')
+report('nosuggest')
+report('oconv2')
+report('oconv')
+report('opentaal_cpdpat2')
+report('opentaal_cpdpat')
+report('opentaal_forbiddenword1')
+report('opentaal_forbiddenword2')
+report('opentaal_keepcase')
+report('ph2')
+report('right_to_left_mark')
+report('simplifiedtriple')
+
+report('utf8_bom2')
+report('utf8_bom')
+report('utf8')
+report('utf8_nonbmp')
+report('utfcompound')
+report('warn')
+report('wordpair')
+report('zeroaffix')

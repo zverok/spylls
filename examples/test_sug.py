@@ -112,4 +112,4 @@ report('onlyincompound')
 # report('ph2')
 
 report('oconv')
-# report('utf8_nonbmp')
+report('utf8_nonbmp')

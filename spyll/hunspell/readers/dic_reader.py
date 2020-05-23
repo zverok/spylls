@@ -15,7 +15,9 @@ class DicReader:
             if num == 1 and re.match(r'^\d+$', ln):  # It is words number, just skip
                 continue
 
-            # TODO: morphology
+            # TODO: morphology. Now we just dropping it
+            ln = re.sub(r'\s+.+$', '', ln)
+
             if '/' in ln:
                 word, flags = ln.split('/')
             else:
