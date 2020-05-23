@@ -16,6 +16,13 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
 
     captype, variants = cap.variants(word)
 
+    def oconv(word):
+        if not dic.aff.oconv:
+            return word
+        for src, dst in dic.aff.oconv:
+            word = word.replace(src, dst)
+        return word
+
     def handle_found(suggestion, *, ignore_included=False):
         if dic.keepcase(suggestion):
             cased_suggestion = suggestion
@@ -29,7 +36,7 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
             return None
 
         seen.add(cased_suggestion)
-        return cased_suggestion
+        return oconv(cased_suggestion)
 
     for variant in variants[1:]:
         if checkword(dic, variant):

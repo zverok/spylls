@@ -119,6 +119,9 @@ class Aff:
     compoundpermitflag: Optional[Flag] = None
     compoundforbidflag: Optional[Flag] = None
 
+    # IO:
+    oconv: List[Tuple[str, str]] = field(default_factory=list)
+
     # TODO: IO, morphology
 
     def __post_init__(self):

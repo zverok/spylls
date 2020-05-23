@@ -95,11 +95,11 @@ report('i58202')
 # report('checksharps') -- CHECKSHARPS+KEEPCASE means "upcase sharp s" is prohibited :facepalm:
 # report('checksharpsutf')
 
-# report('allcaps')
-# report('allcaps2')
-# report('allcaps_utf')
-# report('breakdefault')
-# report('forceucase')
+report('allcaps')
+report('allcaps2')
+report('allcaps_utf')
+# report('breakdefault') -- need to add BREAK to lookup, then suggest will work
+# report('forceucase') -- "FORCEUCASE" flag pollutes the whole compound, check with lookup?
 report('keepcase')
 report('nosuggest')
 report('onlyincompound')
@@ -107,9 +107,9 @@ report('onlyincompound')
 # report('opentaal_forbiddenword2')
 # report('opentaal_keepcase')
 
+# report('phone')
 # report('ph')
 # report('ph2')
-# report('phone')
 
-# report('oconv')
+report('oconv')
 # report('utf8_nonbmp')

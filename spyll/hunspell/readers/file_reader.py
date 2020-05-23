@@ -3,7 +3,7 @@ import io
 
 
 class FileReader:
-    COMMENT_RE = re.compile(r'\#.+$')
+    COMMENT_RE = re.compile(r'\#.*$')
 
     def __init__(self, path_or_io, encoding='Windows-1252'):
         if isinstance(path_or_io, str):
