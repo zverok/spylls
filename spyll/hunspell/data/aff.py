@@ -5,6 +5,8 @@ import itertools
 from dataclasses import dataclass, field
 from typing import List, Set, Tuple, Optional, NewType
 
+from pygtrie import CharTrie
+
 from spyll.hunspell.algo.fsa import FSA
 
 Flag = NewType('Flag', str)
@@ -121,16 +123,16 @@ class Aff:
     def __post_init__(self):
         self.compoundrules = [CompoundRule(r) for r in self.compoundrule]
 
-        self.suffixes = FSA()
-        self.prefixes = FSA()
+        self.suffixes = CharTrie()
+        self.prefixes = CharTrie()
 
         for _, sufs in self.sfx.items():
             for suf in sufs:
-                self.suffixes.put(suf.add[::-1], suf)
+                self.suffixes[suf.add[::-1]] = suf
 
         for _, prefs in self.pfx.items():
             for pref in prefs:
-                self.prefixes.put(pref.add, pref)
+                self.prefixes[pref.add] = pref
 
     def use_dash(self) -> bool:
         return '-' in self.try_ or 'a' in self.try_

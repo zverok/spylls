@@ -92,6 +92,14 @@ version = "1.8.1"
 
 [[package]]
 category = "main"
+description = "Trie data structure implementation."
+name = "pygtrie"
+optional = false
+python-versions = "*"
+version = "2.3.3"
+
+[[package]]
+category = "main"
 description = "Python parsing module"
 name = "pyparsing"
 optional = false
@@ -154,7 +162,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools"]
 
 [metadata]
-content-hash = "d2e3dd7b4e5b226096a9d3ca328a36f62fda6238561b45acce1cb943be63dd44"
+content-hash = "0935a25ce3a6476f4beb06022bd2401fd2a19ff90dc2a40dc527732d26f9d388"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -189,6 +197,9 @@ pluggy = [
 py = [
     {file = "py-1.8.1-py2.py3-none-any.whl", hash = "sha256:c20fdd83a5dbc0af9efd622bee9a5564e278f6380fffcacc43ba6f43db2813b0"},
     {file = "py-1.8.1.tar.gz", hash = "sha256:5e27081401262157467ad6e7f851b7aa402c5852dbcb3dae06768434de5752aa"},
+]
+pygtrie = [
+    {file = "pygtrie-2.3.3.tar.gz", hash = "sha256:2204dbd95584f67821da5b3771c4305ac5585552b3230b210f1f05322608db2c"},
 ]
 pyparsing = [
     {file = "pyparsing-2.4.6-py2.py3-none-any.whl", hash = "sha256:c342dccb5250c08d45fd6f8b4a559613ca603b57498511740e65cd11a2e7dcec"},

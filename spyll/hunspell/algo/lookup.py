@@ -214,7 +214,7 @@ def _desuffix(
             return
         checkpermit = True
 
-    for suf in aff.suffixes.lookup(word[::-1]):
+    for _, suf in aff.suffixes.prefixes(word[::-1]):
         if extra_flag and extra_flag not in suf.flags:
             continue
         if checkpermit and aff.compoundpermitflag not in suf.flags:
@@ -240,7 +240,7 @@ def _deprefix(
             return
         checkpermit = True
 
-    for pref in aff.prefixes.lookup(word):
+    for _, pref in aff.prefixes.prefixes(word):
         if extra_flag and extra_flag not in pref.flags:
             continue
         if checkpermit and aff.compoundpermitflag not in pref.flags:
