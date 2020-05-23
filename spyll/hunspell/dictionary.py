@@ -12,9 +12,9 @@ class Dictionary:
 
     def roots(self, *, with_forbidden=False, with_nosuggest=True, with_onliincompound=True) -> Iterator[data.dic.Word]:
         for word in self.dic.words:
-            if with_forbidden or self.aff.forbiddenword not in word.flags and \
-                with_nosuggest or self.aff.nosuggest not in word.flags and \
-                with_onliincompound or self.aff.onlyincompound not in word.flags:
+            if (with_forbidden or self.aff.forbiddenword not in word.flags) and \
+                (with_nosuggest or self.aff.nosuggest not in word.flags) and \
+                (with_onliincompound or self.aff.onlyincompound not in word.flags):
                 yield word
 
     def lookup(self, word: str, *, allow_nosuggest=True) -> bool:
@@ -28,6 +28,12 @@ class Dictionary:
             return False
 
         return any(self.aff.forbiddenword in w.flags for w in self.dic.homonyms(word))
+
+    def keepcase(self, word: str) -> bool:
+        if not self.aff.keepcase:
+            return False
+
+        return any(self.aff.keepcase in word.flags for word in self.dic.homonyms(word))
 
     def suggest(self, word: str) -> Iterator[str]:
         yield from suggest.suggest(self, word)

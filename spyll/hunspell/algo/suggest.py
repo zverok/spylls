@@ -17,9 +17,12 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
     captype, variants = cap.variants(word)
 
     def handle_found(suggestion, *, ignore_included=False):
-        cased_suggestion = cap.coerce(suggestion, captype)
-        if suggestion != cased_suggestion and dic.is_forbidden(cased_suggestion):
+        if dic.keepcase(suggestion):
             cased_suggestion = suggestion
+        else:
+            cased_suggestion = cap.coerce(suggestion, captype)
+            if suggestion != cased_suggestion and dic.is_forbidden(cased_suggestion):
+                cased_suggestion = suggestion
         if dic.is_forbidden(cased_suggestion):
             return None
         if ignore_included and any(s in cased_suggestion for s in seen) or cased_suggestion in seen:
@@ -29,7 +32,7 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
         return cased_suggestion
 
     for variant in variants[1:]:
-        if dic.lookup_nocap(variant):
+        if checkword(dic, variant):
             sug = handle_found(variant)
             if sug:
                 yield sug, 'case'
@@ -75,7 +78,7 @@ def checkword(dic, word):
 
 def very_good_permutations(dic, word: str) -> Iterator[str]:
     for sug in pmt.twowords(word):
-        if checkword(dic, ' '):
+        if checkword(dic, ' '.join(sug)):
             yield ' '.join(sug), 'spaceword'
         if dic.aff.use_dash() and checkword(dic, '-'.join(sug)):
             yield '-'.join(sug), 'spaceword'

@@ -4,17 +4,17 @@ from collections import Counter
 
 from spyll.hunspell.dictionary import Dictionary
 
-def readlist(path):
+def readlist(path, ignoredot=True):
     if not os.path.isfile(path):
         return []
     # we ignore "incomplete tokenization" feature
-    return [ln for ln in open(path).read().splitlines() if ln[-1:] != '.']
+    return [ln for ln in open(path).read().splitlines() if not ignoredot or ln[-1:] != '.']
 
 def test(name):
     path = f'tests/fixtures/hunspell-orig/{name}'
     dictionary = Dictionary(path)
     bad = readlist(path + '.wrong')
-    sug = list(map(lambda s: re.split(r',\s*', s), readlist(path + '.sug')))
+    sug = list(map(lambda s: re.split(r',\s*', s), readlist(path + '.sug', ignoredot=False)))
     return [
         {
             'word': word,
@@ -26,17 +26,46 @@ def test(name):
 def report(name):
     result = test(name)
     counter = Counter()
+    pending = pendings.get(name, [])
     out = []
     for data in result:
         if data['expected'] == data['got']:
             # print(f"  {data['word']}: +")
             counter['good'] += 1
         else:
-            out.append(f"  {data['word']}: {data['expected']} vs {data['got']}")
-            counter['bad'] += 1
+            if data['word'] in pending:
+                counter['pending'] += 1
+            else:
+                out.append(f"  {data['word']}: {data['expected']} vs {data['got']}")
+                counter['bad'] += 1
 
-    print(f"{name}: {counter['good']} OK, {counter['bad']} fails")
-    print("\n".join(out))
+    summary = f"{name}: {counter['good']} OK"
+    if counter['bad'] > 0:
+        summary += f", {counter['bad']} fails"
+    if counter['pending'] > 0:
+        summary += f", {counter['pending']} pending"
+    print(summary)
+    if out:
+        print("\n".join(out))
+
+pendings = {
+    'base_utf': ['loooked'],
+    'sug': ['permanent.Vacation'],
+    'sugutf': ['permanent.Vacation'],
+    'IJ': ['Ijs'],
+    'keepcase': ['bar'],
+    'i35725': [
+      'pernament',
+      'Permenant',
+      'Pernament',
+      'Pernemant'
+    ],
+    'i58202': [
+      'fooBar',
+      'FooBar',
+      'BazFoo'
+    ]
+}
 
 report('base')
 report('base_utf')
@@ -71,7 +100,7 @@ report('i58202')
 # report('allcaps_utf')
 # report('breakdefault')
 # report('forceucase')
-# report('keepcase')
+report('keepcase')
 report('nosuggest')
 report('onlyincompound')
 # report('opentaal_forbiddenword1')

@@ -91,6 +91,7 @@ class Aff:
     key: str = ''
     try_: str = ''  # actually just TRY, but conflicts with Python keyword
     nosuggest: Optional[Flag] = None
+    keepcase: Optional[Flag] = None
     maxcpdsugs: int = 0
     rep: List[Tuple[str, str]] = field(default_factory=list)
     map: List[Set[str]] = field(default_factory=list)
