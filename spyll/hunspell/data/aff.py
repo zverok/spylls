@@ -7,8 +7,6 @@ from typing import List, Set, Tuple, Optional, NewType
 
 from pygtrie import CharTrie
 
-from spyll.hunspell.algo.fsa import FSA
-
 Flag = NewType('Flag', str)
 
 

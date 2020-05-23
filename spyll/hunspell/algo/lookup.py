@@ -16,16 +16,19 @@ Paradigm = collections.namedtuple('Paradigm',
 Compound = List[Paradigm]
 
 
-def analyze(aff: data.Aff, dic: data.Dic, word: str, *, allow_nosuggest=True) -> Iterator[Union[Paradigm, Compound]]:
+def analyze(aff: data.Aff, dic: data.Dic, word: str, *,
+            allow_nosuggest=True) -> Iterator[Union[Paradigm, Compound]]:
     res = analyze_nocap(aff, dic, word)
 
     captype = cap.guess(word)
 
     # Capitalized: accept this form, and lowercase
     if captype == cap.Cap.INIT:
-        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(), allow_nosuggest=allow_nosuggest))
+        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(),
+                              allow_nosuggest=allow_nosuggest))
     elif captype == cap.Cap.ALL:
-        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(), allcap=True, allow_nosuggest=allow_nosuggest))
+        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(), allcap=True,
+                              allow_nosuggest=allow_nosuggest))
 
     return res
 
@@ -58,7 +61,8 @@ def analyze_affixed(
     for form in split_affixes(aff, word, compoundpos=compoundpos):
         found = False
         for w in dic.homonyms(form.stem):
-            if have_compatible_flags(aff, w, form, compoundpos=compoundpos, allow_nosuggest=allow_nosuggest):
+            if have_compatible_flags(aff, w, form, compoundpos=compoundpos,
+                                     allow_nosuggest=allow_nosuggest):
                 found = True
                 yield form
 
@@ -68,18 +72,21 @@ def analyze_affixed(
                 # case (above), or ALLCAPS
                 if not allcap and cap.guess(w.stem) != cap.Cap.NO:
                     continue
-                if have_compatible_flags(aff, w, form, compoundpos=compoundpos, allow_nosuggest=allow_nosuggest):
+                if have_compatible_flags(aff, w, form, compoundpos=compoundpos,
+                                         allow_nosuggest=allow_nosuggest):
                     yield form
 
 
-def analyze_compound(aff: data.Aff, dic: data.Dic, word: str, allow_nosuggest=True) -> Iterator[Compound]:
+def analyze_compound(aff: data.Aff, dic: data.Dic, word: str,
+                     allow_nosuggest=True) -> Iterator[Compound]:
     if aff.compoundbegin or aff.compoundflag:
         by_flags = split_compound_by_flags(aff, dic, word, allow_nosuggest=allow_nosuggest)
     else:
         by_flags = iter(())
 
     if aff.compoundrules:
-        by_rules = split_compound_by_rules(aff, dic, word, compoundrules=aff.compoundrules, allow_nosuggest=allow_nosuggest)
+        by_rules = split_compound_by_rules(aff, dic, word, compoundrules=aff.compoundrules,
+                                           allow_nosuggest=allow_nosuggest)
     else:
         by_rules = iter(())
 
@@ -280,7 +287,9 @@ def split_compound_by_flags(
     # If it is middle of compounding process "the rest of the word is the whole last part" is always
     # possible
     if prev_parts:
-        for paradigm in analyze_affixed(aff, dic, word_rest, compoundpos=CompoundPos.END, allow_nosuggest=allow_nosuggest):
+        for paradigm in analyze_affixed(aff, dic, word_rest,
+                                        compoundpos=CompoundPos.END,
+                                        allow_nosuggest=allow_nosuggest):
             yield [paradigm]
 
     if len(word_rest) < aff.compoundmin * 2 or \
@@ -292,9 +301,11 @@ def split_compound_by_flags(
     for pos in range(aff.compoundmin, len(word_rest) - aff.compoundmin + 1):
         beg = word_rest[0:pos]
 
-        for paradigm in analyze_affixed(aff, dic, beg, compoundpos=compoundpos, allow_nosuggest=allow_nosuggest):
+        for paradigm in analyze_affixed(aff, dic, beg, compoundpos=compoundpos,
+                                        allow_nosuggest=allow_nosuggest):
             parts = [*prev_parts, paradigm]
-            for rest in split_compound_by_flags(aff, dic, word_rest[pos:], parts, allow_nosuggest=allow_nosuggest):
+            for rest in split_compound_by_flags(aff, dic, word_rest[pos:], parts,
+                                                allow_nosuggest=allow_nosuggest):
                 yield [paradigm, *rest]
 
 
