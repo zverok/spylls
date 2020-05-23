@@ -17,29 +17,23 @@ Compound = List[Paradigm]
 
 
 def analyze(aff: data.Aff, dic: data.Dic, word: str, *,
+            capitalization=True,
             allow_nosuggest=True) -> Iterator[Union[Paradigm, Compound]]:
 
-    captype, variants = cap.variants(word)
+    def analyze_internal(variant, allcap=False):
+        return itertools.chain(
+            analyze_affixed(aff, dic, variant, allcap=allcap, allow_nosuggest=allow_nosuggest),
+            analyze_compound(aff, dic, variant, allow_nosuggest=allow_nosuggest)
+        )
 
-    return itertools.chain.from_iterable(
-        analyze_nocap(aff, dic, v, allcap=(captype == cap.Cap.ALL), allow_nosuggest=allow_nosuggest) for v in variants
-    )
+    if capitalization:
+        captype, variants = cap.variants(word)
 
-def analyze_nocap(
-        aff: data.Aff,
-        dic: data.Dic,
-        word: str,
-        *,
-        allcap: bool = False,
-        allow_nosuggest=True) -> Iterator[Union[Paradigm, Compound]]:
-
-    if aff.forbiddenword and any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
-        return iter(())
-
-    return itertools.chain(
-        analyze_affixed(aff, dic, word, allcap=allcap, allow_nosuggest=allow_nosuggest),
-        analyze_compound(aff, dic, word, allow_nosuggest=allow_nosuggest)
-    )
+        return itertools.chain.from_iterable(
+            analyze_internal(v, allcap=(captype == cap.Cap.ALL)) for v in variants
+        )
+    else:
+        return analyze_internal(word)
 
 
 def analyze_affixed(

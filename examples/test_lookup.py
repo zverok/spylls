@@ -14,7 +14,7 @@ def test(name):
     good = readlist(path + '.good')
     bad = readlist(path + '.wrong')
     return {
-        'good': {word: dictionary.lookup(word) for word in good},
+        'good': {word: dictionary.lookup(word) for word in good if word},
         'bad': {word: dictionary.lookup(word) for word in bad},
     }
 
@@ -84,7 +84,7 @@ report('fullstrip')              # + removes entire word text by suffix.
 # ===========
 report('compoundflag')           # + basic "it can be compounding"
 report('onlyincompound')         # + some of word is ONLY can be in compound
-report('onlyincompound2')
+# report('onlyincompound2')      # - checkcompoundpattern
 
 report('compoundaffix')          # + in compound, prefix only at begin, suffix only at end
 report('compoundaffix2')         # + affix with permit flag allowed inside!

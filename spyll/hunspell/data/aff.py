@@ -104,6 +104,7 @@ class Aff:
     needaffix: Optional[Flag] = None
     pseudoroot: Optional[Flag] = None
     forbiddenword: Optional[Flag] = None
+    BREAK: List[str] = field(default_factory=lambda: ['-', '^-', '-$'])
 
     # Compounding
     compoundrule: List[str] = field(default_factory=list)
@@ -124,6 +125,10 @@ class Aff:
 
     def __post_init__(self):
         self.compoundrules = [CompoundRule(r) for r in self.compoundrule]
+        self.breakpatterns = [
+            re.compile(f"({pat})") if pat.startswith('^') or pat.endswith('$') else re.compile(f".({pat}).")
+            for pat in self.BREAK
+        ]
 
         self.suffixes = CharTrie()
         self.prefixes = CharTrie()

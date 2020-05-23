@@ -21,6 +21,8 @@ class AffReader:
             field = name.lower()
             if field == 'try':
                 field = 'try_'
+            if field == 'break':
+                field = 'BREAK'
             # TODO: This is temp, to test on "real" dictionaries without understanding all
             # the fields. Maybe for ver. 0.0.1 it is acceptable, but should at least be
             # debug-logged.
