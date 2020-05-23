@@ -24,19 +24,19 @@ def test(name):
     ]
 
 def report(name):
-    print(name)
-
     result = test(name)
     counter = Counter()
+    out = []
     for data in result:
         if data['expected'] == data['got']:
             # print(f"  {data['word']}: +")
             counter['good'] += 1
         else:
-            print(f"  {data['word']}: {data['expected']} vs {data['got']}")
+            out.append(f"  {data['word']}: {data['expected']} vs {data['got']}")
             counter['bad'] += 1
-    print('  --')
-    print(f"  good: {counter['good']}, bad: {counter['bad']}")
+
+    print(f"{name}: {counter['good']} OK, {counter['bad']} fails")
+    print("\n".join(out))
 
 report('base')
 report('base_utf')
@@ -72,7 +72,7 @@ report('i58202')
 # report('breakdefault')
 # report('forceucase')
 # report('keepcase')
-# report('nosuggest')
+report('nosuggest')
 # report('onlyincompound')
 # report('opentaal_forbiddenword1')
 # report('opentaal_forbiddenword2')

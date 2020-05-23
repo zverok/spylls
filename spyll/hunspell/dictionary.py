@@ -10,16 +10,17 @@ class Dictionary:
         self.dic = readers.DicReader(
             path + '.dic', encoding=self.aff.set, flag_format=self.aff.flag)()
 
-    def roots(self, *, with_forbidden=False) -> Iterator[data.dic.Word]:
+    def roots(self, *, with_forbidden=False, with_nosuggest=True) -> Iterator[data.dic.Word]:
         for word in self.dic.words:
-            if with_forbidden or self.aff.forbiddenword not in word.flags:
+            if with_forbidden or self.aff.forbiddenword not in word.flags and \
+                with_nosuggest or self.aff.nosuggest not in word.flags:
                 yield word
 
-    def lookup(self, word: str) -> bool:
-        return any(lookup.analyze(self.aff, self.dic, word))
+    def lookup(self, word: str, *, allow_nosuggest=True) -> bool:
+        return any(lookup.analyze(self.aff, self.dic, word, allow_nosuggest=allow_nosuggest))
 
-    def lookup_nocap(self, word: str) -> bool:
-        return any(lookup.analyze_nocap(self.aff, self.dic, word))
+    def lookup_nocap(self, word: str, *, allow_nosuggest=True) -> bool:
+        return any(lookup.analyze_nocap(self.aff, self.dic, word, allow_nosuggest=allow_nosuggest))
 
     def is_forbidden(self, word: str) -> bool:
         if not self.aff.forbiddenword:

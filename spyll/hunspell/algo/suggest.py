@@ -70,12 +70,14 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
         if ngramsugs >= dic.aff.maxngramsugs:
             break
 
+def checkword(dic, word):
+    return dic.lookup_nocap(word, allow_nosuggest=False)
 
 def very_good_permutations(dic, word: str) -> Iterator[str]:
     for sug in pmt.twowords(word):
-        if dic.lookup_nocap(' '.join(sug)):
+        if checkword(dic, ' '):
             yield ' '.join(sug), 'spaceword'
-        if dic.aff.use_dash() and dic.lookup_nocap('-'.join(sug)):
+        if dic.aff.use_dash() and checkword(dic, '-'.join(sug)):
             yield '-'.join(sug), 'spaceword'
 
 
@@ -90,10 +92,10 @@ def good_permutations(dic, word: str) -> Iterator[str]:
     for sug, source in iterator:
         if type(sug) is list:
             # could've come from replchars + spaces -- but no "-"-checks here
-            if all(dic.lookup_nocap(s) for s in sug):
+            if all(checkword(dic, s) for s in sug):
                 yield ' '.join(sug), source
         elif type(sug) is str:
-            if dic.lookup_nocap(sug):
+            if checkword(dic, sug):
                 yield sug, source
 
 
@@ -124,10 +126,10 @@ def questionable_permutations(dic, word: str) -> Iterator[str]:
 
     for sug, source in iterator:
         if type(sug) is list:
-            if all(dic.lookup_nocap(s) for s in sug):
+            if all(checkword(dic, s) for s in sug):
                 yield ' '.join(sug), source
                 if dic.aff.use_dash():
                     yield '-'.join(sug), source
         elif type(sug) is str:
-            if dic.lookup_nocap(sug):
+            if checkword(dic, sug):
                 yield sug, source

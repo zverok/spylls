@@ -16,16 +16,16 @@ Paradigm = collections.namedtuple('Paradigm',
 Compound = List[Paradigm]
 
 
-def analyze(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Union[Paradigm, Compound]]:
+def analyze(aff: data.Aff, dic: data.Dic, word: str, *, allow_nosuggest=True) -> Iterator[Union[Paradigm, Compound]]:
     res = analyze_nocap(aff, dic, word)
 
     captype = cap.guess(word)
 
     # Capitalized: accept this form, and lowercase
     if captype == cap.Cap.INIT:
-        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower()))
+        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(), allow_nosuggest=allow_nosuggest))
     elif captype == cap.Cap.ALL:
-        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(), allcap=True))
+        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(), allcap=True, allow_nosuggest=allow_nosuggest))
 
     return res
 
@@ -34,14 +34,16 @@ def analyze_nocap(
         aff: data.Aff,
         dic: data.Dic,
         word: str,
-        allcap: bool = False) -> Iterator[Union[Paradigm, Compound]]:
+        *,
+        allcap: bool = False,
+        allow_nosuggest=True) -> Iterator[Union[Paradigm, Compound]]:
 
     if aff.forbiddenword and any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
         return iter(())
 
     return itertools.chain(
-        analyze_affixed(aff, dic, word, allcap=allcap),
-        analyze_compound(aff, dic, word)
+        analyze_affixed(aff, dic, word, allcap=allcap, allow_nosuggest=allow_nosuggest),
+        analyze_compound(aff, dic, word, allow_nosuggest=allow_nosuggest)
     )
 
 
@@ -50,12 +52,13 @@ def analyze_affixed(
         dic: data.Dic,
         word: str,
         allcap: bool = False,
-        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
+        compoundpos: Optional[CompoundPos] = None,
+        allow_nosuggest=True) -> Iterator[Paradigm]:
 
     for form in split_affixes(aff, word, compoundpos=compoundpos):
         found = False
         for w in dic.homonyms(form.stem):
-            if have_compatible_flags(aff, w, form, compoundpos=compoundpos):
+            if have_compatible_flags(aff, w, form, compoundpos=compoundpos, allow_nosuggest=allow_nosuggest):
                 found = True
                 yield form
 
@@ -65,18 +68,18 @@ def analyze_affixed(
                 # case (above), or ALLCAPS
                 if not allcap and cap.guess(w.stem) != cap.Cap.NO:
                     continue
-                if have_compatible_flags(aff, w, form, compoundpos=compoundpos):
+                if have_compatible_flags(aff, w, form, compoundpos=compoundpos, allow_nosuggest=allow_nosuggest):
                     yield form
 
 
-def analyze_compound(aff: data.Aff, dic: data.Dic, word: str) -> Iterator[Compound]:
+def analyze_compound(aff: data.Aff, dic: data.Dic, word: str, allow_nosuggest=True) -> Iterator[Compound]:
     if aff.compoundbegin or aff.compoundflag:
-        by_flags = split_compound_by_flags(aff, dic, word)
+        by_flags = split_compound_by_flags(aff, dic, word, allow_nosuggest=allow_nosuggest)
     else:
         by_flags = iter(())
 
     if aff.compoundrules:
-        by_rules = split_compound_by_rules(aff, dic, word, compoundrules=aff.compoundrules)
+        by_rules = split_compound_by_rules(aff, dic, word, compoundrules=aff.compoundrules, allow_nosuggest=allow_nosuggest)
     else:
         by_rules = iter(())
 
@@ -87,7 +90,8 @@ def have_compatible_flags(
         aff: data.Aff,
         dictionary_word: data.dic.Word,
         paradigm: Paradigm,
-        compoundpos: Optional[CompoundPos]) -> bool:
+        compoundpos: Optional[CompoundPos],
+        allow_nosuggest=True) -> bool:
 
     all_flags = dictionary_word.flags
     if paradigm.prefix:
@@ -96,6 +100,9 @@ def have_compatible_flags(
         all_flags = all_flags.union(paradigm.suffix.flags)
 
     if aff.forbiddenword and aff.forbiddenword in dictionary_word.flags:
+        return False
+
+    if not allow_nosuggest and aff.nosuggest and aff.nosuggest in dictionary_word.flags:
         return False
 
     # Check affix flags
@@ -267,12 +274,13 @@ def split_compound_by_flags(
         aff: data.Aff,
         dic: data.Dic,
         word_rest: str,
-        prev_parts: List[Paradigm] = []) -> Iterator[List[Paradigm]]:
+        prev_parts: List[Paradigm] = [],
+        allow_nosuggest=True) -> Iterator[List[Paradigm]]:
 
     # If it is middle of compounding process "the rest of the word is the whole last part" is always
     # possible
     if prev_parts:
-        for paradigm in analyze_affixed(aff, dic, word_rest, compoundpos=CompoundPos.END):
+        for paradigm in analyze_affixed(aff, dic, word_rest, compoundpos=CompoundPos.END, allow_nosuggest=allow_nosuggest):
             yield [paradigm]
 
     if len(word_rest) < aff.compoundmin * 2 or \
@@ -284,9 +292,9 @@ def split_compound_by_flags(
     for pos in range(aff.compoundmin, len(word_rest) - aff.compoundmin + 1):
         beg = word_rest[0:pos]
 
-        for paradigm in analyze_affixed(aff, dic, beg, compoundpos=compoundpos):
+        for paradigm in analyze_affixed(aff, dic, beg, compoundpos=compoundpos, allow_nosuggest=allow_nosuggest):
             parts = [*prev_parts, paradigm]
-            for rest in split_compound_by_flags(aff, dic, word_rest[pos:], parts):
+            for rest in split_compound_by_flags(aff, dic, word_rest[pos:], parts, allow_nosuggest=allow_nosuggest):
                 yield [paradigm, *rest]
 
 
@@ -295,7 +303,10 @@ def split_compound_by_rules(
         dic: data.Dic,
         word_rest: str,
         compoundrules: List[data.aff.CompoundRule],
-        prev_parts: List[data.dic.Word] = []) -> Iterator[List[Paradigm]]:
+        prev_parts: List[data.dic.Word] = [],
+        allow_nosuggest=True) -> Iterator[List[Paradigm]]:
+
+    # FIXME: ignores flags like forbiddenword and nosuggest
 
     # If it is middle of compounding process "the rest of the word is the whole last part" is always
     # possible
