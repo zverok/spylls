@@ -58,6 +58,12 @@ report('allcaps3')               # + more capitalization + suffix examples
 report('allcaps_utf')            # +
 
 report('flag')                   # + suffix having its own flag "I can have extra suffix"
+# report('flaglong')
+# report('flagnum')
+# report('flagutf8')
+# report('alias')
+# report('alias2')
+# report('alias3')
 
 # TODO: only if flag COMPLEXPREFIXES is set in the dictionary
 report('complexprefixes')        # + prefix that has other prefix
@@ -100,6 +106,7 @@ report('compoundrule6')
 # report('compoundrule7') # - "long" flags
 # report('compoundrule8') # - "numeric" flags
 
+# Word breaking by punctuation
 report('breakdefault')
 report('break')
 report('breakoff')
@@ -114,20 +121,12 @@ report('checkcompoundpattern4')
 report('checkcompoundpattern')
 report('checkcompoundrep')
 report('checkcompoundtriple')
+report('compoundforbid')
+
 report('checksharps')
 report('checksharpsutf')
 
-report('compoundforbid')
-report('dotless_i')
 report('encoding')
-
-# report('flag')
-# report('flaglong')
-# report('flagnum')
-# report('flagutf8')
-# report('alias')
-# report('alias2')
-# report('alias3')
 
 report('fogemorpheme')
 report('forbiddenword')
@@ -149,11 +148,11 @@ report('ngram_utf_fix')
 report('nosuggest')
 report('oconv2')
 report('oconv')
-report('opentaal_cpdpat2')
-report('opentaal_cpdpat')
-report('opentaal_forbiddenword1')
-report('opentaal_forbiddenword2')
-report('opentaal_keepcase')
+# report('opentaal_cpdpat2')
+# report('opentaal_cpdpat')
+# report('opentaal_forbiddenword1')
+# report('opentaal_forbiddenword2')
+# report('opentaal_keepcase')
 report('ph2')
 report('right_to_left_mark')
 report('simplifiedtriple')
@@ -171,6 +170,7 @@ report('zeroaffix')
 # =================
 # report('slash')                # - slash in words -- screened with \ in dictionary
 # report('timelimit')
+# report('dotless_i')            # - turkish capitalization rules
 
 report('1592880')
 report('1975530')
