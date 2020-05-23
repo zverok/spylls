@@ -57,6 +57,7 @@ report('allcaps2')               # + forbiddenword marks possible, but wrong for
 report('allcaps3')               # + more capitalization + suffix examples
 report('allcaps_utf')            # +
 
+# Reading
 report('flag')                   # + suffix having its own flag "I can have extra suffix"
 # report('flaglong')
 # report('flagnum')
@@ -64,6 +65,10 @@ report('flag')                   # + suffix having its own flag "I can have extr
 # report('alias')
 # report('alias2')
 # report('alias3')
+report('encoding')
+report('utf8')
+# report('utf8_bom')    # TODO: file reader support for BOM
+# report('utf8_bom2')   # TODO: file reader support for BOM
 
 # TODO: only if flag COMPLEXPREFIXES is set in the dictionary
 report('complexprefixes')        # + prefix that has other prefix
@@ -126,7 +131,7 @@ report('compoundforbid')
 report('checksharps')
 report('checksharpsutf')
 
-report('encoding')
+
 
 report('fogemorpheme')
 report('forbiddenword')
@@ -157,9 +162,6 @@ report('ph2')
 report('right_to_left_mark')
 report('simplifiedtriple')
 
-report('utf8_bom2')
-report('utf8_bom')
-report('utf8')
 report('utf8_nonbmp')
 report('utfcompound')
 report('warn')

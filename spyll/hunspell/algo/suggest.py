@@ -82,7 +82,7 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
 
 
 def checkword(dic, word):
-    return dic.lookup_nocap(word, allow_nosuggest=False)
+    return dic.lookup(word, capitalization=False, allow_nosuggest=False)
 
 
 def very_good_permutations(dic, word: str) -> Iterator[str]:

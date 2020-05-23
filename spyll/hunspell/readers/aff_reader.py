@@ -95,7 +95,8 @@ class AffReader:
         res = []
 
         for _, strip, add, *rest in lines:
-            cond = rest[0]
+            # in LibreOffice ar.aff has at least one prefix (Ph) without any condition. Bug?
+            cond = rest[0] if rest else ''
             if '/' in add:
                 add, flags = add.split('/')
             else:
