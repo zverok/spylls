@@ -10,10 +10,11 @@ class Dictionary:
         self.dic = readers.DicReader(
             path + '.dic', encoding=self.aff.set, flag_format=self.aff.flag)()
 
-    def roots(self, *, with_forbidden=False, with_nosuggest=True) -> Iterator[data.dic.Word]:
+    def roots(self, *, with_forbidden=False, with_nosuggest=True, with_onliincompound=True) -> Iterator[data.dic.Word]:
         for word in self.dic.words:
             if with_forbidden or self.aff.forbiddenword not in word.flags and \
-                with_nosuggest or self.aff.nosuggest not in word.flags:
+                with_nosuggest or self.aff.nosuggest not in word.flags and \
+                with_onliincompound or self.aff.onlyincompound not in word.flags:
                 yield word
 
     def lookup(self, word: str, *, allow_nosuggest=True) -> bool:

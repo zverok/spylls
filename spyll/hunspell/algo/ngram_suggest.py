@@ -52,7 +52,7 @@ def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> 
     # exhaustively search through all root words
     # keeping track of the MAX_ROOTS most similar root words
     root_scores = ScoredArray[data.dic.Word](MAX_ROOTS)
-    for dword in dictionary.roots(with_nosuggest=False):
+    for dword in dictionary.roots(with_nosuggest=False, with_onliincompound=False):
         if abs(len(dword.stem) - len(word)) > 4:
             continue
         # TODO: large skip_exceptions block
