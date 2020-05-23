@@ -33,18 +33,38 @@ def lowerfirst(word: str) -> str:
 def upperfirst(word: str) -> str:
     return word[0].upper() + word[1:]
 
+def lower(word: str) -> str:
+    # turkic "lowercase dot i" to latinic "i"
+    return word.lower().replace('i̇', 'i')
 
-def variants(word: str) -> Tuple[Cap, List[str]]:
+def capitalize(word: str) -> str:
+    was_dot_i = word[0] == 'İ'
+    res = lower(word).capitalize()
+    return 'İ' + res[1:] if was_dot_i else res
+
+def variants(word: str, *, lang_with_dot_i=False) -> Tuple[Cap, List[str]]:
     captype = guess(word)
+
+    was_dot_i = word and word[0] == 'İ'
+    allow_lower = not was_dot_i or lang_with_dot_i
 
     if captype == Cap.NO:
         return (captype, [word])
     elif captype == Cap.INIT:
-        return (captype, [word, word.lower()])
+        if allow_lower:
+            return (captype, [word, lower(word)])
+        else:
+            return (captype, [word])
     elif captype == Cap.HUHINIT:
-        return (captype, [word, lowerfirst(word), word.lower(), word.lower().capitalize()])
+        if allow_lower:
+            return (captype, [word, lowerfirst(word), lower(word), capitalize(word)])
+        else:
+            return (captype, [word, capitalize(word)])
         # TODO: also here and below, consider the theory FooBar meant Foo Bar
     elif captype == Cap.HUH:
-        return (captype, [word, word.lower()])
+        return (captype, [word, lower(word)])
     elif captype == Cap.ALL:
-        return (captype, [word, word.lower(), word.lower().capitalize()])
+        if allow_lower:
+            return (captype, [word, lower(word), capitalize(word)])
+        else:
+            return (captype, [word, capitalize(word)])

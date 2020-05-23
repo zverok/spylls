@@ -18,20 +18,12 @@ Compound = List[Paradigm]
 
 def analyze(aff: data.Aff, dic: data.Dic, word: str, *,
             allow_nosuggest=True) -> Iterator[Union[Paradigm, Compound]]:
-    res = analyze_nocap(aff, dic, word)
 
-    captype = cap.guess(word)
+    captype, variants = cap.variants(word)
 
-    # Capitalized: accept this form, and lowercase
-    if captype == cap.Cap.INIT:
-        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(),
-                              allow_nosuggest=allow_nosuggest))
-    elif captype == cap.Cap.ALL:
-        res = itertools.chain(res, analyze_nocap(aff, dic, word.lower(), allcap=True,
-                              allow_nosuggest=allow_nosuggest))
-
-    return res
-
+    return itertools.chain.from_iterable(
+        analyze_nocap(aff, dic, v, allcap=(captype == cap.Cap.ALL), allow_nosuggest=allow_nosuggest) for v in variants
+    )
 
 def analyze_nocap(
         aff: data.Aff,

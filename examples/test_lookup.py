@@ -100,26 +100,6 @@ report('compoundrule6')
 # report('compoundrule7') # - "long" flags
 # report('compoundrule8') # - "numeric" flags
 
-# Edge cases and bugs
-# =================
-# report('slash')                # - slash in words -- screened with \ in dictionary
-# report('timelimit')
-
-report('1592880')
-report('1975530')
-report('2970240')
-report('2970242')
-report('2999225')
-report('i35725')
-report('i53643')
-report('i54633')
-report('i54980')
-report('i58202')
-
-report('alias2')
-report('alias3')
-report('alias')
-
 report('breakdefault')
 report('break')
 report('breakoff')
@@ -145,6 +125,9 @@ report('encoding')
 # report('flaglong')
 # report('flagnum')
 # report('flagutf8')
+# report('alias')
+# report('alias2')
+# report('alias3')
 
 report('fogemorpheme')
 report('forbiddenword')
@@ -183,3 +166,19 @@ report('utfcompound')
 report('warn')
 report('wordpair')
 report('zeroaffix')
+
+# Edge cases and bugs
+# =================
+# report('slash')                # - slash in words -- screened with \ in dictionary
+# report('timelimit')
+
+report('1592880')
+report('1975530')
+report('2970240')
+report('2970242')
+report('2999225')
+report('i35725')
+report('i53643')
+report('i54633')
+report('i54980')
+report('i58202')
