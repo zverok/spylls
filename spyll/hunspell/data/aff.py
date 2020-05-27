@@ -10,6 +10,11 @@ from pygtrie import CharTrie
 Flag = NewType('Flag', str)
 
 
+class Affixes(CharTrie):
+    def lookup(self, prefix):
+        return [val for _, vals in self.prefixes(prefix) for val in vals]
+
+
 @dataclass
 class Affix:
     flag: Flag
@@ -130,8 +135,8 @@ class Aff:
             for pat in self.BREAK
         ]
 
-        self.suffixes = CharTrie()
-        self.prefixes = CharTrie()
+        self.suffixes = Affixes()
+        self.prefixes = Affixes()
 
         for add, sufs in itertools.groupby(itertools.chain.from_iterable(self.sfx.values()), lambda suf: suf.add[::-1]):
             self.suffixes[add] = list(sufs)

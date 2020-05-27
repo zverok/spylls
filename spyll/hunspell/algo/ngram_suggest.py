@@ -77,26 +77,18 @@ def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> 
     # sort in order of decreasing score
     guesses = sorted(guess_scores.result(), key=itemgetter(1), reverse=True)
 
-    guesses2 = []
-
-    fact = 1.0
-    if maxdiff >= 0:
-        fact = (10.0 - maxdiff) / 5.0
+    fact = (10.0 - maxdiff) / 5.0 if maxdiff >= 0 else 1.0
 
     # weight suggestions with a similarity index, based on
     # the longest common subsequent algorithm and resort
-    for (value, score) in guesses:
-        gl = value.lower()
-
-        sc = detailed_affix_score(word, gl, fact)
-        if not sc:
-            sc = score + 2000
-        guesses2.append((value, sc))
+    guesses2 = [
+        (value, detailed_affix_score(word, value.lower(), fact, base=score))
+        for (value, score) in guesses
+    ]
 
     guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
 
-    for guess in filter_guesses(guesses2, onlymaxdiff=onlymaxdiff):
-        yield guess
+    yield from filter_guesses(guesses2, onlymaxdiff=onlymaxdiff)
 
 
 def filter_guesses(guesses: List[Tuple[str, float]], *, onlymaxdiff=True) -> Iterator[str]:
@@ -149,16 +141,16 @@ def first_affix_score(word1: str, word2: str) -> float:
     return sm.ngram(len(word1), word1, word2, any_mismatch=True) + leftcommon
 
 
-def detailed_affix_score(word1: str, word2: str, fact: float) -> Optional[float]:
+def detailed_affix_score(word1: str, word2: str, fact: float, *, base: float) -> Optional[float]:
     lcs = sm.lcslen(word1, word2)
 
     # same characters with different casing
     if len(word1) == len(word2) and len(word1) == lcs:
-        return None
+        return base + 2000
 
     # using 2-gram instead of 3, and other weightening
-    re = sm.ngram(2, word1, word2, any_mismatch=True, weighted=True)
-    re += sm.ngram(2, word2, word1.lower(), any_mismatch=True, weighted=True)
+    re = sm.ngram(2, word1, word2, any_mismatch=True, weighted=True) + \
+            sm.ngram(2, word2, word1, any_mismatch=True, weighted=True)
 
     ngram_score = sm.ngram(4, word1, word2, any_mismatch=True)
     leftcommon_score = sm.leftcommonsubstring(word1, word2.lower())

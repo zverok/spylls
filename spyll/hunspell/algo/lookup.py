@@ -1,7 +1,7 @@
 import itertools
 import collections
 from enum import Enum
-from typing import List, Iterator, Union, Optional, Tuple
+from typing import List, Iterator, Union, Optional
 
 from spyll.hunspell import data
 import spyll.hunspell.algo.capitalization as cap
@@ -30,7 +30,8 @@ def analyze(aff: data.Aff, dic: data.Dic, word: str, *,
         captype, variants = cap.variants(word)
 
         return itertools.chain.from_iterable(
-            analyze_internal(v, allcap=(captype == cap.Cap.ALL)) for v in variants
+            analyze_internal(v, allcap=(captype == cap.Cap.ALL))
+            for v in variants
         )
     else:
         return analyze_internal(word)
@@ -92,17 +93,15 @@ def have_compatible_flags(
     if paradigm.suffix:
         all_flags = all_flags.union(paradigm.suffix.flags)
 
-    if aff.forbiddenword and aff.forbiddenword in dictionary_word.flags:
+    if aff.forbiddenword in dictionary_word.flags:
         return False
 
-    if not allow_nosuggest and aff.nosuggest and aff.nosuggest in dictionary_word.flags:
+    if not allow_nosuggest and aff.nosuggest in dictionary_word.flags:
         return False
 
     # Check affix flags
     if not paradigm.suffix and not paradigm.prefix:
-        if aff.needaffix and aff.needaffix in all_flags:
-            return False
-        if aff.pseudoroot and aff.pseudoroot in all_flags:
+        if aff.needaffix in all_flags or aff.pseudoroot in all_flags:
             return False
 
     if paradigm.prefix and paradigm.prefix.flag not in all_flags:
@@ -112,26 +111,21 @@ def have_compatible_flags(
 
     # Check compound flags
 
-    # FIXME: "neither of compounding flags present and we still try compound" will fail here,
-    # but we shouldn't even try
-    if compoundpos:
-        if aff.compoundflag and aff.compoundflag in all_flags:
-            return True
+    if not compoundpos:
+        return aff.onlyincompound not in all_flags
 
-        if compoundpos == CompoundPos.BEGIN:
-            if not aff.compoundbegin or aff.compoundbegin not in all_flags:
-                return False
-        elif compoundpos == CompoundPos.END:
-            if not aff.compoundlast or aff.compoundlast not in all_flags:
-                return False
-        elif compoundpos == CompoundPos.MIDDLE:
-            if not aff.compoundmiddle or aff.compoundmiddle not in all_flags:
-                return False
+    if aff.compoundflag in all_flags:
+        return True
+
+    if compoundpos == CompoundPos.BEGIN:
+        return aff.compoundbegin in all_flags
+    elif compoundpos == CompoundPos.END:
+        return aff.compoundlast in all_flags
+    elif compoundpos == CompoundPos.MIDDLE:
+        return aff.compoundmiddle in all_flags
     else:
-        if aff.onlyincompound and aff.onlyincompound in all_flags:
-            return False
-
-    return True
+        # shoulnd't happen
+        return False
 
 
 # Affixes-related algorithms
@@ -145,10 +139,16 @@ def split_affixes(
 
     result = _split_affixes(aff, word, compoundpos=compoundpos)
 
+    def only_affix_need_affix(form, flag):
+        all_affixes = list(filter(None, [form.prefix, form.prefix2, form.suffix, form.suffix2]))
+        if not all_affixes:
+            return False
+        needaffs = [aff for aff in all_affixes if flag in aff.flags]
+        return len(all_affixes) == len(needaffs)
+
     if aff.needaffix:
-        for r in result:
-            if not only_affix_need_affix(r, aff.needaffix):
-                yield r
+        # FIXME: why doesn't just return (...generator...) work?..
+        yield from (r for r in result if not only_affix_need_affix(r, aff.needaffix))
     else:
         yield from result
 
@@ -166,23 +166,45 @@ def _split_affixes(
         yield form
 
         if form.prefix.crossproduct:
-            for form2 in desuffix(aff, form.stem, compoundpos=compoundpos):
-                if form2.suffix.crossproduct:
-                    yield form2._replace(prefix=form.prefix)
+            yield from (
+                form2._replace(prefix=form.prefix)
+                for form2 in desuffix(aff, form.stem, compoundpos=compoundpos, crossproduct=True)
+            )
 
 
 def desuffix(
         aff: data.Aff,
         word: str,
         extra_flag: Optional[str] = None,
-        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
+        compoundpos: Optional[CompoundPos] = None,
+        crossproduct: bool = False) -> Iterator[Paradigm]:
 
-    for stem, suf in _desuffix(aff, word, extra_flag=extra_flag, compoundpos=compoundpos):
-        yield Paradigm(stem, suffix=suf)
+    inside_compound = compoundpos and compoundpos != CompoundPos.END
+
+    # No possibility any suffix will be OK
+    if inside_compound and not aff.compoundpermitflag:
+        return
+
+    def bad_suffix(suffix):
+        return extra_flag and extra_flag not in suffix.flags or \
+               crossproduct and not suffix.crossproduct or \
+               inside_compound and aff.compoundpermitflag not in suffix.flags or \
+               compoundpos and aff.compoundforbidflag in suffix.flags
+
+    possible_suffixes = (
+        suffix
+        for suffix in aff.suffixes.lookup(word[::-1])
+        if not bad_suffix(suffix) and suffix.regexp.search(word)
+    )
+
+    for suffix in possible_suffixes:
+        stem = suffix.regexp.sub(suffix.strip, word)
+
+        yield Paradigm(stem, suffix=suffix)
 
         if not extra_flag:  # only one level depth
-            for form2 in desuffix(aff, stem, extra_flag=suf.flag, compoundpos=compoundpos):
-                yield form2._replace(suffix2=suf)
+            for form2 in desuffix(aff, stem, extra_flag=suffix.flag, compoundpos=compoundpos, crossproduct=crossproduct):
+                yield form2._replace(suffix2=suffix)
 
 
 def deprefix(
@@ -191,75 +213,33 @@ def deprefix(
         extra_flag: Optional[str] = None,
         compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
 
-    for stem, pref in _deprefix(aff, word, extra_flag=extra_flag, compoundpos=compoundpos):
-        yield Paradigm(stem, prefix=pref)
+    inside_compound = compoundpos and compoundpos != CompoundPos.BEGIN
+
+    # No possibility any prefix will be OK
+    if inside_compound and not aff.compoundpermitflag:
+        return
+
+    def bad_prefix(prefix):
+        return extra_flag and extra_flag not in prefix.flags or \
+               inside_compound and aff.compoundpermitflag not in prefix.flags or \
+               compoundpos and aff.compoundforbidflag in prefix.flags
+
+    possible_prefixes = (
+        prefix
+        for prefix in aff.prefixes.lookup(word)
+        if not bad_prefix(prefix) and prefix.regexp.search(word)
+    )
+
+    for prefix in possible_prefixes:
+        stem = prefix.regexp.sub(prefix.strip, word)
+
+        yield Paradigm(stem, prefix=prefix)
 
         # TODO: Only if compoundpreffixes are allowed in *.aff
         if not extra_flag:  # only one level depth
-            for form2 in deprefix(aff, stem, extra_flag=pref.flag, compoundpos=compoundpos):
-                yield form2._replace(prefix2=pref)
+            for form2 in deprefix(aff, stem, extra_flag=prefix.flag, compoundpos=compoundpos):
+                yield form2._replace(prefix2=prefix)
 
-
-def _desuffix(
-        aff: data.Aff,
-        word: str,
-        extra_flag: Optional[str] = None,
-        compoundpos: Optional[CompoundPos] = None) -> Iterator[Tuple[str, data.aff.Suffix]]:
-
-    if compoundpos is None or compoundpos == CompoundPos.END:
-        checkpermit = False
-    else:
-        # No possibility any suffix will be OK
-        if not aff.compoundpermitflag:
-            return
-        checkpermit = True
-
-    for _, sufs in aff.suffixes.prefixes(word[::-1]):
-        for suf in sufs:
-            if extra_flag and extra_flag not in suf.flags:
-                continue
-            if checkpermit and aff.compoundpermitflag not in suf.flags:
-                continue
-            if compoundpos is not None and aff.compoundforbidflag in suf.flags:
-                continue
-
-            if suf.regexp.search(word):
-                yield (suf.regexp.sub(suf.strip, word), suf)
-
-
-def _deprefix(
-        aff: data.Aff,
-        word: str,
-        extra_flag: Optional[str] = None,
-        compoundpos: Optional[CompoundPos] = None) -> Iterator[Tuple[str, data.aff.Prefix]]:
-
-    if compoundpos is None or compoundpos == CompoundPos.BEGIN:
-        checkpermit = False
-    else:
-        # No possibility any prefix will be OK
-        if not aff.compoundpermitflag:
-            return
-        checkpermit = True
-
-    for _, prefs in aff.prefixes.prefixes(word):
-        for pref in prefs:
-            if extra_flag and extra_flag not in pref.flags:
-                continue
-            if checkpermit and aff.compoundpermitflag not in pref.flags:
-                continue
-            if compoundpos is not None and aff.compoundforbidflag in pref.flags:
-                continue
-
-            if pref.regexp.search(word):
-                yield (pref.regexp.sub(pref.strip, word), pref)
-
-
-def only_affix_need_affix(form, flag):
-    all_affixes = list(filter(None, [form.prefix, form.prefix2, form.suffix, form.suffix2]))
-    if not all_affixes:
-        return False
-    needaffs = [aff for aff in all_affixes if flag in aff.flags]
-    return len(all_affixes) == len(needaffs)
 
 # Compounding details
 # -------------------

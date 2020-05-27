@@ -33,14 +33,17 @@ def lowerfirst(word: str) -> str:
 def upperfirst(word: str) -> str:
     return word[0].upper() + word[1:]
 
+
 def lower(word: str) -> str:
     # turkic "lowercase dot i" to latinic "i"
     return word.lower().replace('i̇', 'i')
+
 
 def capitalize(word: str) -> str:
     was_dot_i = word[0] == 'İ'
     res = lower(word).capitalize()
     return 'İ' + res[1:] if was_dot_i else res
+
 
 def variants(word: str, *, lang_with_dot_i=False) -> Tuple[Cap, List[str]]:
     captype = guess(word)
