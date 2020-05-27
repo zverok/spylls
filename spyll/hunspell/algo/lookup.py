@@ -77,7 +77,25 @@ def analyze_compound(aff: data.Aff, dic: data.Dic, word: str,
     else:
         by_rules = iter(())
 
-    return itertools.chain(by_flags, by_rules)
+    def bad_compound(compound):
+
+        for left_paradigm in compound[:-1]:
+            for right_paradigm in compound[1:]:
+                # FIXME: In fact, full words, not stems!
+                left = left_paradigm.stem
+                right = right_paradigm.stem
+                if aff.checkcompoundcase:
+                    r = right[0]
+                    l = left[-1]
+                    if (r == r.upper() or l == l.upper()) and r != '-' and l != '-':
+                        return True
+        return False
+
+
+    yield from (compound
+     for compound in itertools.chain(by_flags, by_rules)
+     if not bad_compound(compound)
+    )
 
 
 def have_compatible_flags(
@@ -139,6 +157,8 @@ def split_affixes(
 
     result = _split_affixes(aff, word, compoundpos=compoundpos)
 
+    # FIXME: I feel like this methods should be simpler!
+    # Or at least better explained
     def only_affix_need_affix(form, flag):
         all_affixes = list(filter(None, [form.prefix, form.prefix2, form.suffix, form.suffix2]))
         if not all_affixes:
@@ -160,41 +180,50 @@ def _split_affixes(
 
     yield Paradigm(word)    # "Whole word" is always existing option
 
-    yield from desuffix(aff, word, compoundpos=compoundpos)
+    if compoundpos:
+        suffix_allowed = compoundpos == CompoundPos.END or aff.compoundpermitflag
+        prefix_allowed = compoundpos == CompoundPos.BEGIN or aff.compoundpermitflag
+        prefix_required_flags = [] if compoundpos == CompoundPos.BEGIN else [aff.compoundpermitflag]
+        suffix_required_flags = [] if compoundpos == CompoundPos.END else [aff.compoundpermitflag]
+        forbidden_flags = [aff.compoundforbidflag] if aff.compoundforbidflag else []
+    else:
+        suffix_allowed = True
+        prefix_allowed = True
+        prefix_required_flags = []
+        suffix_required_flags = []
+        forbidden_flags = []
 
-    for form in deprefix(aff, word, compoundpos=compoundpos):
-        yield form
+    if suffix_allowed:
+        yield from desuffix(aff, word, required_flags=suffix_required_flags, forbidden_flags=forbidden_flags)
 
-        if form.prefix.crossproduct:
-            yield from (
-                form2._replace(prefix=form.prefix)
-                for form2 in desuffix(aff, form.stem, compoundpos=compoundpos, crossproduct=True)
-            )
+    if prefix_allowed:
+        for form in deprefix(aff, word, required_flags=prefix_required_flags, forbidden_flags=forbidden_flags):
+            yield form
+
+            if suffix_allowed and form.prefix.crossproduct:
+                yield from (
+                    form2._replace(prefix=form.prefix)
+                    for form2 in desuffix(aff, form.stem, required_flags=suffix_required_flags, forbidden_flags=forbidden_flags, crossproduct=True)
+                )
 
 
 def desuffix(
         aff: data.Aff,
         word: str,
-        extra_flag: Optional[str] = None,
-        compoundpos: Optional[CompoundPos] = None,
+        required_flags: List[str] = [],
+        forbidden_flags: List[str] = [],
+        nested: bool = False,
         crossproduct: bool = False) -> Iterator[Paradigm]:
 
-    inside_compound = compoundpos and compoundpos != CompoundPos.END
-
-    # No possibility any suffix will be OK
-    if inside_compound and not aff.compoundpermitflag:
-        return
-
-    def bad_suffix(suffix):
-        return extra_flag and extra_flag not in suffix.flags or \
-               crossproduct and not suffix.crossproduct or \
-               inside_compound and aff.compoundpermitflag not in suffix.flags or \
-               compoundpos and aff.compoundforbidflag in suffix.flags
+    def good_suffix(suffix):
+        return crossproduct == suffix.crossproduct and \
+                all(f in suffix.flags for f in required_flags) and \
+                all(f not in suffix.flags for f in forbidden_flags)
 
     possible_suffixes = (
         suffix
         for suffix in aff.suffixes.lookup(word[::-1])
-        if not bad_suffix(suffix) and suffix.regexp.search(word)
+        if good_suffix(suffix) and suffix.regexp.search(word)
     )
 
     for suffix in possible_suffixes:
@@ -202,32 +231,30 @@ def desuffix(
 
         yield Paradigm(stem, suffix=suffix)
 
-        if not extra_flag:  # only one level depth
-            for form2 in desuffix(aff, stem, extra_flag=suffix.flag, compoundpos=compoundpos, crossproduct=crossproduct):
+        if not nested:  # only one level depth
+            for form2 in desuffix(aff, stem,
+                                  required_flags=[suffix.flag, *required_flags],
+                                  forbidden_flags=forbidden_flags,
+                                  nested=True,
+                                  crossproduct=crossproduct):
                 yield form2._replace(suffix2=suffix)
 
 
 def deprefix(
         aff: data.Aff,
         word: str,
-        extra_flag: Optional[str] = None,
-        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
+        required_flags: List[str] = [],
+        forbidden_flags: List[str] = [],
+        nested: bool = False) -> Iterator[Paradigm]:
 
-    inside_compound = compoundpos and compoundpos != CompoundPos.BEGIN
-
-    # No possibility any prefix will be OK
-    if inside_compound and not aff.compoundpermitflag:
-        return
-
-    def bad_prefix(prefix):
-        return extra_flag and extra_flag not in prefix.flags or \
-               inside_compound and aff.compoundpermitflag not in prefix.flags or \
-               compoundpos and aff.compoundforbidflag in prefix.flags
+    def good_prefix(prefix):
+        return all(f in prefix.flags for f in required_flags) and \
+               all(f not in prefix.flags for f in forbidden_flags)
 
     possible_prefixes = (
         prefix
         for prefix in aff.prefixes.lookup(word)
-        if not bad_prefix(prefix) and prefix.regexp.search(word)
+        if good_prefix(prefix) and prefix.regexp.search(word)
     )
 
     for prefix in possible_prefixes:
@@ -236,8 +263,11 @@ def deprefix(
         yield Paradigm(stem, prefix=prefix)
 
         # TODO: Only if compoundpreffixes are allowed in *.aff
-        if not extra_flag:  # only one level depth
-            for form2 in deprefix(aff, stem, extra_flag=prefix.flag, compoundpos=compoundpos):
+        if not nested:  # only one level depth
+            for form2 in deprefix(aff, stem,
+                                  required_flags=[prefix.flag, *required_flags],
+                                  forbidden_flags=forbidden_flags,
+                                  nested=True):
                 yield form2._replace(prefix2=prefix)
 
 

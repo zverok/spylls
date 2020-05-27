@@ -43,7 +43,7 @@ class AffReader:
     # TODO: all Flag-typed directives should be read via util.parse_flags
     def _read_directive(self, field, name, *values):
         f = self.FIELDS[field]
-        value = values[0]
+        value = values[0] if values else None
         if field == 'sfx' or field == 'pfx':
             return self._read_affix(field, values)
         elif f.type == int:
@@ -74,6 +74,9 @@ class AffReader:
                 )
                 for ln in lines
             ]
+        elif f.type == bool:
+            # Presense of directive always means "turn it on"
+            return True
         else:
             return tuple(values)
 

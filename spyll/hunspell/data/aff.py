@@ -123,6 +123,9 @@ class Aff:
     compoundpermitflag: Optional[Flag] = None
     compoundforbidflag: Optional[Flag] = None
 
+    checkcompoundcase: bool = False
+    checkcompounddup: bool = False
+
     # IO:
     oconv: List[Tuple[str, str]] = field(default_factory=list)
 
