@@ -18,6 +18,11 @@ def test(name):
         'bad': {word: dictionary.lookup(word) for word in bad},
     }
 
+def section(title):
+    print()
+    print(title)
+    print('=' * len(title))
+
 def report(name):
     # print(name)
 
@@ -47,17 +52,12 @@ def report(name):
         print(f"  Bad words found: {', '.join(nobad)}")
 
 
+# ==============================
+section('Base')
+
 report('base')                   # + basic suffixes/prefixes + capitalization
 report('base_utf')               # ± special chars, 1 fail with turkish "i" capitalized
 
-report('affixes')                # + just simple affixes
-
-report('allcaps')                # + fully capitalized forms: UNICEF'S ('s suffix) and OPENOFFICE.ORG (find OpenOffice.org in dictionary)
-report('allcaps2')               # + forbiddenword marks possible, but wrong form
-report('allcaps3')               # + more capitalization + suffix examples
-report('allcaps_utf')            # +
-
-# Reading
 report('flag')                   # + suffix having its own flag "I can have extra suffix"
 # report('flaglong')
 # report('flagnum')
@@ -69,6 +69,11 @@ report('encoding')
 report('utf8')
 # report('utf8_bom')    # TODO: file reader support for BOM
 # report('utf8_bom2')   # TODO: file reader support for BOM
+
+# ===============================
+section('Affixes')
+
+report('affixes')                # + just simple affixes
 
 # TODO: only if flag COMPLEXPREFIXES is set in the dictionary
 report('complexprefixes')        # + prefix that has other prefix
@@ -91,8 +96,36 @@ report('needaffix5')             # + "this affix needs affix" flag -- two at onc
 # TODO: test that WITHOUT the flag it is impossible
 report('fullstrip')              # + removes entire word text by suffix.
 
-# Compounding
-# ===========
+# ==============================
+section("Exclusion flags")
+
+report('allcaps')                # + fully capitalized forms: UNICEF'S ('s suffix) and OPENOFFICE.ORG (find OpenOffice.org in dictionary)
+report('allcaps2')               # + forbiddenword marks possible, but wrong form
+report('allcaps3')               # + more capitalization + suffix examples
+report('allcaps_utf')            # +
+report('forbiddenword')
+report('forceucase')
+report('keepcase')
+report('nosuggest')
+
+# ==============================
+section('Break')
+
+report('breakdefault')
+report('break')
+report('breakoff')
+
+# ==============================
+section('Input/Output')
+
+report('iconv')
+report('iconv2')
+report('oconv')
+report('oconv2')
+
+# ==============================
+section('Compounding')
+
 report('compoundflag')           # + basic "it can be compounding"
 report('onlyincompound')         # + some of word is ONLY can be in compound
 # report('onlyincompound2')      # - checkcompoundpattern
@@ -111,11 +144,6 @@ report('compoundrule6')
 # report('compoundrule7') # - "long" flags
 # report('compoundrule8') # - "numeric" flags
 
-# Word breaking by punctuation
-report('breakdefault')
-report('break')
-report('breakoff')
-
 report('checkcompoundcase')
 report('checkcompoundcase2')
 report('checkcompoundcaseutf')
@@ -128,31 +156,12 @@ report('checkcompoundrep')
 report('checkcompoundtriple')
 report('compoundforbid')
 
-report('checksharps')
-report('checksharpsutf')
 
-
-
+# ======================================
+section('Misc')
 report('fogemorpheme')
-report('forbiddenword')
-report('forceucase')
-report('germancompounding')
-report('germancompoundingold')
-report('hu')
-report('iconv2')
-report('iconv')
-report('ignore')
-report('ignoresug')
-report('ignoreutf')
-report('IJ')
-report('keepcase')
-report('korean')
 report('morph')
-report('nepali')
 report('ngram_utf_fix')
-report('nosuggest')
-report('oconv2')
-report('oconv')
 # report('opentaal_cpdpat2')
 # report('opentaal_cpdpat')
 # report('opentaal_forbiddenword1')
@@ -168,11 +177,26 @@ report('warn')
 report('wordpair')
 report('zeroaffix')
 
-# Edge cases and bugs
-# =================
+# ===============================
+section('Specific languages')
+report('ignore')
+report('ignoresug')
+report('ignoreutf')
+report('germancompounding')
+report('germancompoundingold')
+report('hu')
+# report('dotless_i')            # - turkish capitalization rules
+report('IJ')
+report('nepali')
+report('korean')
+report('checksharps')
+report('checksharpsutf')
+
+# ===============================
+section('Edge cases and bugs')
+
 # report('slash')                # - slash in words -- screened with \ in dictionary
 # report('timelimit')
-# report('dotless_i')            # - turkish capitalization rules
 
 report('1592880')
 report('1975530')

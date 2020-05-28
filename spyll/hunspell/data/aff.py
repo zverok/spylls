@@ -129,6 +129,7 @@ class Aff:
     checkcompoundtriple: bool = False
 
     # IO:
+    iconv: List[Tuple[str, str]] = field(default_factory=list)
     oconv: List[Tuple[str, str]] = field(default_factory=list)
 
     # TODO: IO, morphology

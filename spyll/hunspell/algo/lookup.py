@@ -25,14 +25,28 @@ class Paradigm:
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
 
+    def is_base(self):
+        return not self.suffix and not self.prefix
+
+    def affix_flags(self):
+        flags = self.prefix.flags if self.prefix else set()
+        if self.suffix:
+            return flags.union(self.suffix.flags)
+        else:
+            return flags
+
 
 Compound = List[Paradigm]
 
 
 def lookup(aff: data.Aff, dic: data.Dic, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
     if aff.forbiddenword and \
-       any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
+       dic.homonyms(word) and all(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
         return False
+
+    if aff.iconv:
+        for (i, o) in sorted(aff.iconv, key=lambda io: len(io[1]), reverse=True):
+            word = word.replace(i, o)
 
     def is_found(variant):
         return any(
@@ -92,6 +106,12 @@ def analyze_affixed(
 
     for form in split_affixes(aff, word, compoundpos=compoundpos):
         found = False
+        # Base (no suffixes) homonym is allowed if exists.
+        # And if it would not, we would not be here at all.
+        if compoundpos or not form.is_base():
+            if any(aff.forbiddenword in dword.flags for dword in dic.homonyms(form.stem)):
+                return
+
         for w in dic.homonyms(form.stem):
             if have_compatible_flags(aff, w, form, compoundpos=compoundpos,
                                      allow_nosuggest=allow_nosuggest):
@@ -161,14 +181,7 @@ def have_compatible_flags(
         compoundpos: Optional[CompoundPos],
         allow_nosuggest=True) -> bool:
 
-    all_flags = dictionary_word.flags
-    if paradigm.prefix:
-        all_flags = all_flags.union(paradigm.prefix.flags)
-    if paradigm.suffix:
-        all_flags = all_flags.union(paradigm.suffix.flags)
-
-    if aff.forbiddenword in dictionary_word.flags:
-        return False
+    all_flags = dictionary_word.flags.union(paradigm.affix_flags())
 
     if not allow_nosuggest and aff.nosuggest in dictionary_word.flags:
         return False
