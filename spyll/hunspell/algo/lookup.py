@@ -1,19 +1,64 @@
 import itertools
-import collections
+import re
 from enum import Enum
 from typing import List, Iterator, Union, Optional
+import dataclasses
+from dataclasses import dataclass
 
 from spyll.hunspell import data
 import spyll.hunspell.algo.capitalization as cap
+import spyll.hunspell.algo.permutations as pmt
+
 
 CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
 
-Paradigm = collections.namedtuple('Paradigm',
-                                  ['stem', 'prefix', 'suffix', 'prefix2', 'suffix2'],
-                                  defaults=[None, None, None, None]
-                                  )
+
+@dataclass
+class Paradigm:
+    text: str
+    stem: str
+    prefix: Optional[data.aff.Prefix] = None
+    suffix: Optional[data.aff.Suffix] = None
+    prefix2: Optional[data.aff.Prefix] = None
+    suffix2: Optional[data.aff.Suffix] = None
+
+    def replace(self, **changes):
+        return dataclasses.replace(self, **changes)
+
 
 Compound = List[Paradigm]
+
+
+def lookup(aff: data.Aff, dic: data.Dic, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
+    if aff.forbiddenword and \
+       any(aff.forbiddenword in w.flags for w in dic.homonyms(word)):
+        return False
+
+    def is_found(variant):
+        return any(
+            analyze(aff, dic, variant, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
+        )
+
+    def try_break(text, depth=0):
+        if depth > 10:
+            return
+
+        yield [text]
+        for pat in aff.breakpatterns:
+            for m in re.finditer(pat, text):
+                start = text[:m.start(1)]
+                rest = text[m.end(1):]
+                for breaking in try_break(rest, depth=depth+1):
+                    yield [start, *breaking]
+
+    if is_found(word):
+        return True
+
+    for parts in try_break(word):
+        if all(is_found(part) for part in parts if part):
+            return True
+
+    return False
 
 
 def analyze(aff: data.Aff, dic: data.Dic, word: str, *,
@@ -66,6 +111,7 @@ def analyze_affixed(
 
 def analyze_compound(aff: data.Aff, dic: data.Dic, word: str,
                      allow_nosuggest=True) -> Iterator[Compound]:
+
     if aff.compoundbegin or aff.compoundflag:
         by_flags = split_compound_by_flags(aff, dic, word, allow_nosuggest=allow_nosuggest)
     else:
@@ -78,12 +124,24 @@ def analyze_compound(aff: data.Aff, dic: data.Dic, word: str,
         by_rules = iter(())
 
     def bad_compound(compound):
-
         for left_paradigm in compound[:-1]:
+            left = left_paradigm.text
+
+            if aff.compoundforbidflag:
+                # We don't check right: compoundforbid prohibits words at the beginning and middle
+                for dword in dic.homonyms(left):
+                    if aff.compoundforbidflag in dword.flags:
+                        return True
+
             for right_paradigm in compound[1:]:
-                # FIXME: In fact, full words, not stems!
-                left = left_paradigm.stem
-                right = right_paradigm.stem
+                right = right_paradigm.text
+                if aff.checkcompoundrep:
+                    for candidate in pmt.replchars(left + right, aff.rep):
+                        if isinstance(candidate, str) and any(analyze_affixed(aff, dic, candidate)):
+                            return True
+                if aff.checkcompoundtriple:
+                    if len(set(left[-2:] + right[:1])) == 1 or len(set(left[-1:] + right[:2])) == 1:
+                        return True
                 if aff.checkcompoundcase:
                     r = right[0]
                     l = left[-1]
@@ -91,11 +149,9 @@ def analyze_compound(aff: data.Aff, dic: data.Dic, word: str,
                         return True
         return False
 
-
     yield from (compound
-     for compound in itertools.chain(by_flags, by_rules)
-     if not bad_compound(compound)
-    )
+                for compound in itertools.chain(by_flags, by_rules)
+                if not bad_compound(compound))
 
 
 def have_compatible_flags(
@@ -178,7 +234,7 @@ def _split_affixes(
         word: str,
         compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
 
-    yield Paradigm(word)    # "Whole word" is always existing option
+    yield Paradigm(word, word)    # "Whole word" is always existing option
 
     if compoundpos:
         suffix_allowed = compoundpos == CompoundPos.END or aff.compoundpermitflag
@@ -202,7 +258,7 @@ def _split_affixes(
 
             if suffix_allowed and form.prefix.crossproduct:
                 yield from (
-                    form2._replace(prefix=form.prefix)
+                    form2.replace(prefix=form.prefix)
                     for form2 in desuffix(aff, form.stem, required_flags=suffix_required_flags, forbidden_flags=forbidden_flags, crossproduct=True)
                 )
 
@@ -216,7 +272,7 @@ def desuffix(
         crossproduct: bool = False) -> Iterator[Paradigm]:
 
     def good_suffix(suffix):
-        return crossproduct == suffix.crossproduct and \
+        return (not crossproduct or suffix.crossproduct) and \
                 all(f in suffix.flags for f in required_flags) and \
                 all(f not in suffix.flags for f in forbidden_flags)
 
@@ -229,7 +285,7 @@ def desuffix(
     for suffix in possible_suffixes:
         stem = suffix.regexp.sub(suffix.strip, word)
 
-        yield Paradigm(stem, suffix=suffix)
+        yield Paradigm(word, stem, suffix=suffix)
 
         if not nested:  # only one level depth
             for form2 in desuffix(aff, stem,
@@ -237,7 +293,7 @@ def desuffix(
                                   forbidden_flags=forbidden_flags,
                                   nested=True,
                                   crossproduct=crossproduct):
-                yield form2._replace(suffix2=suffix)
+                yield form2.replace(suffix2=suffix, text=word)
 
 
 def deprefix(
@@ -260,7 +316,7 @@ def deprefix(
     for prefix in possible_prefixes:
         stem = prefix.regexp.sub(prefix.strip, word)
 
-        yield Paradigm(stem, prefix=prefix)
+        yield Paradigm(word, stem, prefix=prefix)
 
         # TODO: Only if compoundpreffixes are allowed in *.aff
         if not nested:  # only one level depth
@@ -268,7 +324,7 @@ def deprefix(
                                   required_flags=[prefix.flag, *required_flags],
                                   forbidden_flags=forbidden_flags,
                                   nested=True):
-                yield form2._replace(prefix2=prefix)
+                yield form2.replace(prefix2=prefix, text=word)
 
 
 # Compounding details
@@ -324,7 +380,7 @@ def split_compound_by_rules(
             parts = [*prev_parts, homonym]
             flag_sets = [w.flags for w in parts]
             if any(r.fullmatch(flag_sets) for r in compoundrules):
-                yield [Paradigm(homonym)]
+                yield [Paradigm(word_rest, word_rest)]
 
     if len(word_rest) < aff.compoundmin * 2 or \
             (aff.compoundwordsmax and len(prev_parts) >= aff.compoundwordsmax):
@@ -342,4 +398,4 @@ def split_compound_by_rules(
                             compoundrules=compoundrules, prev_parts=parts
                         )
                 for rest in by_rules:
-                    yield [Paradigm(beg), *rest]
+                    yield [Paradigm(beg, beg), *rest]

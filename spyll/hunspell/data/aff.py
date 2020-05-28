@@ -125,6 +125,8 @@ class Aff:
 
     checkcompoundcase: bool = False
     checkcompounddup: bool = False
+    checkcompoundrep: bool = False
+    checkcompoundtriple: bool = False
 
     # IO:
     oconv: List[Tuple[str, str]] = field(default_factory=list)

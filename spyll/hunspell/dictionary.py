@@ -1,4 +1,3 @@
-import re
 from typing import Iterator
 
 from spyll.hunspell import data, readers
@@ -23,41 +22,7 @@ class Dictionary:
                 yield word
 
     def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
-        if self.aff.forbiddenword and \
-           any(self.aff.forbiddenword in w.flags for w in self.dic.homonyms(word)):
-            return False
-
-        def is_found(variant):
-            return any(
-                lookup.analyze(
-                    self.aff,
-                    self.dic,
-                    variant,
-                    capitalization=capitalization,
-                    allow_nosuggest=allow_nosuggest
-                )
-            )
-
-        def try_break(text, depth=0):
-            if depth > 10:
-                return
-
-            yield [text]
-            for pat in self.aff.breakpatterns:
-                for m in re.finditer(pat, text):
-                    start = text[:m.start(1)]
-                    rest = text[m.end(1):]
-                    for breaking in try_break(rest, depth=depth+1):
-                        yield [start, *breaking]
-
-        if is_found(word):
-            return True
-
-        for parts in try_break(word):
-            if all(is_found(part) for part in parts if part):
-                return True
-
-        return False
+        return lookup.lookup(self.aff, self.dic, word, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
 
     def is_forbidden(self, word: str) -> bool:
         if not self.aff.forbiddenword:
