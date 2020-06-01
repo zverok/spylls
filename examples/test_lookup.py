@@ -96,6 +96,9 @@ report('needaffix5')             # + "this affix needs affix" flag -- two at onc
 # TODO: test that WITHOUT the flag it is impossible
 report('fullstrip')              # + removes entire word text by suffix.
 
+report('zeroaffix')
+
+
 # ==============================
 section("Exclusion flags")
 
@@ -104,7 +107,6 @@ report('allcaps2')               # + forbiddenword marks possible, but wrong for
 report('allcaps3')               # + more capitalization + suffix examples
 report('allcaps_utf')            # +
 report('forbiddenword')
-report('forceucase')
 report('keepcase')
 report('nosuggest')
 
@@ -156,9 +158,13 @@ report('checkcompoundrep')
 report('checkcompoundtriple')
 report('compoundforbid')
 
+report('wordpair')
+
+report('forceucase')
 
 # ======================================
 section('Misc')
+
 report('fogemorpheme')
 report('morph')
 report('ngram_utf_fix')
@@ -174,18 +180,18 @@ report('simplifiedtriple')
 report('utf8_nonbmp')
 report('utfcompound')
 report('warn')
-report('wordpair')
-report('zeroaffix')
+
 
 # ===============================
 section('Specific languages')
+
 report('ignore')
 report('ignoresug')
 report('ignoreutf')
 report('germancompounding')
 report('germancompoundingold')
 report('hu')
-# report('dotless_i')            # - turkish capitalization rules
+report('dotless_i')            # - turkish capitalization rules
 report('IJ')
 report('nepali')
 report('korean')
@@ -198,13 +204,13 @@ section('Edge cases and bugs')
 # report('slash')                # - slash in words -- screened with \ in dictionary
 # report('timelimit')
 
-report('1592880')
-report('1975530')
-report('2970240')
-report('2970242')
-report('2999225')
-report('i35725')
-report('i53643')
-report('i54633')
-report('i54980')
-report('i58202')
+# report('1592880')
+# report('1975530')
+# report('2970240')
+# report('2970242')
+# report('2999225')
+# report('i35725')
+# report('i53643')
+# report('i54633')
+# report('i54980')
+# report('i58202')

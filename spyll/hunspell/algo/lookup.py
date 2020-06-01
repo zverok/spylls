@@ -35,6 +35,9 @@ class Paradigm:
         else:
             return flags
 
+    def all_affixes(self):
+        return list(filter(None, [self.prefix2, self.prefix, self.suffix, self.suffix2]))
+
 
 Compound = List[Paradigm]
 
@@ -53,6 +56,9 @@ def lookup(aff: data.Aff, dic: data.Dic, word: str, *, capitalization=True, allo
             analyze(aff, dic, variant, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
         )
 
+    if is_found(word):
+        return True
+
     def try_break(text, depth=0):
         if depth > 10:
             return
@@ -65,9 +71,6 @@ def lookup(aff: data.Aff, dic: data.Dic, word: str, *, capitalization=True, allo
                 for breaking in try_break(rest, depth=depth+1):
                     yield [start, *breaking]
 
-    if is_found(word):
-        return True
-
     for parts in try_break(word):
         if all(is_found(part) for part in parts if part):
             return True
@@ -79,9 +82,9 @@ def analyze(aff: data.Aff, dic: data.Dic, word: str, *,
             capitalization=True,
             allow_nosuggest=True) -> Iterator[Union[Paradigm, Compound]]:
 
-    def analyze_internal(variant, allcap=False):
+    def analyze_internal(variant, captype):
         return itertools.chain(
-            analyze_affixed(aff, dic, variant, allcap=allcap, allow_nosuggest=allow_nosuggest),
+            analyze_affixed(aff, dic, variant, captype=captype, allow_nosuggest=allow_nosuggest),
             analyze_compound(aff, dic, variant, allow_nosuggest=allow_nosuggest)
         )
 
@@ -89,7 +92,7 @@ def analyze(aff: data.Aff, dic: data.Dic, word: str, *,
         captype, variants = cap.variants(word)
 
         return itertools.chain.from_iterable(
-            analyze_internal(v, allcap=(captype == cap.Cap.ALL))
+            analyze_internal(v, captype=captype)
             for v in variants
         )
     else:
@@ -100,7 +103,7 @@ def analyze_affixed(
         aff: data.Aff,
         dic: data.Dic,
         word: str,
-        allcap: bool = False,
+        captype: cap.Cap = cap.Cap.NO,   # FIXME: Is it so?..
         compoundpos: Optional[CompoundPos] = None,
         allow_nosuggest=True) -> Iterator[Paradigm]:
 
@@ -114,6 +117,7 @@ def analyze_affixed(
 
         for w in dic.homonyms(form.stem):
             if have_compatible_flags(aff, w, form, compoundpos=compoundpos,
+                                     captype=captype,
                                      allow_nosuggest=allow_nosuggest):
                 found = True
                 yield form
@@ -122,9 +126,10 @@ def analyze_affixed(
             for w in dic.homonyms(form.stem, ignorecase=True):
                 # If the dictionary word is not lowercase, we accept only exactly that
                 # case (above), or ALLCAPS
-                if not allcap and cap.guess(w.stem) != cap.Cap.NO:
+                if captype != cap.Cap.ALL and cap.guess(w.stem) != cap.Cap.NO:
                     continue
                 if have_compatible_flags(aff, w, form, compoundpos=compoundpos,
+                                         captype=captype,
                                          allow_nosuggest=allow_nosuggest):
                     yield form
 
@@ -179,6 +184,7 @@ def have_compatible_flags(
         dictionary_word: data.dic.Word,
         paradigm: Paradigm,
         compoundpos: Optional[CompoundPos],
+        captype: cap.Cap,
         allow_nosuggest=True) -> bool:
 
     all_flags = dictionary_word.flags.union(paradigm.affix_flags())
@@ -186,9 +192,17 @@ def have_compatible_flags(
     if not allow_nosuggest and aff.nosuggest in dictionary_word.flags:
         return False
 
+    # Check capitalization
+    if aff.keepcase and aff.keepcase in dictionary_word.flags and captype != cap.guess(dictionary_word.stem):
+        return False
+
     # Check affix flags
-    if not paradigm.suffix and not paradigm.prefix:
-        if aff.needaffix in all_flags or aff.pseudoroot in all_flags:
+    # TODO: pseudoroot is an old synonym for needaffix
+    if aff.needaffix:
+        affixes = paradigm.all_affixes()
+        if aff.needaffix in dictionary_word.flags and not affixes:
+            return False
+        if affixes and all(aff.needaffix in a.flags for a in affixes):
             return False
 
     if paradigm.prefix and paradigm.prefix.flag not in all_flags:
@@ -224,29 +238,6 @@ def split_affixes(
         word: str,
         compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
 
-    result = _split_affixes(aff, word, compoundpos=compoundpos)
-
-    # FIXME: I feel like this methods should be simpler!
-    # Or at least better explained
-    def only_affix_need_affix(form, flag):
-        all_affixes = list(filter(None, [form.prefix, form.prefix2, form.suffix, form.suffix2]))
-        if not all_affixes:
-            return False
-        needaffs = [aff for aff in all_affixes if flag in aff.flags]
-        return len(all_affixes) == len(needaffs)
-
-    if aff.needaffix:
-        # FIXME: why doesn't just return (...generator...) work?..
-        yield from (r for r in result if not only_affix_need_affix(r, aff.needaffix))
-    else:
-        yield from result
-
-
-def _split_affixes(
-        aff: data.Aff,
-        word: str,
-        compoundpos: Optional[CompoundPos] = None) -> Iterator[Paradigm]:
-
     yield Paradigm(word, word)    # "Whole word" is always existing option
 
     if compoundpos:
@@ -272,7 +263,10 @@ def _split_affixes(
             if suffix_allowed and form.prefix.crossproduct:
                 yield from (
                     form2.replace(prefix=form.prefix)
-                    for form2 in desuffix(aff, form.stem, required_flags=suffix_required_flags, forbidden_flags=forbidden_flags, crossproduct=True)
+                    for form2 in desuffix(aff, form.stem,
+                                          required_flags=suffix_required_flags,
+                                          forbidden_flags=forbidden_flags,
+                                          crossproduct=True)
                 )
 
 

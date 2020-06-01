@@ -150,7 +150,7 @@ def detailed_affix_score(word1: str, word2: str, fact: float, *, base: float) ->
 
     # using 2-gram instead of 3, and other weightening
     re = sm.ngram(2, word1, word2, any_mismatch=True, weighted=True) + \
-            sm.ngram(2, word2, word1, any_mismatch=True, weighted=True)
+        sm.ngram(2, word2, word1, any_mismatch=True, weighted=True)
 
     ngram_score = sm.ngram(4, word1, word2, any_mismatch=True)
     leftcommon_score = sm.leftcommonsubstring(word1, word2.lower())
