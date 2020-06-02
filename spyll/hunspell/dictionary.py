@@ -8,7 +8,9 @@ class Dictionary:
     def __init__(self, path):
         self.aff = readers.AffReader(path + '.aff')()
         self.dic = readers.DicReader(
-            path + '.dic', encoding=self.aff.set, flag_format=self.aff.flag)()
+            path + '.dic', encoding=self.aff.SET, flag_format=self.aff.FLAG)()
+
+        self.analyzer = lookup.Analyzer(self.aff, self.dic)
 
     def roots(self, *,
               with_forbidden=False,
@@ -22,7 +24,7 @@ class Dictionary:
                 yield word
 
     def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
-        return lookup.lookup(self.aff, self.dic, word, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
+        return self.analyzer.lookup(word, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
 
     def is_forbidden(self, word: str) -> bool:
         if not self.aff.forbiddenword:

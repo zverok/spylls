@@ -5,15 +5,8 @@ import itertools
 from dataclasses import dataclass, field
 from typing import List, Set, Tuple, Optional, NewType
 
-from pygtrie import CharTrie
 
 Flag = NewType('Flag', str)
-
-
-class Affixes(CharTrie):
-    def lookup(self, prefix):
-        return [val for _, vals in self.prefixes(prefix) for val in vals]
-
 
 @dataclass
 class Affix:
@@ -28,127 +21,71 @@ class Affix:
 @dataclass
 class Prefix(Affix):
     def __post_init__(self):
-        cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
-        if self.strip:
-            cond_parts = cond_parts[len(self.strip):]
-
-        if cond_parts and cond_parts != ['.']:
-            cond = '(?=' + ''.join(cond_parts) + ')'
-        else:
-            cond = ''
-        self.regexp = re.compile('^' + self.add + cond)
         self.cond_regexp = re.compile('^' + self.condition)
 
 
 @dataclass
 class Suffix(Affix):
     def __post_init__(self):
-        cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
-        if self.strip:
-            cond_parts = cond_parts[:-len(self.strip)]
-
-        if cond_parts and cond_parts != ['.']:
-            cond = '(?<=' + ''.join(cond_parts) + ')'
-        else:
-            cond = ''
-        self.regexp = re.compile(cond + self.add + '$')
         self.cond_regexp = re.compile(self.condition + '$')
-
-
-@dataclass
-class CompoundRule:
-    text: str
-
-    def __post_init__(self):
-        # TODO: proper flag parsing! Long is (aa)(bb)*(cc), numeric is (1001)(1002)*(1003)
-        self.flags = set(re.sub(r'[\*\?]', '', self.text))
-        parts = re.findall(r'[^*?][*?]?', self.text)
-        self.re = re.compile(self.text)
-        self.partial_re = re.compile(
-            functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1])
-        )
-
-    def fullmatch(self, flag_sets):
-        relevant_flags = [self.flags.intersection(f) for f in flag_sets]
-        return any(
-            self.re.fullmatch(''.join(fc))
-            for fc in itertools.product(*relevant_flags)
-        )
-
-    def partial_match(self, flag_sets):
-        relevant_flags = [self.flags.intersection(f) for f in flag_sets]
-        return any(
-            self.partial_re.fullmatch(''.join(fc))
-            for fc in itertools.product(*relevant_flags)
-        )
 
 
 @dataclass
 class Aff:
     # General
-    set: str = 'Windows-1252'
-    flag: str = 'short'  # TODO: Enum of possible values, in fact
-    af: List[Tuple[int, Set[str]]] = field(default_factory=list)
+    SET: str = 'Windows-1252'
+    FLAG: str = 'short'  # TODO: Enum of possible values, in fact
+    AF: List[Tuple[int, Set[str]]] = field(default_factory=list)
 
     # Suggestions
-    key: str = ''
-    try_: str = ''  # actually just TRY, but conflicts with Python keyword
-    nosuggest: Optional[Flag] = None
-    keepcase: Optional[Flag] = None
-    maxcpdsugs: int = 0
-    rep: List[Tuple[str, str]] = field(default_factory=list)
-    map: List[Set[str]] = field(default_factory=list)
-    maxdiff: int = -1
-    onlymaxdiff: bool = False
-    maxngramsugs: int = 4
+    KEY: str = ''
+    TRY: str = ''
+    NOSUGGEST: Optional[Flag] = None
+    KEEPCASE: Optional[Flag] = None
+    MAXCPDSUGS: int = 0
+    REP: List[Tuple[str, str]] = field(default_factory=list)
+    MAP: List[Set[str]] = field(default_factory=list)
+    MAXDIFF: int = -1
+    ONLYMAXDIFF: bool = False
+    MAXNGRAMSUGS: int = 4
 
     # Stemming
-    pfx: List[Prefix] = field(default_factory=dict)
-    sfx: List[Suffix] = field(default_factory=dict)
-    circumfix: Optional[Flag] = None
-    needaffix: Optional[Flag] = None
-    pseudoroot: Optional[Flag] = None
-    forbiddenword: Optional[Flag] = None
+    PFX: List[Prefix] = field(default_factory=dict)
+    SFX: List[Suffix] = field(default_factory=dict)
+    CIRCUMFIX: Optional[Flag] = None
+    NEEDAFFIX: Optional[Flag] = None
+    PSEUDOROOT: Optional[Flag] = None
+    FORBIDDENWORD: Optional[Flag] = None
     BREAK: List[str] = field(default_factory=lambda: ['-', '^-', '-$'])
 
     # Compounding
-    compoundrule: List[str] = field(default_factory=list)
-    compoundmin: int = 3
-    compoundwordsmax: Optional[int] = None
-    compoundflag: Optional[Flag] = None
-    compoundbegin: Optional[Flag] = None
-    compoundmiddle: Optional[Flag] = None
-    compoundlast: Optional[Flag] = None
-    onlyincompound: Optional[Flag] = None
-    compoundpermitflag: Optional[Flag] = None
-    compoundforbidflag: Optional[Flag] = None
+    COMPOUNDRULE: List[str] = field(default_factory=list)
 
-    checkcompoundcase: bool = False
-    checkcompounddup: bool = False
-    checkcompoundrep: bool = False
-    checkcompoundtriple: bool = False
+    COMPOUNDMIN: int = 3
+    COMPOUNDWORDSMAX: Optional[int] = None
+
+    COMPOUNDFLAG: Optional[Flag] = None
+
+    COMPOUNDBEGIN: Optional[Flag] = None
+    COMPOUNDMIDDLE: Optional[Flag] = None
+    COMPOUNDLAST: Optional[Flag] = None
+
+    ONLYINCOMPOUND: Optional[Flag] = None
+
+    COMPOUNDPERMITFLAG: Optional[Flag] = None
+    COMPOUNDFORBIDFLAG: Optional[Flag] = None
+
+    CHECKCOMPOUNDCASE: bool = False
+    CHECKCOMPOUNDDUP: bool = False
+    CHECKCOMPOUNDREP: bool = False
+    CHECKCOMPOUNDTRIPLE: bool = False
+    CHECKCOMPOUNDPATTERN: List[Tuple[str, str, Optional[str]]] = field(default_factory=list)
 
     # IO:
-    iconv: List[Tuple[str, str]] = field(default_factory=list)
-    oconv: List[Tuple[str, str]] = field(default_factory=list)
+    ICONV: List[Tuple[str, str]] = field(default_factory=list)
+    OCONV: List[Tuple[str, str]] = field(default_factory=list)
 
-    # TODO: IO, morphology
-
-    def __post_init__(self):
-        self.compoundrules = [CompoundRule(r) for r in self.compoundrule]
-        self.breakpatterns = [
-            re.compile(f"({pat})") if pat.startswith('^') or pat.endswith('$') else re.compile(f".({pat}).")
-            for pat in self.BREAK
-        ]
-
-        self.suffixes = Affixes()
-        self.prefixes = Affixes()
-
-        for add, sufs in itertools.groupby(itertools.chain.from_iterable(self.sfx.values()), lambda suf: suf.add[::-1]):
-            self.suffixes[add] = list(sufs)
-
-        for add, prefs in itertools.groupby(itertools.chain.from_iterable(self.pfx.values()), lambda pref: pref.add):
-            self.prefixes[add] = list(prefs)
+    # TODO: morphology
 
     def use_dash(self) -> bool:
         return '-' in self.try_ or 'a' in self.try_

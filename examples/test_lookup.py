@@ -69,6 +69,7 @@ report('encoding')
 report('utf8')
 # report('utf8_bom')    # TODO: file reader support for BOM
 # report('utf8_bom2')   # TODO: file reader support for BOM
+# report('right_to_left_mark') # TODO: file reader should remove \u200f
 
 # ===============================
 section('Affixes')
@@ -151,16 +152,16 @@ report('checkcompoundcase2')
 report('checkcompoundcaseutf')
 report('checkcompounddup')
 report('checkcompoundpattern')
-report('checkcompoundpattern2')
-report('checkcompoundpattern3')
-report('checkcompoundpattern4')
+# report('checkcompoundpattern2') -- replacement feature of pattern seems to not be used at all
+# report('checkcompoundpattern3')
+# report('checkcompoundpattern4')
 report('checkcompoundrep')
 report('checkcompoundtriple')
 report('compoundforbid')
 
 report('wordpair')
-
 report('forceucase')
+report('utfcompound')
 
 # ======================================
 section('Misc')
@@ -168,17 +169,16 @@ section('Misc')
 report('fogemorpheme')
 report('morph')
 report('ngram_utf_fix')
-# report('opentaal_cpdpat2')
-# report('opentaal_cpdpat')
-# report('opentaal_forbiddenword1')
-# report('opentaal_forbiddenword2')
-# report('opentaal_keepcase')
+report('opentaal_cpdpat2')
+report('opentaal_cpdpat')
+report('opentaal_forbiddenword1')
+report('opentaal_forbiddenword2')
+# report('opentaal_keepcase') -- reader fail, `break #`
 report('ph2')
-report('right_to_left_mark')
+
 report('simplifiedtriple')
 
 report('utf8_nonbmp')
-report('utfcompound')
 report('warn')
 
 

@@ -17,21 +17,17 @@ class AffReader:
     def __call__(self):
         data = {}
         for (num, ln) in self.source:
-            name, *parts = re.split(r'\s+', ln)
-            field = name.lower()
-            if field == 'try':
-                field = 'try_'
-            if field == 'break':
-                field = 'BREAK'
+            field, *parts = re.split(r'\s+', ln)
+
             # TODO: This is temp, to test on "real" dictionaries without understanding all
             # the fields. Maybe for ver. 0.0.1 it is acceptable, but should at least be
             # debug-logged.
             if field not in self.FIELDS:
                 continue
-            val = self._read_directive(field, name, *parts)
-            if field == 'flags':
+            val = self._read_directive(field, *parts)
+            if field == 'FLAGS':
                 self.flag_format = field
-            if field == 'sfx' or field == 'pfx':
+            if field == 'SFX' or field == 'PFX':
                 if field not in data:
                     data[field] = {}
                 data[field][val[0].flag] = val
@@ -41,32 +37,34 @@ class AffReader:
         return Aff(**data)
 
     # TODO: all Flag-typed directives should be read via util.parse_flags
-    def _read_directive(self, field, name, *values):
+    def _read_directive(self, field, *values):
         f = self.FIELDS[field]
         value = values[0] if values else None
-        if field == 'sfx' or field == 'pfx':
+        if field == 'SFX' or field == 'PFX':
             return self._read_affix(field, values)
+        elif field == 'CHECKCOMPOUNDPATTERN':
+            return self._read_compoundpattern(value)
         elif f.type == int:
             return int(value)
         elif f.type == str:
-            if field == 'set':
+            if field == 'SET':
                 self.source.reset_encoding(value)
             return value
         elif f.type == t.Optional[aff.Flag]:
             return aff.Flag(value)
         elif f.type == t.List[t.Tuple[str, str]]:
-            lines = self._read_array(name, int(value))
+            lines = self._read_array(field, int(value))
             return [tuple(ln) for ln in lines]
         elif f.type == t.List[str]:
-            return [ln[0] for ln in self._read_array(name, int(value))]
+            return [ln[0] for ln in self._read_array(field, int(value))]
         elif f.type == t.List[t.Tuple[int, t.Set[str]]]:
-            lines = self._read_array(name, int(value))
+            lines = self._read_array(field, int(value))
             return [
                 (i + 1, util.parse_flags(ln[0], format=self.flag_format))
                 for i, ln in enumerate(lines)
             ]
         elif f.type == t.List[t.Set[str]]:
-            lines = self._read_array(name, int(value))
+            lines = self._read_array(field, int(value))
             return [
                 list(
                     map(lambda s: re.sub(r'[()]', '', s),
@@ -116,3 +114,11 @@ class AffReader:
             )
 
         return res
+
+    def _read_compoundpattern(self, count):
+        lines = self._read_array('CHECKCOMPOUNDPATTERN', int(count))
+
+        return [
+            (left, right, rest[0] if rest else None)
+            for left, right, *rest in lines
+        ]
