@@ -57,15 +57,8 @@ class CompoundPattern:
     replacement: Optional[str] = None
 
     def __post_init__(self):
-        if '/' in self.left:
-            self.left_stem, self.left_flag = self.left.split('/')
-        else:
-            self.left_stem, self.left_flag = self.left, None
-
-        if '/' in self.right:
-            self.right_stem, self.right_flag = self.right.split('/')
-        else:
-            self.right_stem, self.right_flag = self.right, None
+        self.left_stem, _, self.left_flag = self.left.partition('/')
+        self.right_stem, _, self.right_flag = self.right.partition('/')
 
     def match(self, left, right):
         # TODO: we don't check flags yet
@@ -153,8 +146,7 @@ class Analyzer:
 
 
     def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
-        if self.aff.FORBIDDENWORD and \
-           self.dic.homonyms(word) and all(self.aff.FORBIDDENWORD in w.flags for w in self.dic.homonyms(word)):
+        if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
 
         if self.aff.ICONV:
@@ -195,7 +187,7 @@ class Analyzer:
         def analyze_internal(variant, captype):
             return itertools.chain(
                 self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest),
-                self.compound_parts(variant, allow_nosuggest=allow_nosuggest)
+                self.compound_parts(variant, captype=captype, allow_nosuggest=allow_nosuggest)
             )
 
         if capitalization:
@@ -221,7 +213,7 @@ class Analyzer:
             # Base (no suffixes) homonym is allowed if exists.
             # And if it would not, we would not be here at all.
             if compoundpos or not form.is_base():
-                if any(self.aff.FORBIDDENWORD in dword.flags for dword in self.dic.homonyms(form.stem)):
+                if self.dic.has_flag(form.stem, self.aff.FORBIDDENWORD):
                     return
 
             for w in self.dic.homonyms(form.stem):
@@ -243,7 +235,7 @@ class Analyzer:
                         yield form
 
 
-    def compound_parts(self, word: str, allow_nosuggest=True) -> Iterator[Compound]:
+    def compound_parts(self, word: str, captype: cap.Cap, allow_nosuggest=True) -> Iterator[Compound]:
         aff = self.aff
 
         if aff.COMPOUNDBEGIN or aff.COMPOUNDFLAG:
@@ -257,14 +249,17 @@ class Analyzer:
             by_rules = iter(())
 
         def bad_compound(compound):
+            if aff.FORCEUCASE and captype not in [cap.Cap.ALL, cap.Cap.INIT]:
+                if self.dic.has_flag(compound[-1].text, aff.FORCEUCASE):
+                        return True
+
             for left_paradigm in compound[:-1]:
                 left = left_paradigm.text
 
                 if aff.COMPOUNDFORBIDFLAG:
                     # We don't check right: compoundforbid prohibits words at the beginning and middle
-                    for dword in self.dic.homonyms(left):
-                        if aff.COMPOUNDFORBIDFLAG in dword.flags:
-                            return True
+                    if self.dic.has_flag(left, aff.COMPOUNDFORBIDFLAG):
+                        return True
 
                 for right_paradigm in compound[1:]:
                     right = right_paradigm.text
@@ -281,7 +276,7 @@ class Analyzer:
                         if (r == r.upper() or l == l.upper()) and r != '-' and l != '-':
                             return True
                     if aff.CHECKCOMPOUNDPATTERN:
-                        if any(rule.match(left_paradigm, right_paradigm) for rule in self.compoundpatterns):
+                        if any(pattern.match(left_paradigm, right_paradigm) for pattern in self.compoundpatterns):
                             return True
             return False
 
@@ -494,6 +489,7 @@ class Analyzer:
             allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
+        # initial run
         if rules is None:
             rules = self.compoundrules
 

@@ -1,5 +1,4 @@
 import re
-import functools
 import itertools
 
 from dataclasses import dataclass, field
@@ -35,7 +34,6 @@ class Aff:
     # General
     SET: str = 'Windows-1252'
     FLAG: str = 'short'  # TODO: Enum of possible values, in fact
-    AF: List[Tuple[int, Set[str]]] = field(default_factory=list)
 
     # Suggestions
     KEY: str = ''
@@ -50,6 +48,7 @@ class Aff:
     MAXNGRAMSUGS: int = 4
 
     # Stemming
+    AF: List[Tuple[int, Set[Flag]]] = field(default_factory=list)
     PFX: List[Prefix] = field(default_factory=dict)
     SFX: List[Suffix] = field(default_factory=dict)
     CIRCUMFIX: Optional[Flag] = None
@@ -74,6 +73,8 @@ class Aff:
 
     COMPOUNDPERMITFLAG: Optional[Flag] = None
     COMPOUNDFORBIDFLAG: Optional[Flag] = None
+
+    FORCEUCASE: Optional[Flag] = None
 
     CHECKCOMPOUNDCASE: bool = False
     CHECKCOMPOUNDDUP: bool = False
