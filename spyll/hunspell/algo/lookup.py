@@ -430,13 +430,23 @@ class Analyzer:
 
         for pos in range(aff.COMPOUNDMIN, len(word_rest) - aff.COMPOUNDMIN + 1):
             beg = word_rest[0:pos]
+            rest = word_rest[pos:]
 
             for form in self.word_forms(beg, compoundpos=compoundpos,
                                             allow_nosuggest=allow_nosuggest):
                 parts = [*prev_parts, form]
-                for rest in self.compound_parts_by_flags(word_rest[pos:], parts,
+                for rest in self.compound_parts_by_flags(rest, parts,
                                                     allow_nosuggest=allow_nosuggest):
                     yield [form, *rest]
+
+            if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
+                # FIXME: for now, we only try duplicating the first word's letter
+                for form in self.word_forms(beg + beg[-1], compoundpos=compoundpos,
+                                                allow_nosuggest=allow_nosuggest):
+                    parts = [*prev_parts, form]
+                    for rest in self.compound_parts_by_flags(rest, parts,
+                                                        allow_nosuggest=allow_nosuggest):
+                        yield [form.replace(text=beg), *rest]
 
     def compound_parts_by_rules(
             self,
@@ -492,19 +502,30 @@ class Analyzer:
 
             for right_paradigm in compound[1:]:
                 right = right_paradigm.text
+
+                if any(self.dic.homonyms(left + ' ' + right)):
+                    return True
+
                 if aff.CHECKCOMPOUNDREP:
                     for candidate in pmt.replchars(left + right, aff.REP):
                         if isinstance(candidate, str) and any(self.word_forms(candidate)):
                             return True
+
                 if aff.CHECKCOMPOUNDTRIPLE:
                     if len(set(left[-2:] + right[:1])) == 1 or len(set(left[-1:] + right[:2])) == 1:
                         return True
+
                 if aff.CHECKCOMPOUNDCASE:
                     r = right[0]
                     l = left[-1]
                     if (r == r.upper() or l == l.upper()) and r != '-' and l != '-':
                         return True
+
                 if aff.CHECKCOMPOUNDPATTERN:
                     if any(pattern.match(left_paradigm, right_paradigm) for pattern in self.compoundpatterns):
+                        return True
+
+                if aff.CHECKCOMPOUNDDUP:
+                    if left == right:
                         return True
         return False

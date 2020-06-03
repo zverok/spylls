@@ -16,7 +16,8 @@ class DicReader:
                 continue
 
             # TODO: morphology. Now we just dropping it
-            ln = re.sub(r'\s+.+$', '', ln)
+            if ':' in ln:
+                ln = re.sub(r'\s+.+$', '', ln)
 
             if '/' in ln:
                 word, flags = ln.split('/')
