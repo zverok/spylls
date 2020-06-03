@@ -1,11 +1,11 @@
 import re
-import itertools
 
 from dataclasses import dataclass, field
 from typing import List, Set, Tuple, Optional, NewType
 
 
 Flag = NewType('Flag', str)
+
 
 @dataclass
 class Affix:
@@ -34,6 +34,9 @@ class Aff:
     # General
     SET: str = 'Windows-1252'
     FLAG: str = 'short'  # TODO: Enum of possible values, in fact
+    LANG: Optional[str] = None
+    WORDCHARS: Optional[str] = None
+    IGNORE: Optional[str] = None
 
     # Suggestions
     KEY: str = ''
@@ -46,6 +49,7 @@ class Aff:
     MAXDIFF: int = -1
     ONLYMAXDIFF: bool = False
     MAXNGRAMSUGS: int = 4
+    NOSPLITSUGS: bool = False
 
     # Stemming
     AF: List[Tuple[int, Set[Flag]]] = field(default_factory=list)
@@ -56,18 +60,23 @@ class Aff:
     PSEUDOROOT: Optional[Flag] = None
     FORBIDDENWORD: Optional[Flag] = None
     BREAK: List[str] = field(default_factory=lambda: ['-', '^-', '-$'])
+    COMPLEXPREFIXES: bool = False
+    FULLSTRIP: bool = False
+    WARN: Optional[Flag] = None
+
+    CHECKSHARPS: bool = False
 
     # Compounding
     COMPOUNDRULE: List[str] = field(default_factory=list)
 
     COMPOUNDMIN: int = 3
-    COMPOUNDWORDSMAX: Optional[int] = None
+    COMPOUNDWORDMAX: Optional[int] = None
 
     COMPOUNDFLAG: Optional[Flag] = None
 
     COMPOUNDBEGIN: Optional[Flag] = None
     COMPOUNDMIDDLE: Optional[Flag] = None
-    COMPOUNDLAST: Optional[Flag] = None
+    COMPOUNDEND: Optional[Flag] = None
 
     ONLYINCOMPOUND: Optional[Flag] = None
 
@@ -81,6 +90,10 @@ class Aff:
     CHECKCOMPOUNDREP: bool = False
     CHECKCOMPOUNDTRIPLE: bool = False
     CHECKCOMPOUNDPATTERN: List[Tuple[str, str, Optional[str]]] = field(default_factory=list)
+
+    SIMPLIFIEDTRIPLE: bool = False
+
+    COMPOUNDSYLLABLE: Optional[Tuple[int, str]] = None
 
     # IO:
     ICONV: List[Tuple[str, str]] = field(default_factory=list)

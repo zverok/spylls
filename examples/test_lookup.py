@@ -159,6 +159,8 @@ report('checkcompoundrep')
 report('checkcompoundtriple')
 report('compoundforbid')
 
+report('simplifiedtriple')
+
 report('wordpair')
 report('forceucase')
 report('utfcompound')
@@ -169,14 +171,12 @@ section('Misc')
 report('fogemorpheme')
 report('morph')
 report('ngram_utf_fix')
-report('opentaal_cpdpat2')
 report('opentaal_cpdpat')
+report('opentaal_cpdpat2')
 report('opentaal_forbiddenword1')
 report('opentaal_forbiddenword2')
 # report('opentaal_keepcase') -- reader fail, `break #`
 report('ph2')
-
-report('simplifiedtriple')
 
 report('utf8_nonbmp')
 report('warn')
