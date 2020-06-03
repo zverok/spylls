@@ -336,9 +336,9 @@ class Analyzer:
                     yield from (
                         form2.replace(prefix=form.prefix)
                         for form2 in self.desuffix(form.stem,
-                                              required_flags=suffix_required_flags,
-                                              forbidden_flags=forbidden_flags,
-                                              crossproduct=True)
+                                                   required_flags=suffix_required_flags,
+                                                   forbidden_flags=forbidden_flags,
+                                                   crossproduct=True)
                     )
 
     def desuffix(
@@ -367,10 +367,10 @@ class Analyzer:
 
             if not nested:  # only one level depth
                 for form2 in self.desuffix(stem,
-                                      required_flags=[suffix.flag, *required_flags],
-                                      forbidden_flags=forbidden_flags,
-                                      nested=True,
-                                      crossproduct=crossproduct):
+                                           required_flags=[suffix.flag, *required_flags],
+                                           forbidden_flags=forbidden_flags,
+                                           nested=True,
+                                           crossproduct=crossproduct):
                     yield form2.replace(suffix2=suffix, text=word)
 
     def deprefix(
@@ -398,9 +398,9 @@ class Analyzer:
             # TODO: Only if compoundpreffixes are allowed in *.aff
             if not nested:  # only one level depth
                 for form2 in self.deprefix(stem,
-                                      required_flags=[prefix.flag, *required_flags],
-                                      forbidden_flags=forbidden_flags,
-                                      nested=True):
+                                           required_flags=[prefix.flag, *required_flags],
+                                           forbidden_flags=forbidden_flags,
+                                           nested=True):
                     yield form2.replace(prefix2=prefix, text=word)
 
     # Compounding details
@@ -418,8 +418,8 @@ class Analyzer:
         # possible
         if prev_parts:
             for form in self.word_forms(word_rest,
-                                            compoundpos=CompoundPos.END,
-                                            allow_nosuggest=allow_nosuggest):
+                                        compoundpos=CompoundPos.END,
+                                        allow_nosuggest=allow_nosuggest):
                 yield [form]
 
         if len(word_rest) < aff.COMPOUNDMIN * 2 or \
@@ -433,19 +433,19 @@ class Analyzer:
             rest = word_rest[pos:]
 
             for form in self.word_forms(beg, compoundpos=compoundpos,
-                                            allow_nosuggest=allow_nosuggest):
+                                        allow_nosuggest=allow_nosuggest):
                 parts = [*prev_parts, form]
                 for rest in self.compound_parts_by_flags(rest, parts,
-                                                    allow_nosuggest=allow_nosuggest):
+                                                         allow_nosuggest=allow_nosuggest):
                     yield [form, *rest]
 
             if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
                 # FIXME: for now, we only try duplicating the first word's letter
                 for form in self.word_forms(beg + beg[-1], compoundpos=compoundpos,
-                                                allow_nosuggest=allow_nosuggest):
+                                            allow_nosuggest=allow_nosuggest):
                     parts = [*prev_parts, form]
                     for rest in self.compound_parts_by_flags(rest, parts,
-                                                        allow_nosuggest=allow_nosuggest):
+                                                             allow_nosuggest=allow_nosuggest):
                         yield [form.replace(text=beg), *rest]
 
     def compound_parts_by_rules(
