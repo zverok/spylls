@@ -1,11 +1,9 @@
 from .file_reader import FileReader
-from .aff_reader import AffReader
-from .dic_reader import DicReader
-from .util import parse_flags
+from .aff import read_aff
+from .dic import read_dic
 
 __all__ = [
     "FileReader",
-    "AffReader",
-    "DicReader",
-    "parse_flags"
+    "read_aff",
+    "read_dic"
 ]

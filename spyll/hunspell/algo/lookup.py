@@ -125,17 +125,21 @@ class Analyzer:
                 cond = ''
             return re.compile('^' + prefix.add + cond)
 
-        for add, sufs in itertools.groupby(itertools.chain.from_iterable(self.aff.SFX.values()), lambda suf: suf.add[::-1]):
-            self.suffixes[add] = [
-                (suf, suffix_regexp(suf))
-                for suf in sufs
-            ]
+        suffixes = {}
+        for suf in itertools.chain.from_iterable(self.aff.SFX.values()):
+            key = suf.add[::-1]
+            suffixes[key] = [*suffixes.get(key, []), (suf, suffix_regexp(suf))]
 
-        for add, prefs in itertools.groupby(itertools.chain.from_iterable(self.aff.PFX.values()), lambda pref: pref.add):
-            self.prefixes[add] = [
-                (pref, prefix_regexp(pref))
-                for pref in prefs
-            ]
+        for key, sufs in suffixes.items():
+            self.suffixes[key] = sufs
+
+        prefixes = {}
+        for pref in itertools.chain.from_iterable(self.aff.PFX.values()):
+            key = pref.add
+            prefixes[key] = [*prefixes.get(key, []), (pref, prefix_regexp(pref))]
+
+        for key, prefs in prefixes.items():
+            self.prefixes[key] = prefs
 
         self.compoundrules = [CompoundRule(r) for r in self.aff.COMPOUNDRULE]
         self.compoundpatterns = [CompoundPattern(*row) for row in self.aff.CHECKCOMPOUNDPATTERN]
@@ -488,6 +492,7 @@ class Analyzer:
 
     def bad_compound(self, compound, captype):
         aff = self.aff
+
         if aff.FORCEUCASE and captype not in [cap.Cap.ALL, cap.Cap.INIT]:
             if self.dic.has_flag(compound[-1].text, aff.FORCEUCASE):
                 return True

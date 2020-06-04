@@ -6,9 +6,8 @@ from spyll.hunspell.algo import lookup, suggest
 
 class Dictionary:
     def __init__(self, path):
-        self.aff = readers.AffReader(path + '.aff')()
-        self.dic = readers.DicReader(
-            path + '.dic', encoding=self.aff.SET, flag_format=self.aff.FLAG)()
+        self.aff, flag_parser = readers.read_aff(path + '.aff')
+        self.dic = readers.read_dic(path + '.dic', encoding=self.aff.SET, flag_parser=flag_parser)
 
         self.analyzer = lookup.Analyzer(self.aff, self.dic)
 

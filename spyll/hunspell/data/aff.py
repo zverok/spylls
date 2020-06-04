@@ -1,7 +1,7 @@
 import re
 
 from dataclasses import dataclass, field
-from typing import List, Set, Tuple, Optional, NewType
+from typing import List, Set, Dict, Tuple, Optional, NewType
 
 
 Flag = NewType('Flag', str)
@@ -52,7 +52,7 @@ class Aff:
     NOSPLITSUGS: bool = False
 
     # Stemming
-    AF: List[Tuple[int, Set[Flag]]] = field(default_factory=list)
+    AF: Dict[int, Set[Flag]] = field(default_factory=dict)
     PFX: List[Prefix] = field(default_factory=dict)
     SFX: List[Suffix] = field(default_factory=dict)
     CIRCUMFIX: Optional[Flag] = None
@@ -99,7 +99,8 @@ class Aff:
     ICONV: List[Tuple[str, str]] = field(default_factory=list)
     OCONV: List[Tuple[str, str]] = field(default_factory=list)
 
-    # TODO: morphology
+    # Morphology
+    AM: Dict[int, Set[str]] = field(default_factory=dict)
 
     def use_dash(self) -> bool:
         return '-' in self.try_ or 'a' in self.try_

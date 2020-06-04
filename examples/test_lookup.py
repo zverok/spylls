@@ -59,12 +59,12 @@ report('base')                   # + basic suffixes/prefixes + capitalization
 report('base_utf')               # ± special chars, 1 fail with turkish "i" capitalized
 
 report('flag')                   # + suffix having its own flag "I can have extra suffix"
-# report('flaglong')
-# report('flagnum')
-# report('flagutf8')
-# report('alias')
-# report('alias2')
-# report('alias3')
+report('flaglong')
+report('flagnum')
+report('flagutf8')
+report('alias')
+report('alias2')
+report('alias3')
 report('encoding')
 report('utf8')
 # report('utf8_bom')    # TODO: file reader support for BOM
@@ -208,13 +208,13 @@ section('Edge cases and bugs')
 # report('slash')                # - slash in words -- screened with \ in dictionary
 # report('timelimit')
 
-# report('1592880')
-# report('1975530')
-# report('2970240')
-# report('2970242')
-# report('2999225')
-# report('i35725')
-# report('i53643')
-# report('i54633')
-# report('i54980')
-# report('i58202')
+report('1592880')
+report('1975530')
+report('2970240')
+# report('2970242') -- checkcompoundpattern with flag
+# report('2999225') -- numbers, should be treated specially
+report('i35725')
+report('i53643')
+report('i54633')
+report('i54980')
+report('i58202') # -- tricky capitalization

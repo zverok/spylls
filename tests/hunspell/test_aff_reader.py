@@ -5,19 +5,19 @@ def test_everything():
     reader = AffReader('tests/fixtures/everything.aff')
     aff = reader()
 
-    assert aff.set == 'UTF-8'
-    assert aff.flag == 'short'
+    assert aff.SET == 'UTF-8'
+    assert aff.FLAG == 'short'
 
-    assert aff.key == ['qwertyuiopå', 'asdfghjklæø', 'zxcvbnm']
+    assert aff.KEY == 'qwertyuiopå|asdfghjklæø|zxcvbnm'
 
-    assert aff.circumfix == a.Flag('f')
-    assert aff.needaffix == a.Flag('*')
-    assert aff.forbiddenword == a.Flag('-')
-    assert aff.nosuggest == a.Flag('X')
-    assert aff.maxcpdsugs == 0
-    assert aff.compoundmin == 1
+    assert aff.CIRCUMFIX == a.Flag('f')
+    assert aff.NEEDAFFIX == a.Flag('*')
+    assert aff.FORBIDDENWORD == a.Flag('-')
+    assert aff.NOSUGGEST == a.Flag('X')
+    assert aff.MAXCPDSUGS == 0
+    assert aff.COMPOUNDMIN == 1
 
-    assert aff.rep == [
+    assert aff.REP == [
         ("^Ca$", "Ça"),
         ("^l", "l'"),
         ("^d", "d'"),
@@ -25,7 +25,7 @@ def test_everything():
         ("^s", "s'")
     ]
 
-    assert aff.map == [
+    assert aff.MAP == [
         "aàâäAÀÂÄ",
         "eéèêëEÉÈÊË",
         "iîïyIÎÏY",
@@ -34,7 +34,7 @@ def test_everything():
         "cçCÇ"
     ]
 
-    assert aff.af == [
+    assert aff.AF == [
         (1, {'A', 'B'}),
         (2, {'B', 'C'}),
         (3, {'C', 'D'}),
