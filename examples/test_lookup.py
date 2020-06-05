@@ -6,7 +6,7 @@ def readlist(path, ignoredot=True):
     if not os.path.isfile(path):
         return []
     # we ignore "incomplete tokenization" feature
-    return [ln for ln in open(path).read().splitlines() if not ignoredot or ln[-1:] != '.']
+    return [ln.strip() for ln in open(path).read().splitlines() if not ignoredot or ln[-1:] != '.']
 
 def test(name):
     path = f'tests/fixtures/hunspell-orig/{name}'
@@ -167,16 +167,17 @@ report('utfcompound')
 
 report('fogemorpheme')
 
+report('opentaal_cpdpat')
+report('opentaal_cpdpat2')
+
+report('opentaal_forbiddenword1')
+report('opentaal_forbiddenword2')
+
 # ======================================
 section('Misc')
 
 report('ngram_utf_fix')
 
-
-report('opentaal_cpdpat')
-report('opentaal_cpdpat2')
-report('opentaal_forbiddenword1')
-report('opentaal_forbiddenword2')
 # report('opentaal_keepcase') -- reader fail, `break #`
 
 report('ph2') # -- requires better dictionary parsing, first of all
@@ -192,15 +193,19 @@ section('Specific languages')
 report('ignore')
 report('ignoresug')
 report('ignoreutf')
+
+report('checksharps')
+report('checksharpsutf')
+
+report('dotless_i')            # - turkish capitalization rules
+report('IJ')
+
+report('nepali')                # - conversion of invisible characters
+report('korean')
+
 report('germancompounding')
 report('germancompoundingold')
 report('hu')
-report('dotless_i')            # - turkish capitalization rules
-report('IJ')
-report('nepali')
-report('korean')
-report('checksharps')
-report('checksharpsutf')
 
 # ===============================
 section('Edge cases and bugs')

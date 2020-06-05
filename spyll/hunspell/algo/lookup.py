@@ -59,10 +59,24 @@ class CompoundPattern:
     def __post_init__(self):
         self.left_stem, _, self.left_flag = self.left.partition('/')
         self.right_stem, _, self.right_flag = self.right.partition('/')
+        if self.left_stem == '0':
+            self.left_stem = ''
+            self.left_no_affix = True
+        else:
+            self.left_no_affix = False
+
+        if self.right_stem == '0':
+            self.right_stem = ''
+            self.right_no_affix = True
+        else:
+            self.right_no_affix = False
 
     def match(self, left, right):
-        # TODO: we don't check flags yet
-        return left.stem.endswith(self.left_stem) and right.stem.startswith(self.right_stem)
+        return (left.stem.endswith(self.left_stem)) and (right.stem.startswith(self.right_stem)) and \
+               (not self.left_no_affix or not left.is_base()) and \
+               (not self.right_no_affix or not right.is_base()) and \
+               (not self.left_flag or self.left_flag in left.flags()) and \
+               (not self.right_flag or self.right_flag in right.flags())
 
 
 @dataclass
@@ -73,6 +87,7 @@ class WordForm:
     suffix: Optional[data.aff.Suffix] = None
     prefix2: Optional[data.aff.Prefix] = None
     suffix2: Optional[data.aff.Suffix] = None
+    root: Optional[data.dic.Word] = None
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
@@ -80,12 +95,14 @@ class WordForm:
     def is_base(self):
         return not self.suffix and not self.prefix
 
-    def affix_flags(self):
-        flags = self.prefix.flags if self.prefix else set()
+    def flags(self):
+        flags = self.root.flags if self.root else set()
+        if self.prefix:
+            flags = flags.union(self.prefix.flags)
         if self.suffix:
-            return flags.union(self.suffix.flags)
-        else:
-            return flags
+            flags = flags.union(self.suffix.flags)
+
+        return flags
 
     def all_affixes(self):
         return list(filter(None, [self.prefix2, self.prefix, self.suffix, self.suffix2]))
@@ -208,34 +225,34 @@ class Analyzer:
             word: str,
             captype: cap.Cap = cap.Cap.NO,   # FIXME: Is it so?..
             compoundpos: Optional[CompoundPos] = None,
-            allow_nosuggest=True) -> Iterator[WordForm]:
+            allow_nosuggest=True,
+            with_forbidden=False) -> Iterator[WordForm]:
 
-        def suitable_homonym(form, homonym):
-            return self.suitable_homonym(form, homonym, compoundpos=compoundpos,
-                                         captype=captype,
-                                         allow_nosuggest=allow_nosuggest)
+        def good_form(form, **kwarg):
+            return self.good_form(form, compoundpos=compoundpos,
+                                  captype=captype,
+                                  allow_nosuggest=allow_nosuggest,
+                                  **kwarg)
 
         for form in self.try_affix_forms(word, compoundpos=compoundpos):
             found = False
             # Base (no suffixes) homonym is allowed if exists.
             # And if it would not, we would not be here at all.
             if compoundpos or not form.is_base():
-                if self.dic.has_flag(form.stem, self.aff.FORBIDDENWORD):
+                if not with_forbidden and self.dic.has_flag(form.stem, self.aff.FORBIDDENWORD):
                     return
 
             for homonym in self.dic.homonyms(form.stem):
-                if suitable_homonym(form, homonym):
+                candidate = form.replace(root=homonym)
+                if good_form(candidate):
                     found = True
-                    yield form
+                    yield candidate
 
             if not found:
                 for homonym in self.dic.homonyms(form.stem, ignorecase=True):
-                    # If the dictionary word is not lowercase, we accept only exactly that
-                    # case (above), or ALLCAPS
-                    if captype != cap.Cap.ALL and cap.guess(homonym.stem) != cap.Cap.NO:
-                        continue
-                    if suitable_homonym(form, homonym):
-                        yield form
+                    candidate = form.replace(root=homonym)
+                    if good_form(candidate, check_cap=True):
+                        yield candidate
 
     def compound_parts(self, word: str, captype: cap.Cap, allow_nosuggest=True) -> Iterator[Compound]:
         if self.aff.COMPOUNDBEGIN or self.aff.COMPOUNDFLAG:
@@ -255,25 +272,31 @@ class Analyzer:
                     for compound in itertools.chain(by_flags, by_rules)
                     if not bad_compound(compound))
 
-    def suitable_homonym(
+    def good_form(
             self,
             form: WordForm,
-            dictionary_word: data.dic.Word,
             compoundpos: Optional[CompoundPos],
             captype: cap.Cap,
-            allow_nosuggest=True) -> bool:
+            allow_nosuggest=True,
+            check_cap=False) -> bool:
 
         aff = self.aff
 
-        root_flags = dictionary_word.flags
-        all_flags = root_flags.union(form.affix_flags())
+        root_flags = form.root.flags
+        all_flags = form.flags()
+        root_capitalization = cap.guess(form.root.stem)
 
         if not allow_nosuggest and aff.NOSUGGEST in root_flags:
             return False
 
         # Check capitalization
-        if aff.KEEPCASE in root_flags and captype != cap.guess(dictionary_word.stem):
-            return False
+        if captype != root_capitalization:
+            if aff.KEEPCASE in root_flags:
+                return False
+            # If the dictionary word is not lowercase, we accept only exactly that
+            # case, or ALLCAPS
+            if check_cap and captype != cap.Cap.ALL and root_capitalization != cap.Cap.NO:
+                return False
 
         # Check affix flags
 
@@ -425,6 +448,12 @@ class Analyzer:
                                         compoundpos=CompoundPos.END,
                                         allow_nosuggest=allow_nosuggest):
                 yield [form]
+        else:
+            # if we try to decompoun "forbiddenword's", AND "forbiddenword" with suffix "'s" is forbidden,
+            # we shouldn't even try.
+            if aff.FORBIDDENWORD and any(aff.FORBIDDENWORD in candidate.flags()
+                                         for candidate in self.word_forms(word_rest, with_forbidden=True)):
+                return
 
         if len(word_rest) < aff.COMPOUNDMIN * 2 or \
                 (aff.COMPOUNDWORDMAX and len(prev_parts) >= aff.COMPOUNDWORDMAX):
@@ -508,7 +537,7 @@ class Analyzer:
             for right_paradigm in compound[1:]:
                 right = right_paradigm.text
 
-                if any(self.dic.homonyms(left + ' ' + right)):
+                if any(self.word_forms(left + ' ' + right)):
                     return True
 
                 if aff.CHECKCOMPOUNDREP:

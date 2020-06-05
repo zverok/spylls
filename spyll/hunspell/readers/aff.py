@@ -37,7 +37,7 @@ class FlagReader:
         elif self.format == 'UTF-8':
             return string
         else:
-            raise ArgumentError(f"Unknown flag format {self.format}")
+            raise ValueError(f"Unknown flag format {self.format}")
 
 
 def read_aff(path_or_io):
@@ -105,13 +105,13 @@ def read_value(source, directive, *values, flag_reader):
     elif directive in ['MAXDIFF', 'MAXNGRAMSUGS', 'MAXCPDSUGS', 'COMPOUNDMIN', 'COMPOUNDWORDMAX']:
         return int(value)
     elif directive in ['NOSUGGEST', 'KEEPCASE', 'CIRCUMFIX', 'NEEDAFFIX', 'FORBIDDENWORD', 'WARN',
-                   'COMPOUNDFLAG', 'COMPOUNDBEGIN', 'COMPOUNDMIDDLE', 'COMPOUNDEND',
-                   'ONLYINCOMPOUND',
-                   'COMPOUNDPERMITFLAG', 'COMPOUNDFORBIDFLAG', 'FORCEUCASE']:
+                       'COMPOUNDFLAG', 'COMPOUNDBEGIN', 'COMPOUNDMIDDLE', 'COMPOUNDEND',
+                       'ONLYINCOMPOUND',
+                       'COMPOUNDPERMITFLAG', 'COMPOUNDFORBIDFLAG', 'FORCEUCASE']:
         return aff.Flag(flag_reader.parse_one(value))
     elif directive in ['COMPLEXPREFIXES', 'FULLSTRIP', 'NOSPLITSUGS', 'CHECKSHARPS',
-                   'CHECKCOMPOUNDCASE', 'CHECKCOMPOUNDDUP', 'CHECKCOMPOUNDREP', 'CHECKCOMPOUNDTRIPLE',
-                   'SIMPLIFIEDTRIPLE']:
+                       'CHECKCOMPOUNDCASE', 'CHECKCOMPOUNDDUP', 'CHECKCOMPOUNDREP', 'CHECKCOMPOUNDTRIPLE',
+                       'SIMPLIFIEDTRIPLE']:
         # Presense of directive always means "turn it on"
         return True
     elif directive in ['BREAK', 'COMPOUNDRULE']:
@@ -152,6 +152,7 @@ def read_value(source, directive, *values, flag_reader):
     else:
         # TODO: Maybe for ver 0.0.1 it is acceptable to just not recognize some flags?
         raise Exception(f"Can't parse {directive}")
+
 
 def make_affix(kind, flag, crossproduct, _, strip, add, *rest, flag_reader):
     kind_class = aff.Suffix if kind == 'SFX' else aff.Prefix
