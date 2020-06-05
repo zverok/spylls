@@ -13,9 +13,17 @@ def test(name):
     dictionary = Dictionary(path)
     good = readlist(path + '.good')
     bad = readlist(path + '.wrong')
+
+    # morph.good has "drink eat" pairs, which hunspell treats as just two words :shrug:
+    def lookup(word):
+        res = dictionary.lookup(word)
+        if ' ' in word and not res:
+            res = all(dictionary.lookup(w) for w in word.split(' '))
+        return res
+
     return {
-        'good': {word: dictionary.lookup(word) for word in good if word},
-        'bad': {word: dictionary.lookup(word) for word in bad},
+        'good': {word: lookup(word) for word in good if word},
+        'bad': {word: lookup(word) for word in bad},
     }
 
 def section(title):

@@ -1,6 +1,7 @@
 import re
 import itertools
 from dataclasses import dataclass, field
+import dataclasses
 from typing import Dict
 
 from spyll.hunspell.readers import FileReader
@@ -13,40 +14,45 @@ SYNONYMS = {'PSEUDOROOT': 'NEEDAFFIX', 'COMPOUNDLAST': 'COMPOUNDEND'}
 
 
 @dataclass
-class FlagReader:
-    format: str = 'short'
-    synonyms: Dict[str, str] = field(default_factory=dict)
+class Context:
+    encoding: str = 'Windows-1252'
+    flag_format: str = 'short'
+    flag_synonyms: Dict[str, str] = field(default_factory=dict)
+    ignore: str = ''
 
-    def parse_one(self, string):
-        return self.parse(string)[0]
+    def replace(self, **changes):
+        return dataclasses.replace(self, **changes)
 
-    def parse(self, string):
+    def parse_flag(self, string):
+        return self.parse_flags(string)[0]
+
+    def parse_flags(self, string):
         if string is None:
             return []
 
-        if re.match(r'^\d+', string) and self.synonyms:
-            return self.synonyms[string]
+        if re.match(r'^\d+', string) and self.flag_synonyms:
+            return self.flag_synonyms[string]
 
         # TODO: what if string format doesn't match expected (odd number of chars for long, etc.)?
-        if self.format == 'short':
+        if self.flag_format == 'short':
             return string
-        elif self.format == 'long':
+        elif self.flag_format == 'long':
             return re.findall(r'..', string)
-        elif self.format == 'num':
+        elif self.flag_format == 'num':
             return re.findall(r'\d+(?=,|$)', string)
-        elif self.format == 'UTF-8':
+        elif self.flag_format == 'UTF-8':
             return string
         else:
-            raise ValueError(f"Unknown flag format {self.format}")
+            raise ValueError(f"Unknown flag format {self.flag_format}")
 
 
 def read_aff(path_or_io):
     source = FileReader(path_or_io)
     data = {'SFX': {}, 'PFX': {}, 'FLAG': 'short'}
-    flag_reader = FlagReader(format='short')
+    context = Context()
 
     for (num, line) in source:
-        directive, value = read_directive(source, line, flag_reader=flag_reader)
+        directive, value = read_directive(source, line, context=context)
 
         if not directive:
             continue
@@ -58,20 +64,24 @@ def read_aff(path_or_io):
 
         # Additional actions, changing further reading behavior
         if directive == 'FLAG':
-            flag_reader = FlagReader(format=value)
+            context = context.replace(flag_format=value)
         elif directive == 'AF':
-            flag_reader = FlagReader(format=flag_reader.format, synonyms=value)
+            context = context.replace(flag_synonyms=value)
         elif directive == 'SET':
+            context = context.replace(encoding=value)
             source.reset_encoding(value)
+        elif directive == 'IGNORE':
+            context = context.replace(ignore=value)
 
         if directive == 'FLAG' and value == 'UTF-8':
+            context = context.replace(encoding='UTF-8')
             data['SET'] = 'UTF-8'
             source.reset_encoding('UTF-8')
 
-    return (Aff(**data), flag_reader)
+    return (Aff(**data), context)
 
 
-def read_directive(source, line, *, flag_reader):
+def read_directive(source, line, *, context):
     name, *arguments = re.split(r'\s+', line)
 
     # base_utf has lines like McDonalds’sá/w -- at the end...
@@ -81,13 +91,12 @@ def read_directive(source, line, *, flag_reader):
 
     name = SYNONYMS.get(name, name)
 
-    value = read_value(source, name, *arguments, flag_reader=flag_reader)
+    value = read_value(source, name, *arguments, context=context)
 
     return (name, value)
 
 
-# TODO: all Flag-typed directives should be read via util.parse_flags
-def read_value(source, directive, *values, flag_reader):
+def read_value(source, directive, *values, context):
     value = values[0] if values else None
 
     def _read_array(count=None):
@@ -108,7 +117,7 @@ def read_value(source, directive, *values, flag_reader):
                        'COMPOUNDFLAG', 'COMPOUNDBEGIN', 'COMPOUNDMIDDLE', 'COMPOUNDEND',
                        'ONLYINCOMPOUND',
                        'COMPOUNDPERMITFLAG', 'COMPOUNDFORBIDFLAG', 'FORCEUCASE']:
-        return aff.Flag(flag_reader.parse_one(value))
+        return aff.Flag(context.parse_flag(value))
     elif directive in ['COMPLEXPREFIXES', 'FULLSTRIP', 'NOSPLITSUGS', 'CHECKSHARPS',
                        'CHECKCOMPOUNDCASE', 'CHECKCOMPOUNDDUP', 'CHECKCOMPOUNDREP', 'CHECKCOMPOUNDTRIPLE',
                        'SIMPLIFIEDTRIPLE']:
@@ -129,7 +138,7 @@ def read_value(source, directive, *values, flag_reader):
     elif directive in ['SFX', 'PFX']:
         flag, crossproduct, count = values
         return [
-            make_affix(directive, flag, crossproduct, *line, flag_reader=flag_reader)
+            make_affix(directive, flag, crossproduct, *line, context=context)
             for line in _read_array(int(count))
         ]
     elif directive == 'CHECKCOMPOUNDPATTERN':
@@ -139,7 +148,7 @@ def read_value(source, directive, *values, flag_reader):
         ]
     elif directive == 'AF':
         return {
-            str(i + 1): {*flag_reader.parse(ln[0])}
+            str(i + 1): {*context.parse_flags(ln[0])}
             for i, ln in enumerate(_read_array())
         }
     elif directive == 'AM':
@@ -154,7 +163,7 @@ def read_value(source, directive, *values, flag_reader):
         raise Exception(f"Can't parse {directive}")
 
 
-def make_affix(kind, flag, crossproduct, _, strip, add, *rest, flag_reader):
+def make_affix(kind, flag, crossproduct, _, strip, add, *rest, context):
     kind_class = aff.Suffix if kind == 'SFX' else aff.Prefix
 
     # in LibreOffice ar.aff has at least one prefix (Ph) without any condition. Bug?
@@ -164,7 +173,7 @@ def make_affix(kind, flag, crossproduct, _, strip, add, *rest, flag_reader):
         flag=flag,
         crossproduct=(crossproduct == 'Y'),
         strip=('' if strip == '0' else strip),
-        add=('' if add == '0' else add),
+        add=('' if add == '0' else add.translate(str.maketrans('', '', context.ignore))),
         condition=cond,
-        flags={*flag_reader.parse(flags)}
+        flags={*context.parse_flags(flags)}
     )

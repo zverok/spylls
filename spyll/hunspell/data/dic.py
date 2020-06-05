@@ -1,13 +1,13 @@
 import itertools
 from dataclasses import dataclass
-from typing import List, Set
+from typing import List, Set, Dict
 
 
 @dataclass
 class Word:
     stem: str
     flags: Set[str]
-    # TODO: morphology
+    morphology: Dict[str, str]
 
 
 @dataclass

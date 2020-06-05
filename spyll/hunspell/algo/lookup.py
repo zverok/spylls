@@ -174,6 +174,9 @@ class Analyzer:
             for (i, o) in sorted(self.aff.ICONV, key=lambda io: len(io[1]), reverse=True):
                 word = word.replace(i, o)
 
+        if self.aff.IGNORE:
+            word = word.translate(str.maketrans('', '', self.aff.IGNORE))
+
         def is_found(variant):
             return any(
                 self.analyze(variant, capitalization=capitalization, allow_nosuggest=allow_nosuggest)

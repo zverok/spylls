@@ -5,10 +5,10 @@ from spyll.hunspell.readers.file_reader import FileReader
 from spyll.hunspell.readers import aff
 
 def test_directives():
-    def directive(line, next_lines=''):
-        flag_reader = aff.FlagReader()
+    def directive(line, next_lines='', **kwarg):
         source = FileReader(io.StringIO(next_lines))
-        return aff.read_directive(source, line, flag_reader=flag_reader)
+        context = aff.Context(**kwarg)
+        return aff.read_directive(source, line, context=context)
 
     assert directive('REP 5',
         """
@@ -36,8 +36,11 @@ def test_directives():
             ['ß', 'ss']
         ])
 
+    assert directive('PFX A Y 1',
+        'PFX A 0 re .', ignore='aeiou')[1][0].add == 'r'
+
 def test_long_flags():
-    data = aff.read_aff(io.StringIO("""
+    data, _ = aff.read_aff(io.StringIO("""
         FLAG long
 
         SFX zx Y 1
@@ -58,7 +61,7 @@ def test_long_flags():
     assert data.AF == {'1': {'AB'}, '2': {'BC'}}
 
 def test_numeric_flags():
-    data = aff.read_aff(io.StringIO("""
+    data, _ = aff.read_aff(io.StringIO("""
         FLAG num
 
         SFX 999 Y 1
@@ -73,7 +76,7 @@ def test_numeric_flags():
     assert data.NOSUGGEST == '348'
 
 def test_utf_flags():
-    data = aff.read_aff(io.StringIO("""
+    data, _ = aff.read_aff(io.StringIO("""
         FLAG UTF-8
 
         SFX A Y 1
@@ -88,7 +91,7 @@ def test_utf_flags():
     assert data.NOSUGGEST == 'ю'
 
 def test_flag_aliases():
-    data = aff.read_aff(io.StringIO("""
+    data, _ = aff.read_aff(io.StringIO("""
         AF 2
         AF AB
         AF BC
