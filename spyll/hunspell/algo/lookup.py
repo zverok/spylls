@@ -178,7 +178,7 @@ class Analyzer:
 
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
-    def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True, allow_break=True) -> bool:
+    def lookup(self, word: str, *, capitalization=True, with_compounds=None, allow_nosuggest=True, allow_break=True) -> bool:
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
 
@@ -191,7 +191,7 @@ class Analyzer:
 
         def is_found(variant):
             return any(
-                self.analyze(variant, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
+                self.analyze(variant, with_compounds=with_compounds, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
             )
 
         # Numbers are allowed and considered "good word" always
@@ -225,28 +225,27 @@ class Analyzer:
 
     def analyze(self, word: str, *,
                 capitalization=True,
+                with_compounds=None,
                 allow_nosuggest=True) -> Iterator[Union[WordForm, Compound]]:
 
         def analyze_internal(variant, captype):
-            return itertools.chain(
-                self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest),
-                self.compound_parts(variant, captype=captype, allow_nosuggest=allow_nosuggest)
-            )
+            if with_compounds != True:
+                yield from self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
+            if with_compounds != False:
+                yield from self.compound_parts(variant, captype=captype, allow_nosuggest=allow_nosuggest)
 
         if capitalization:
             captype, variants = self.collation.variants(word)
 
-            return itertools.chain.from_iterable(
-                analyze_internal(v, captype=captype)
-                for v in variants
-            )
+            for v in variants:
+                yield from analyze_internal(v, captype=captype)
         else:
-            return analyze_internal(word, captype=cap.guess(word))
+            yield from analyze_internal(word, captype=cap.guess(word))
 
     def word_forms(
             self,
             word: str,
-            captype: cap.Cap = cap.Cap.NO,   # FIXME: Is it so?..
+            captype: cap.Cap,
             compoundpos: Optional[CompoundPos] = None,
             allow_nosuggest=True,
             with_forbidden=False) -> Iterator[WordForm]:
@@ -271,6 +270,15 @@ class Analyzer:
                     found = True
                     yield candidate
 
+            # If it then might be required by compound end to be capitalized, we should find it EVEN
+            # if the check is "without checking different capitalizations"
+            if self.aff.FORCEUCASE and captype == cap.Cap.INIT and compoundpos == CompoundPos.BEGIN:
+                for homonym in self.dic.homonyms(form.stem.lower()):
+                    candidate = form.replace(root=homonym)
+                    if good_form(candidate):
+                        found = True
+                        yield candidate
+
             if not found:
                 for homonym in self.dic.homonyms(form.stem, ignorecase=True):
                     candidate = form.replace(root=homonym)
@@ -279,7 +287,7 @@ class Analyzer:
 
     def compound_parts(self, word: str, captype: cap.Cap, allow_nosuggest=True) -> Iterator[Compound]:
         if self.aff.COMPOUNDBEGIN or self.aff.COMPOUNDFLAG:
-            by_flags = self.compound_parts_by_flags(word, allow_nosuggest=allow_nosuggest)
+            by_flags = self.compound_parts_by_flags(word, captype=captype, allow_nosuggest=allow_nosuggest)
         else:
             by_flags = iter(())
 
@@ -471,6 +479,8 @@ class Analyzer:
             self,
             word_rest: str,
             prev_parts: List[WordForm] = [],
+            *,
+            captype: cap.Cap,
             allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
@@ -479,6 +489,7 @@ class Analyzer:
         # possible
         if prev_parts:
             for form in self.word_forms(word_rest,
+                                        captype=captype,
                                         compoundpos=CompoundPos.END,
                                         allow_nosuggest=allow_nosuggest):
                 yield [form]
@@ -486,7 +497,7 @@ class Analyzer:
             # if we try to decompoun "forbiddenword's", AND "forbiddenword" with suffix "'s" is forbidden,
             # we shouldn't even try.
             if aff.FORBIDDENWORD and any(aff.FORBIDDENWORD in candidate.flags()
-                                         for candidate in self.word_forms(word_rest, with_forbidden=True)):
+                                         for candidate in self.word_forms(word_rest, captype=captype, with_forbidden=True)):
                 return
 
         if len(word_rest) < aff.COMPOUNDMIN * 2 or \
@@ -499,21 +510,21 @@ class Analyzer:
             beg = word_rest[0:pos]
             rest = word_rest[pos:]
 
-            for form in self.word_forms(beg, compoundpos=compoundpos,
+            for form in self.word_forms(beg, captype=captype, compoundpos=compoundpos,
                                         allow_nosuggest=allow_nosuggest):
                 parts = [*prev_parts, form]
-                for rest in self.compound_parts_by_flags(rest, parts,
+                for others in self.compound_parts_by_flags(rest, parts, captype=captype,
                                                          allow_nosuggest=allow_nosuggest):
-                    yield [form, *rest]
+                    yield [form, *others]
 
             if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
                 # FIXME: for now, we only try duplicating the first word's letter
-                for form in self.word_forms(beg + beg[-1], compoundpos=compoundpos,
+                for form in self.word_forms(beg + beg[-1], captype=captype, compoundpos=compoundpos,
                                             allow_nosuggest=allow_nosuggest):
                     parts = [*prev_parts, form]
-                    for rest in self.compound_parts_by_flags(rest, parts,
+                    for others in self.compound_parts_by_flags(rest, parts, captype=captype,
                                                              allow_nosuggest=allow_nosuggest):
-                        yield [form.replace(text=beg), *rest]
+                        yield [form.replace(text=beg), *others]
 
     def compound_parts_by_rules(
             self,
@@ -570,12 +581,12 @@ class Analyzer:
                 if self.dic.has_flag(left, aff.COMPOUNDFORBIDFLAG):
                     return True
 
-            if any(self.word_forms(left + ' ' + right)):
+            if any(self.word_forms(left + ' ' + right, captype=captype)):
                 return True
 
             if aff.CHECKCOMPOUNDREP:
                 for candidate in pmt.replchars(left + right, aff.REP):
-                    if isinstance(candidate, str) and any(self.word_forms(candidate)):
+                    if isinstance(candidate, str) and any(self.word_forms(candidate, captype=captype)):
                         return True
 
             if aff.CHECKCOMPOUNDTRIPLE:

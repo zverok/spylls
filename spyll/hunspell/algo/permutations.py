@@ -9,29 +9,6 @@ from spyll.hunspell import data
 MAX_CHAR_DISTANCE = 4
 
 
-def permutations(word: str, aff: data.Aff) -> Iterator[Union[str, Tuple[str, str]]]:
-    return itertools.chain(
-        [word],                      # source word itself is also a valid permutation
-        [word.upper()],              # suggestions for an uppercase word (html -> HTML)
-        replchars(word, aff.rep),    # typical fault of spelling
-        mapchars(word, aff.map),     # wrong char from a related set
-        swapchar(word),              # swap the order of chars by mistake
-        longswapchar(word),          # swap the order of non adjacent chars by mistake
-        badcharkey(word, aff.key),   # hit the wrong key in place of a good char (case and keyboard)
-        extrachar(word),             # add a char that should not be there
-        forgotchar(word, aff.try_),  # forgot a char
-        movechar(word),              # move a char
-        badchar(word, aff.try_),     # just hit the wrong key in place of a good char
-        doubletwochars(word),        # double two characters
-
-        # perhaps we forgot to hit space and two words ran together
-        # (dictionary word pairs have top priority here, so
-        # we always suggest them, in despite of nosplitsugs, and
-        # drop compound word and other suggestions)
-        twowords(word)
-    )
-
-
 # suggestions for a typical fault of spelling, that
 # differs with more than 1 letter from the right form.
 #
