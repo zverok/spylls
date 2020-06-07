@@ -115,7 +115,7 @@ class Counted:
     def __init__(self):
         self.counter = 0
 
-    def count(generator):
+    def count(self, generator):
         for item in generator:
             self.counter += 1
             yield item
@@ -176,7 +176,7 @@ class Analyzer:
             for pat in self.aff.BREAK
         ]
 
-        self.collation = cap.Collation(sharp_s = self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
+        self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
     def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):

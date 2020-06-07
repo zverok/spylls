@@ -70,6 +70,7 @@ def variants(word: str, *, lang_with_dot_i=False) -> Tuple[Cap, List[str]]:
         else:
             return (captype, [word, capitalize(word)])
 
+
 class Collation:
     def __init__(self, sharp_s=False, dotless_i=False):
         self.sharp_s = sharp_s
@@ -110,15 +111,13 @@ class Collation:
             variants = [word, *self.lower(word)]
         elif captype == Cap.HUHINIT:
             variants = [word,
-                *(l + word[1:] for l in self.lower(word[0])),
-            ]
+                        *(l + word[1:] for l in self.lower(word[0]))]
             # TODO: also here and below, consider the theory FooBar meant Foo Bar
         elif captype == Cap.HUH:
             variants = [word]
         elif captype == Cap.ALL:
             variants = [word,
-                *self.lower(word),
-                *[word[0] + lower for lower in self.lower(word[1:])]
-            ]
+                        *self.lower(word),
+                        *(word[0] + lower for lower in self.lower(word[1:]))]
 
         return (captype, variants)
