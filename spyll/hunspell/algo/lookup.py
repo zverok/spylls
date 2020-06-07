@@ -111,6 +111,16 @@ class WordForm:
 Compound = List[WordForm]
 
 
+class Counted:
+    def __init__(self):
+        self.counter = 0
+
+    def count(generator):
+        for item in generator:
+            self.counter += 1
+            yield item
+
+
 class Analyzer:
     def __init__(self, aff: data.aff, dic: data.dic):
         self.aff = aff
@@ -166,6 +176,8 @@ class Analyzer:
             for pat in self.aff.BREAK
         ]
 
+        self.collation = cap.Collation(sharp_s = self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
+
     def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
@@ -181,6 +193,11 @@ class Analyzer:
             return any(
                 self.analyze(variant, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
             )
+
+        # Numbers are allowed and considered "good word" always
+        # TODO: check in hunspell's code, if there are some exceptions?..
+        if re.fullmatch(r'^\d+(\.\d+)?$', word):
+            return True
 
         if is_found(word):
             return True
@@ -214,7 +231,7 @@ class Analyzer:
             )
 
         if capitalization:
-            captype, variants = cap.variants(word)
+            captype, variants = self.collation.variants(word)
 
             return itertools.chain.from_iterable(
                 analyze_internal(v, captype=captype)
@@ -289,12 +306,14 @@ class Analyzer:
         all_flags = form.flags()
         root_capitalization = cap.guess(form.root.stem)
 
+        # investigate = (form.prefix and form.prefix.flag == 'D' and form.suffix and form.suffix.flag == 'A')
+
         if not allow_nosuggest and aff.NOSUGGEST in root_flags:
             return False
 
         # Check capitalization
         if captype != root_capitalization:
-            if aff.KEEPCASE in root_flags:
+            if aff.KEEPCASE in root_flags and not aff.CHECKSHARPS:
                 return False
             # If the dictionary word is not lowercase, we accept only exactly that
             # case, or ALLCAPS
@@ -313,6 +332,15 @@ class Analyzer:
             return False
         if form.suffix and form.suffix.flag not in all_flags:
             return False
+
+        if aff.CIRCUMFIX:
+            if form.suffix and aff.CIRCUMFIX in form.suffix.flags and \
+               not (form.prefix and aff.CIRCUMFIX in form.prefix.flags):
+                return False
+
+            if form.prefix and aff.CIRCUMFIX in form.prefix.flags and \
+               not (form.suffix and aff.CIRCUMFIX in form.suffix.flags):
+                return False
 
         # Check compound flags
 
@@ -364,7 +392,7 @@ class Analyzer:
 
                 if suffix_allowed and form.prefix.crossproduct:
                     yield from (
-                        form2.replace(prefix=form.prefix)
+                        form2.replace(text=form.text, prefix=form.prefix)
                         for form2 in self.desuffix(form.stem,
                                                    required_flags=suffix_required_flags,
                                                    forbidden_flags=forbidden_flags,
@@ -529,40 +557,40 @@ class Analyzer:
             if self.dic.has_flag(compound[-1].text, aff.FORCEUCASE):
                 return True
 
-        for left_paradigm in compound[:-1]:
+        for idx, left_paradigm in enumerate(compound[:-1]):
             left = left_paradigm.text
+            right_paradigm = compound[idx+1]
+            right = right_paradigm.text
 
             if aff.COMPOUNDFORBIDFLAG:
                 # We don't check right: compoundforbid prohibits words at the beginning and middle
                 if self.dic.has_flag(left, aff.COMPOUNDFORBIDFLAG):
                     return True
 
-            for right_paradigm in compound[1:]:
-                right = right_paradigm.text
+            if any(self.word_forms(left + ' ' + right)):
+                return True
 
-                if any(self.word_forms(left + ' ' + right)):
+            if aff.CHECKCOMPOUNDREP:
+                for candidate in pmt.replchars(left + right, aff.REP):
+                    if isinstance(candidate, str) and any(self.word_forms(candidate)):
+                        return True
+
+            if aff.CHECKCOMPOUNDTRIPLE:
+                if len(set(left[-2:] + right[:1])) == 1 or len(set(left[-1:] + right[:2])) == 1:
                     return True
 
-                if aff.CHECKCOMPOUNDREP:
-                    for candidate in pmt.replchars(left + right, aff.REP):
-                        if isinstance(candidate, str) and any(self.word_forms(candidate)):
-                            return True
+            if aff.CHECKCOMPOUNDCASE:
+                r = right[0]
+                l = left[-1]
+                if (r == r.upper() or l == l.upper()) and r != '-' and l != '-':
+                    return True
 
-                if aff.CHECKCOMPOUNDTRIPLE:
-                    if len(set(left[-2:] + right[:1])) == 1 or len(set(left[-1:] + right[:2])) == 1:
-                        return True
+            if aff.CHECKCOMPOUNDPATTERN:
+                if any(pattern.match(left_paradigm, right_paradigm) for pattern in self.compoundpatterns):
+                    return True
 
-                if aff.CHECKCOMPOUNDCASE:
-                    r = right[0]
-                    l = left[-1]
-                    if (r == r.upper() or l == l.upper()) and r != '-' and l != '-':
-                        return True
-
-                if aff.CHECKCOMPOUNDPATTERN:
-                    if any(pattern.match(left_paradigm, right_paradigm) for pattern in self.compoundpatterns):
-                        return True
-
-                if aff.CHECKCOMPOUNDDUP:
-                    if left == right:
-                        return True
+            if aff.CHECKCOMPOUNDDUP:
+                # duplication only forbidden at the end (TODO: check, that's what I guess from test)
+                if left == right and idx == len(compound) - 2:
+                    return True
         return False

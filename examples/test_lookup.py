@@ -1,3 +1,4 @@
+import time
 import os.path
 
 from spyll.hunspell.dictionary import Dictionary
@@ -31,10 +32,16 @@ def section(title):
     print(title)
     print('=' * len(title))
 
-def report(name):
-    # print(name)
+ok = 0
+err = 0
 
+def report(name):
+    global ok, err
+
+    start = time.monotonic()
     result = test(name)
+    duration = time.monotonic() - start
+
     good = result['good']
     nogood = [word for word, res in good.items() if not res]
 
@@ -53,11 +60,18 @@ def report(name):
         else:
             summary += f", bad OK ({len(bad)})"
 
+    if duration > 0.05:
+        summary += f" [{duration:.4f}s]"
+
     print(summary)
     if nogood:
         print(f"  Good words not found: {', '.join(nogood)}")
     if nobad:
         print(f"  Bad words found: {', '.join(nobad)}")
+    if nogood or nobad:
+        err += 1
+    else:
+        ok += 1
 
 
 # ==============================
@@ -93,7 +107,7 @@ report('condition')              # + complex conditions "what is suitable affix"
 report('condition_utf')          # + same, with UTF chars
 report('conditionalprefix')      # + prefix allowed depending on suffix
 
-report('circumfix')              # + mark prefix "it is possible if has a suffix" -- FIXME: weirdly works without special CIRCUFIXFLAG processing...
+report('circumfix')              # + mark prefix "it is possible if has a suffix" -- FIXME: weirdly works without special CIRCUMFIXFLAG processing...
 
 # TODO: better comments!
 report('needaffix')              # + "this affix needs affix" flag
@@ -231,3 +245,7 @@ report('i53643')
 report('i54633')
 report('i54980')
 report('i58202') # -- tricky capitalization
+
+print()
+print("------------")
+print(f"{ok + err} tests: {ok} OK, {err} fails")
