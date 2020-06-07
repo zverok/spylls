@@ -103,4 +103,4 @@ class Aff:
     AM: Dict[int, Set[str]] = field(default_factory=dict)
 
     def use_dash(self) -> bool:
-        return '-' in self.try_ or 'a' in self.try_
+        return '-' in self.TRY or 'a' in self.TRY

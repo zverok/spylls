@@ -14,28 +14,28 @@ class Dictionary:
     def roots(self, *,
               with_forbidden=False,
               with_nosuggest=True,
-              with_onliincompound=True) -> Iterator[data.dic.Word]:
+              with_onlyincompound=True) -> Iterator[data.dic.Word]:
 
         for word in self.dic.words:
-            if (with_forbidden or self.aff.forbiddenword not in word.flags) and \
-               (with_nosuggest or self.aff.nosuggest not in word.flags) and \
-               (with_onliincompound or self.aff.onlyincompound not in word.flags):
+            if (with_forbidden or self.aff.FORBIDDENWORD not in word.flags) and \
+               (with_nosuggest or self.aff.NOSUGGEST not in word.flags) and \
+               (with_onlyincompound or self.aff.ONLYINCOMPOUND not in word.flags):
                 yield word
 
     def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
         return self.analyzer.lookup(word, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
 
     def is_forbidden(self, word: str) -> bool:
-        if not self.aff.forbiddenword:
+        if not self.aff.FORBIDDENWORD:
             return False
 
-        return any(self.aff.forbiddenword in w.flags for w in self.dic.homonyms(word))
+        return self.dic.has_flag(word, self.aff.FORBIDDENWORD)
 
     def keepcase(self, word: str) -> bool:
-        if not self.aff.keepcase:
+        if not self.aff.KEEPCASE:
             return False
 
-        return any(self.aff.keepcase in word.flags for word in self.dic.homonyms(word))
+        return self.dic.has_flag(word, self.aff.KEEPCASE)
 
     def suggest(self, word: str) -> Iterator[str]:
         yield from suggest.suggest(self, word)
@@ -43,8 +43,8 @@ class Dictionary:
     def suffixes_for(self, word):
         res = []
         for flag in word.flags:
-            if flag in self.aff.sfx:
-                for suf in self.aff.sfx[flag]:
+            if flag in self.aff.SFX:
+                for suf in self.aff.SFX[flag]:
                     if suf.cond_regexp.search(word.stem):
                         res.append(suf)
                         break
@@ -53,8 +53,8 @@ class Dictionary:
     def prefixes_for(self, word):
         res = []
         for flag in word.flags:
-            if flag in self.aff.pfx:
-                for pref in self.aff.pfx[flag]:
+            if flag in self.aff.PFX:
+                for pref in self.aff.PFX[flag]:
                     if pref.cond_regexp.search(word.stem):
                         res.append(pref)
                         break

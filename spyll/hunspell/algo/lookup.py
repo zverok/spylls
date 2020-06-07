@@ -238,7 +238,7 @@ class Analyzer:
                 for v in variants
             )
         else:
-            return analyze_internal(word)
+            return analyze_internal(word, captype=cap.guess(word))
 
     def word_forms(
             self,

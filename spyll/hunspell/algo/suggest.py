@@ -17,9 +17,9 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
     captype, variants = cap.variants(word)
 
     def oconv(word):
-        if not dic.aff.oconv:
+        if not dic.aff.OCONV:
             return word
-        for src, dst in dic.aff.oconv:
+        for src, dst in dic.aff.OCONV:
             word = word.replace(src, dst)
         return word
 
@@ -67,17 +67,17 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
             if sug:
                 yield sug, source
 
-    if very_good or good or dic.aff.maxngramsugs == 0:
+    if very_good or good or dic.aff.MAXNGRAMSUGS == 0:
         return
 
     ngramsugs = 0
     for sug in ngram_suggest.ngram_suggest(
-                dic, word.lower(), maxdiff=dic.aff.maxdiff, onlymaxdiff=dic.aff.onlymaxdiff):
+                dic, word.lower(), maxdiff=dic.aff.MAXDIFF, onlymaxdiff=dic.aff.ONLYMAXDIFF):
         sug = handle_found(sug, ignore_included=True)
         if sug:
             yield sug, 'ngram'
         ngramsugs += 1
-        if ngramsugs >= dic.aff.maxngramsugs:
+        if ngramsugs >= dic.aff.MAXNGRAMSUGS:
             break
 
 
@@ -98,7 +98,7 @@ def good_permutations(dic, word: str) -> Iterator[str]:
         # suggestions for an uppercase word (html -> HTML)
         [(word.upper(), 'uppercase')],
         # typical fault of spelling
-        product(pmt.replchars(word, dic.aff.rep), ['replchars'])
+        product(pmt.replchars(word, dic.aff.REP), ['replchars'])
     )
 
     for sug, source in iterator:
@@ -114,21 +114,21 @@ def good_permutations(dic, word: str) -> Iterator[str]:
 def questionable_permutations(dic, word: str) -> Iterator[str]:
     iterator = chain(
         # wrong char from a related set
-        product(pmt.mapchars(word, dic.aff.map), ['mapchars']),
+        product(pmt.mapchars(word, dic.aff.MAP), ['mapchars']),
         # swap the order of chars by mistake
         product(pmt.swapchar(word), ['swapchar']),
         # swap the order of non adjacent chars by mistake
         product(pmt.longswapchar(word), ['longswapchar']),
         # hit the wrong key in place of a good char (case and keyboard)
-        product(pmt.badcharkey(word, dic.aff.key), ['badcharkey']),
+        product(pmt.badcharkey(word, dic.aff.KEY), ['badcharkey']),
         # add a char that should not be there
         product(pmt.extrachar(word), ['extrachar']),
         # forgot a char
-        product(pmt.forgotchar(word, dic.aff.try_), ['forgotchar']),
+        product(pmt.forgotchar(word, dic.aff.TRY), ['forgotchar']),
         # move a char
         product(pmt.movechar(word), ['movechar']),
         # just hit the wrong key in place of a good char
-        product(pmt.badchar(word, dic.aff.try_), ['badchar']),
+        product(pmt.badchar(word, dic.aff.TRY), ['badchar']),
         # double two characters
         product(pmt.doubletwochars(word), ['doubletwochars']),
 

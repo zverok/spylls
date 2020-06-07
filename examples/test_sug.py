@@ -1,4 +1,5 @@
 import re
+import time
 import os.path
 from collections import Counter
 
@@ -23,17 +24,29 @@ def test(name):
         } for i, word in enumerate(bad)
     ]
 
+stats = Counter()
+
+def section(title):
+    print()
+    print(title)
+    print('=' * len(title))
+
 def report(name):
+    global stats
+
+    start = time.monotonic()
     result = test(name)
+    duration = time.monotonic() - start
+
     counter = Counter()
-    pending = pendings.get(name, [])
+    pendings = pending_by_file.get(name, [])
     out = []
     for data in result:
         if data['expected'] == data['got']:
             # print(f"  {data['word']}: +")
             counter['good'] += 1
         else:
-            if data['word'] in pending:
+            if data['word'] in pendings:
                 counter['pending'] += 1
             else:
                 out.append(f"  {data['word']}: {data['expected']} vs {data['got']}")
@@ -44,11 +57,23 @@ def report(name):
         summary += f", {counter['bad']} fails"
     if counter['pending'] > 0:
         summary += f", {counter['pending']} pending"
+    if duration > 0.05:
+        stats['slow'] += 1
+        summary += f" [{duration:.4f}s]"
+
     print(summary)
     if out:
         print("\n".join(out))
 
-pendings = {
+    stats['total'] += 1
+    if counter['bad'] > 0:
+        stats['fail'] += 1
+    elif counter['pending'] > 0:
+        stats['pending'] += 1
+    else:
+        stats['ok'] += 1
+
+pending_by_file = {
     'base_utf': ['loooked'],
     'sug': ['permanent.Vacation'],
     'sugutf': ['permanent.Vacation'],
@@ -67,19 +92,65 @@ pendings = {
     ]
 }
 
+# ==================
+section('Base')
+
 report('base')
 report('base_utf')
+
+report('allcaps')
+report('allcaps2')
+report('allcaps_utf')
+report('breakdefault')
+
+# ==================
+section('Suggest base')
 
 report('sug')
 report('sugutf')
 
 report('sug2')
 
+# ==================
+section('Permutations')
+
 report('map')
 report('maputf')
 
 report('rep')
 report('reputf')
+
+
+# ==================
+section('Prohibit bad suggestions')
+
+report('forceucase')
+report('keepcase')
+report('nosuggest')
+report('onlyincompound')
+
+report('opentaal_forbiddenword1')
+report('opentaal_forbiddenword2')
+# report('opentaal_keepcase') -- reader fail, `break #`
+
+# ==================
+section('Phonetical suggestions')
+
+# report('phone')
+report('ph')
+report('ph2')
+
+# ==================
+section('IO quirks')
+
+report('oconv')
+report('utf8_nonbmp')
+
+# ==================
+section('Edge cases and bugs')
+
+report('checksharps')
+report('checksharpsutf')
 
 report('ngram_utf_fix')
 
@@ -92,24 +163,7 @@ report('i35725')
 report('i54633')
 report('i58202')
 
-# report('checksharps') -- CHECKSHARPS+KEEPCASE means "upcase sharp s" is prohibited :facepalm:
-# report('checksharpsutf')
 
-report('allcaps')
-report('allcaps2')
-report('allcaps_utf')
-# report('breakdefault') -- need to add BREAK to lookup, then suggest will work
-# report('forceucase') -- "FORCEUCASE" flag pollutes the whole compound, check with lookup?
-report('keepcase')
-report('nosuggest')
-report('onlyincompound')
-# report('opentaal_forbiddenword1')
-# report('opentaal_forbiddenword2')
-# report('opentaal_keepcase')
-
-# report('phone')
-# report('ph')
-# report('ph2')
-
-report('oconv')
-report('utf8_nonbmp')
+print()
+print("------------")
+print(f"{stats['total']} tests: {stats['ok']} OK, {stats['pending']} pending, {stats['fail']} fails ({stats['slow']} slow)")
