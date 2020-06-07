@@ -76,20 +76,20 @@ def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
         sug = handle_found(sug, ignore_included=True)
         if sug:
             yield sug, 'ngram'
-        ngramsugs += 1
+            ngramsugs += 1
         if ngramsugs >= dic.aff.MAXNGRAMSUGS:
             break
 
 
-def checkword(dic, word):
-    return dic.lookup(word, capitalization=False, allow_nosuggest=False)
+def checkword(dic, word, **kwarg):
+    return dic.lookup(word, capitalization=False, allow_nosuggest=False, **kwarg)
 
 
 def very_good_permutations(dic, word: str) -> Iterator[str]:
     for sug in pmt.twowords(word):
         if checkword(dic, ' '.join(sug)):
             yield ' '.join(sug), 'spaceword'
-        if dic.aff.use_dash() and checkword(dic, '-'.join(sug)):
+        if dic.aff.use_dash() and checkword(dic, '-'.join(sug), allow_break=False):
             yield '-'.join(sug), 'spaceword'
 
 

@@ -22,8 +22,8 @@ class Dictionary:
                (with_onlyincompound or self.aff.ONLYINCOMPOUND not in word.flags):
                 yield word
 
-    def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
-        return self.analyzer.lookup(word, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
+    def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True, allow_break=True) -> bool:
+        return self.analyzer.lookup(word, capitalization=capitalization, allow_nosuggest=allow_nosuggest, allow_break=allow_break)
 
     def is_forbidden(self, word: str) -> bool:
         if not self.aff.FORBIDDENWORD:

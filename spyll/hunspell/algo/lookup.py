@@ -178,7 +178,7 @@ class Analyzer:
 
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
-    def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True) -> bool:
+    def lookup(self, word: str, *, capitalization=True, allow_nosuggest=True, allow_break=True) -> bool:
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
 
@@ -201,6 +201,9 @@ class Analyzer:
 
         if is_found(word):
             return True
+
+        if not allow_break:
+            return False
 
         def try_break(text, depth=0):
             if depth > 10:

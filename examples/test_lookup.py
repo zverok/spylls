@@ -202,7 +202,7 @@ report('ngram_utf_fix')
 
 # report('opentaal_keepcase') -- reader fail, `break #`
 
-report('ph2') # -- requires better dictionary parsing, first of all
+report('ph2')
 report('morph')
 
 report('utf8_nonbmp')
@@ -238,13 +238,13 @@ section('Edge cases and bugs')
 report('1592880')
 report('1975530')
 report('2970240')
-# report('2970242') -- checkcompoundpattern with flag
-# report('2999225') -- numbers, should be treated specially
+report('2970242')
+report('2999225')
 report('i35725')
 report('i53643')
 report('i54633')
 report('i54980')
-report('i58202') # -- tricky capitalization
+report('i58202')
 
 print()
 print("------------")
