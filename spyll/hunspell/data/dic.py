@@ -9,6 +9,9 @@ class Word:
     flags: Set[str]
     morphology: Dict[str, str]
 
+    def __repr__(self):
+        return f"Word({self.stem} /{','.join(self.flags)})"
+
 
 @dataclass
 class Dic:

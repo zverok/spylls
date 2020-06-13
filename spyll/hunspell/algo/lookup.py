@@ -279,7 +279,7 @@ class Analyzer:
                         found = True
                         yield candidate
 
-            if not found:
+            if not found and not compoundpos:
                 for homonym in self.dic.homonyms(form.stem, ignorecase=True):
                     candidate = form.replace(root=homonym)
                     if good_form(candidate, check_cap=True):

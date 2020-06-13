@@ -141,8 +141,12 @@ def questionable_permutations(dic, word: str) -> Iterator[str]:
             # FIXME: this is how it is in hunspell (see opentaal_forbiddenword1): either BOTH
             # should be compound, or BOTH should be not. I am not sure it is the right thing
             # to do, but just want to catch up with tests, for now.
-            if all(checkword(dic, s, with_compounds=False, allow_break=False) for s in sug) or \
-               all(checkword(dic, s, with_compounds=True, allow_break=False) for s in sug):
+            # if all(checkword(dic, s, with_compounds=False, allow_break=False) for s in sug) or \
+            #    all(checkword(dic, s, with_compounds=True, allow_break=False) for s in sug):
+            #     yield ' '.join(sug), source
+            #     if dic.aff.use_dash():
+            #         yield '-'.join(sug), source
+            if all(checkword(dic, s, allow_break=False) for s in sug):
                 yield ' '.join(sug), source
                 if dic.aff.use_dash():
                     yield '-'.join(sug), source

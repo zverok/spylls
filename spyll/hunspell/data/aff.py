@@ -16,17 +16,24 @@ class Affix:
     condition: str
     flags: Set[Flag] = field(default_factory=set)
 
-
 @dataclass
 class Prefix(Affix):
     def __post_init__(self):
         self.cond_regexp = re.compile('^' + self.condition)
+
+    def __repr__(self):
+        return f"Prefix({self.flag}{'[x]' if self.crossproduct else ''}: "\
+               f"{self.strip}[{self.condition}] => {self.add} /{','.join(self.flags)})"
 
 
 @dataclass
 class Suffix(Affix):
     def __post_init__(self):
         self.cond_regexp = re.compile(self.condition + '$')
+
+    def __repr__(self):
+        return f"Suffix({self.flag}{'[x]' if self.crossproduct else ''}: "\
+               f"[{self.condition}]{self.strip} => {self.add} /{','.join(self.flags)})"
 
 
 @dataclass

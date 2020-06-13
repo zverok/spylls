@@ -33,3 +33,5 @@ print(f'Suggest bad: {time.time() - t}')
 
 print(list(d.suggest('hwihc')))
 print(list(d.suggest('Hwihc')))
+
+print(list(d.suggest('11thhour')))
