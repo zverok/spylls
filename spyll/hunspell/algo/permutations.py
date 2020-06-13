@@ -1,9 +1,6 @@
 import re
-import itertools
 
 from typing import Iterator, Union, List, Tuple, Set
-
-from spyll.hunspell import data
 
 
 MAX_CHAR_DISTANCE = 4

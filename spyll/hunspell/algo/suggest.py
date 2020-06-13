@@ -1,4 +1,3 @@
-from itertools import chain, product, islice
 from typing import Iterator, Tuple, Optional, List, Union
 
 import dataclasses
@@ -6,6 +5,7 @@ from dataclasses import dataclass
 
 from spyll.hunspell import data
 from spyll.hunspell.algo import ngram_suggest, permutations as pmt, capitalization as cap
+
 
 @dataclass
 class Suggestion:
@@ -28,7 +28,6 @@ class Suggestion:
         else:
             raise ValueError(f"Expected string or list, got {self.text_or_words!r}")
 
-
     def __repr__(self):
         if self.text:
             return f"Suggestion[{self.source}]({self.text})"
@@ -47,6 +46,7 @@ class Observed:
         for item in generator:
             self.seen.append(item)
             yield item
+
 
 class Suggest:
     def __init__(self, aff: data.Aff, dic: data.Dic, lookup):
@@ -77,9 +77,9 @@ class Suggest:
             for suggestion in suggestions:
                 if suggestion.words:
                     if all(check_suggestion(word) for word in suggestion.words):
-                        yield suggestion.replace(text = ' '.join(suggestion.words))
+                        yield suggestion.replace(text=' '.join(suggestion.words))
                         if suggestion.allow_dash:
-                            yield suggestion.replace(text = '-'.join(suggestion.words))
+                            yield suggestion.replace(text='-'.join(suggestion.words))
                 else:
                     if check_suggestion(suggestion.text, allow_break=suggestion.allow_break):
                         yield suggestion
@@ -89,7 +89,6 @@ class Suggest:
 
         def is_forbidden(word):
             return self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD)
-
 
         def handle_found(suggestion, *, ignore_included=False):
             text = suggestion.text
@@ -116,7 +115,7 @@ class Suggest:
         if self.aff.FORCEUCASE:
             if check_suggestion(word.capitalize()):
                 yield from handle_found(Suggestion(word.capitalize(), 'forcecase'))
-                return # No more need to check anything
+                return  # No more need to check anything
 
         for variant in variants[1:]:
             if check_suggestion(variant):
@@ -140,69 +139,8 @@ class Suggest:
         if very_good.seen or good.seen or self.aff.MAXNGRAMSUGS == 0:
             return
 
-        def suffixes_for(word):
-            res = []
-            for flag in word.flags:
-                if flag in self.aff.SFX:
-                    for suf in self.aff.SFX[flag]:
-                        if suf.cond_regexp.search(word.stem):
-                            res.append(suf)
-                            break
-            return res
-
-        def prefixes_for(word):
-            res = []
-            for flag in word.flags:
-                if flag in self.aff.PFX:
-                    for pref in self.aff.PFX[flag]:
-                        if pref.cond_regexp.search(word.stem):
-                            res.append(pref)
-                            break
-            return res
-
-        def forms_for(word: data.dic.Word, candidate: str):
-            # word without prefixes/suffixes is also present...
-            # TODO: unless it is forbidden :)
-            res = [word.stem]
-
-            suffixes = [
-                suf
-                for suf in suffixes_for(word)
-                if candidate.endswith(suf.add)
-            ]
-            prefixes = [
-                pref
-                for pref in prefixes_for(word)
-                if candidate.startswith(pref.add)
-            ]
-
-            for suf in suffixes:
-                root = word.stem[0:-len(suf.strip)] if suf.strip else word.stem
-                res.append(root + suf.add)
-
-            for suf in suffixes:
-                if not suf.crossproduct:
-                    continue
-                root = word.stem[0:-len(suf.strip)] if suf.strip else word.stem
-                for pref in prefixes:
-                    if not pref.crossproduct:
-                        continue
-                    root = root[len(pref.strip):]
-                    res.append(pref.add + root + suf.add)
-
-            for pref in prefixes:
-                root = word.stem[len(pref.strip):]
-                res.append(pref.add + root)
-
-            return res
-
         ngrams_seen = Observed()
-        for sug in ngram_suggest.ngram_suggest(
-                    word.lower(),
-                    roots=self.roots(with_nosuggest=False, with_onlyincompound=False),
-                    forms_producer=forms_for,
-                    maxdiff=self.aff.MAXDIFF,
-                    onlymaxdiff=self.aff.ONLYMAXDIFF):
+        for sug in self.ngram_suggestions(word):
             yield from ngrams_seen(handle_found(Suggestion(sug, 'ngram'), ignore_included=True))
             if len(ngrams_seen.seen) >= self.aff.MAXNGRAMSUGS:
                 return
@@ -276,3 +214,50 @@ class Suggest:
         # perhaps we forgot to hit space and two words ran together
         for suggestion in pmt.twowords(word):
             yield Suggestion(suggestion, 'twowords', allow_dash=self.aff.use_dash())
+
+    def ngram_suggestions(self, word):
+        def forms_for(word: data.dic.Word, candidate: str):
+            # word without prefixes/suffixes is also present...
+            # TODO: unless it is forbidden :)
+            res = [word.stem]
+
+            suffixes = [
+                suffix
+                for flag in word.flags
+                for suffix in self.aff.SFX.get(flag, [])
+                if suffix.cond_regexp.search(word.stem) and candidate.endswith(suffix.add)
+            ]
+            prefixes = [
+                prefix
+                for flag in word.flags
+                for prefix in self.aff.PFX.get(flag, [])
+                if prefix.cond_regexp.search(word.stem) and candidate.startswith(prefix.add)
+            ]
+
+            cross = [
+                (prefix, suffix)
+                for prefix in prefixes
+                for suffix in suffixes
+                if suffix.crossproduct and prefix.crossproduct
+            ]
+
+            for suf in suffixes:
+                root = word.stem[0:-len(suf.strip)] if suf.strip else word.stem
+                res.append(root + suf.add)
+
+            for pref, suf in cross:
+                root = word.stem[len(pref.strip):-len(suf.strip)] if suf.strip else word.stem[len(pref.strip):]
+                res.append(pref.add + root + suf.add)
+
+            for pref in prefixes:
+                root = word.stem[len(pref.strip):]
+                res.append(pref.add + root)
+
+            return res
+
+        yield from ngram_suggest.ngram_suggest(
+                    word.lower(),
+                    roots=self.roots(with_nosuggest=False, with_onlyincompound=False),
+                    forms_producer=forms_for,
+                    maxdiff=self.aff.MAXDIFF,
+                    onlymaxdiff=self.aff.ONLYMAXDIFF)

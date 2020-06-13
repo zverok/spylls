@@ -5,6 +5,9 @@ from spyll.hunspell.algo import lookup, suggest
 
 
 class Dictionary:
+    aff: data.Aff
+    dic: data.Dic
+
     def __init__(self, path):
         self.aff, context = readers.read_aff(path + '.aff')
         self.dic = readers.read_dic(path + '.dic', context=context)
