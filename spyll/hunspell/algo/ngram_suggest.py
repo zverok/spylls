@@ -43,7 +43,7 @@ class ScoredArray(Generic[Value]):
         return filter(lambda s: s[0], self.data)
 
 
-def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
+def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
     # TODO: lowering depends on BMP of word, true by default
     # low = True
 
@@ -52,7 +52,7 @@ def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> 
     # exhaustively search through all root words
     # keeping track of the MAX_ROOTS most similar root words
     root_scores = ScoredArray[data.dic.Word](MAX_ROOTS)
-    for dword in dictionary.roots(with_nosuggest=False, with_onlyincompound=False):
+    for dword in roots:
         if abs(len(dword.stem) - len(word)) > 4:
             continue
         # TODO: large skip_exceptions block
@@ -68,7 +68,7 @@ def ngram_suggest(dictionary, word: str, *, maxdiff: int, onlymaxdiff=False) -> 
     # possible suggestions
     guess_scores = ScoredArray[str](MAX_GUESSES)
     for (root, _) in root_scores.result():
-        for form in dictionary.forms_for(root, word):
+        for form in forms_producer(root, word):
             score = first_affix_score(word, form.lower())
             if score > threshold:
                 guess_scores.push(form, score)

@@ -1,7 +1,42 @@
 from itertools import chain, product, islice
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, Optional, List, Union
 
+import dataclasses
+from dataclasses import dataclass
+
+from spyll.hunspell import data
 from spyll.hunspell.algo import ngram_suggest, permutations as pmt, capitalization as cap
+
+@dataclass
+class Suggestion:
+    text_or_words: Union[str, List[str]]
+    source: str
+    allow_dash: bool = True
+    allow_break: bool = True
+
+    text: Optional[str] = None
+    words: Optional[List[str]] = None
+
+    def __post_init__(self):
+        if self.text or self.words:
+            return
+
+        if type(self.text_or_words) is list:
+            self.words = self.text_or_words
+        elif type(self.text_or_words) is str:
+            self.text = self.text_or_words
+        else:
+            raise ValueError(f"Expected string or list, got {self.text_or_words!r}")
+
+
+    def __repr__(self):
+        if self.text:
+            return f"Suggestion[{self.source}]({self.text})"
+        else:
+            return f"Suggestion[{self.source}]({self.words!r})"
+
+    def replace(self, **changes):
+        return dataclasses.replace(self, **changes)
 
 
 class Observed:
@@ -13,143 +48,231 @@ class Observed:
             self.seen.append(item)
             yield item
 
+class Suggest:
+    def __init__(self, aff: data.Aff, dic: data.Dic, lookup):
+        self.aff = aff
+        self.dic = dic
+        self.lookup = lookup
 
-def suggest(dic, word: str) -> Iterator[str]:
-    yield from (sug for sug, _ in suggest_debug(dic, word))
+    def suggest(self, word: str) -> Iterator[str]:
+        yield from (suggestion.text for suggestion in self.suggest_debug(word))
 
+    def suggest_debug(self, word: str) -> Iterator[Tuple[str, str]]:
+        good = Observed()
+        very_good = Observed()
+        seen = set()
 
-def suggest_debug(dic, word: str) -> Iterator[Tuple[str, str]]:
-    good = Observed()
-    very_good = Observed()
-    seen = set()
-
-    def oconv(word):
-        if not dic.aff.OCONV:
+        def oconv(word):
+            if not self.aff.OCONV:
+                return word
+            for src, dst in self.aff.OCONV:
+                word = word.replace(src, dst)
             return word
-        for src, dst in dic.aff.OCONV:
-            word = word.replace(src, dst)
-        return word
 
-    def handle_found(suggestion, source, *, ignore_included=False):
-        if dic.keepcase(suggestion) and not dic.aff.CHECKSHARPS:
-            cased_suggestion = suggestion
-        else:
-            cased_suggestion = cap.coerce(suggestion, captype)
-            if suggestion != cased_suggestion and dic.is_forbidden(cased_suggestion):
-                cased_suggestion = suggestion
-        if dic.is_forbidden(cased_suggestion):
+        def check_suggestion(word, **kwarg):
+            return self.lookup.lookup(word, capitalization=False, allow_nosuggest=False, **kwarg)
+
+        def filter_suggestions(suggestions):
+            # TODO: allow_break?
+            for suggestion in suggestions:
+                if suggestion.words:
+                    if all(check_suggestion(word) for word in suggestion.words):
+                        yield suggestion.replace(text = ' '.join(suggestion.words))
+                        if suggestion.allow_dash:
+                            yield suggestion.replace(text = '-'.join(suggestion.words))
+                else:
+                    if check_suggestion(suggestion.text, allow_break=suggestion.allow_break):
+                        yield suggestion
+
+        def keep_case(word):
+            return self.aff.KEEPCASE and self.dic.has_flag(word, self.aff.KEEPCASE)
+
+        def is_forbidden(word):
+            return self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD)
+
+
+        def handle_found(suggestion, *, ignore_included=False):
+            text = suggestion.text
+            if keep_case(text) and not self.aff.CHECKSHARPS:
+                # Don't change text
+                pass
+            else:
+                text = cap.coerce(text, captype)
+                if text != suggestion.text and is_forbidden(text):
+                    text = suggestion.text
+            if is_forbidden(text):
+                return
+            if text in seen or ignore_included and any(previous in text for previous in seen):
+                return
+
+            seen.add(text)
+            yield suggestion.replace(text=oconv(text))
+
+        captype, variants = cap.variants(word)
+
+        if self.aff.CHECKSHARPS and 'ß' in word and cap.guess(word.replace('ß', '')) == cap.Cap.ALL:
+            captype = cap.Cap.ALL
+
+        if self.aff.FORCEUCASE:
+            if check_suggestion(word.capitalize()):
+                yield from handle_found(Suggestion(word.capitalize(), 'forcecase'))
+                return # No more need to check anything
+
+        for variant in variants[1:]:
+            if check_suggestion(variant):
+                yield from handle_found(Suggestion(variant, 'case'))
+
+        for variant in variants:
+            for suggestion in filter_suggestions(self.good_permutations(variant)):
+                yield from good(handle_found(suggestion))
+
+        for variant in variants:
+            for suggestion in filter_suggestions(self.very_good_permutations(variant)):
+                yield from very_good(handle_found(suggestion))
+
+        if very_good.seen:
             return
-        if ignore_included and any(s in cased_suggestion for s in seen) or cased_suggestion in seen:
+
+        for variant in variants:
+            for suggestion in filter_suggestions(self.questionable_permutations(variant)):
+                yield from handle_found(suggestion)
+
+        if very_good.seen or good.seen or self.aff.MAXNGRAMSUGS == 0:
             return
 
-        seen.add(cased_suggestion)
-        yield oconv(cased_suggestion), source
+        def suffixes_for(word):
+            res = []
+            for flag in word.flags:
+                if flag in self.aff.SFX:
+                    for suf in self.aff.SFX[flag]:
+                        if suf.cond_regexp.search(word.stem):
+                            res.append(suf)
+                            break
+            return res
 
-    captype, variants = cap.variants(word)
+        def prefixes_for(word):
+            res = []
+            for flag in word.flags:
+                if flag in self.aff.PFX:
+                    for pref in self.aff.PFX[flag]:
+                        if pref.cond_regexp.search(word.stem):
+                            res.append(pref)
+                            break
+            return res
 
-    if dic.aff.CHECKSHARPS and 'ß' in word and cap.guess(word.replace('ß', '')) == cap.Cap.ALL:
-        captype = cap.Cap.ALL
+        def forms_for(word: data.dic.Word, candidate: str):
+            # word without prefixes/suffixes is also present...
+            # TODO: unless it is forbidden :)
+            res = [word.stem]
 
-    if dic.aff.FORCEUCASE:
-        if checkword(dic, word.capitalize()):
-            yield from handle_found(word.capitalize(), 'forcecase')
-            return # No more need to check anything
+            suffixes = [
+                suf
+                for suf in suffixes_for(word)
+                if candidate.endswith(suf.add)
+            ]
+            prefixes = [
+                pref
+                for pref in prefixes_for(word)
+                if candidate.startswith(pref.add)
+            ]
 
-    for variant in variants[1:]:
-        if checkword(dic, variant):
-            yield from handle_found(variant, 'case')
+            for suf in suffixes:
+                root = word.stem[0:-len(suf.strip)] if suf.strip else word.stem
+                res.append(root + suf.add)
 
-    for variant in variants:
-        for sug, source in good_permutations(dic, variant):
-            yield from good(handle_found(sug, source))
+            for suf in suffixes:
+                if not suf.crossproduct:
+                    continue
+                root = word.stem[0:-len(suf.strip)] if suf.strip else word.stem
+                for pref in prefixes:
+                    if not pref.crossproduct:
+                        continue
+                    root = root[len(pref.strip):]
+                    res.append(pref.add + root + suf.add)
 
-    for variant in variants:
-        for sug, source in very_good_permutations(dic, variant):
-            yield from very_good(handle_found(sug, source))
+            for pref in prefixes:
+                root = word.stem[len(pref.strip):]
+                res.append(pref.add + root)
 
-    if very_good.seen:
-        return
+            return res
 
-    for variant in variants:
-        for sug, source in questionable_permutations(dic, variant):
-            yield from handle_found(sug, source)
+        ngrams_seen = Observed()
+        for sug in ngram_suggest.ngram_suggest(
+                    word.lower(),
+                    roots=self.roots(with_nosuggest=False, with_onlyincompound=False),
+                    forms_producer=forms_for,
+                    maxdiff=self.aff.MAXDIFF,
+                    onlymaxdiff=self.aff.ONLYMAXDIFF):
+            yield from ngrams_seen(handle_found(Suggestion(sug, 'ngram'), ignore_included=True))
+            if len(ngrams_seen.seen) >= self.aff.MAXNGRAMSUGS:
+                return
 
-    if very_good.seen or good.seen or dic.aff.MAXNGRAMSUGS == 0:
-        return
+    def roots(self, *,
+              with_forbidden=False,
+              with_nosuggest=True,
+              with_onlyincompound=True) -> Iterator[data.dic.Word]:
 
-    ngramsugs = 0
-    for sug in ngram_suggest.ngram_suggest(
-                dic, word.lower(), maxdiff=dic.aff.MAXDIFF, onlymaxdiff=dic.aff.ONLYMAXDIFF):
-        yield from islice(handle_found(sug, 'ngram', ignore_included=True), dic.aff.MAXNGRAMSUGS)
+        for word in self.dic.words:
+            if (with_forbidden or self.aff.FORBIDDENWORD not in word.flags) and \
+               (with_nosuggest or self.aff.NOSUGGEST not in word.flags) and \
+               (with_onlyincompound or self.aff.ONLYINCOMPOUND not in word.flags):
+                yield word
 
+    def very_good_permutations(self, word: str) -> Iterator[str]:
+        for words in pmt.twowords(word):
+            yield Suggestion(' '.join(words), 'spaceword')
+            if self.aff.use_dash():
+                yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
 
-def checkword(dic, word, *, with_compounds=None, **kwarg):
-    return dic.lookup(word, capitalization=False, allow_nosuggest=False, with_compounds=with_compounds, **kwarg)
+    def good_permutations(self, word: str) -> Iterator[str]:
+        # suggestions for an uppercase word (html -> HTML)
+        yield Suggestion(word.upper(), 'uppercase')
 
+        # typical fault of spelling, might return several words if REP table has "REP <something> _",
+        # ...in this case we should suggest both "<word1> <word2>" as one dictionary entry, and
+        # "<word1>" "<word1>" as a sequence -- but clarifying this sequence might NOT be joined by "-"
+        for suggestion in pmt.replchars(word, self.aff.REP):
+            if type(suggestion) is list:
+                yield Suggestion(' '.join(suggestion), 'replchars')
+            yield Suggestion(suggestion, 'replchars', allow_dash=False)
 
-def very_good_permutations(dic, word: str) -> Iterator[str]:
-    for sug in pmt.twowords(word):
-        if checkword(dic, ' '.join(sug)):
-            yield ' '.join(sug), 'spaceword'
-        if dic.aff.use_dash() and checkword(dic, '-'.join(sug), allow_break=False):
-            yield '-'.join(sug), 'spaceword'
-
-
-def good_permutations(dic, word: str) -> Iterator[str]:
-    # suggestions for an uppercase word (html -> HTML)
-    if checkword(dic, word.upper()):
-        yield (word.upper(), 'uppercase')
-
-    # typical fault of spelling
-    for sug, source in product(pmt.replchars(word, dic.aff.REP), ['replchars']):
-        if type(sug) is list:
-            # could've come from replchars + spaces -- but no "-"-checks here
-            if all(checkword(dic, s) for s in sug):
-                yield ' '.join(sug), source
-        elif type(sug) is str:
-            if checkword(dic, sug):
-                yield sug, source
-
-
-def questionable_permutations(dic, word: str) -> Iterator[str]:
-    iterator = chain(
+    def questionable_permutations(self, word: str) -> Iterator[str]:
         # wrong char from a related set
-        product(pmt.mapchars(word, dic.aff.MAP), ['mapchars']),
+        for suggestion in pmt.mapchars(word, self.aff.MAP):
+            yield Suggestion(suggestion, 'mapchars')
+
         # swap the order of chars by mistake
-        product(pmt.swapchar(word), ['swapchar']),
+        for suggestion in pmt.swapchar(word):
+            yield Suggestion(suggestion, 'swapchar')
+
         # swap the order of non adjacent chars by mistake
-        product(pmt.longswapchar(word), ['longswapchar']),
+        for suggestion in pmt.longswapchar(word):
+            yield Suggestion(suggestion, 'longswapchar')
+
         # hit the wrong key in place of a good char (case and keyboard)
-        product(pmt.badcharkey(word, dic.aff.KEY), ['badcharkey']),
+        for suggestion in pmt.badcharkey(word, self.aff.KEY):
+            yield Suggestion(suggestion, 'badcharkey')
+
         # add a char that should not be there
-        product(pmt.extrachar(word), ['extrachar']),
+        for suggestion in pmt.extrachar(word):
+            yield Suggestion(suggestion, 'extrachar')
+
         # forgot a char
-        product(pmt.forgotchar(word, dic.aff.TRY), ['forgotchar']),
+        for suggestion in pmt.forgotchar(word, self.aff.TRY):
+            yield Suggestion(suggestion, 'forgotchar')
+
         # move a char
-        product(pmt.movechar(word), ['movechar']),
+        for suggestion in pmt.movechar(word):
+            yield Suggestion(suggestion, 'movechar')
+
         # just hit the wrong key in place of a good char
-        product(pmt.badchar(word, dic.aff.TRY), ['badchar']),
+        for suggestion in pmt.badchar(word, self.aff.TRY):
+            yield Suggestion(suggestion, 'badchar')
+
         # double two characters
-        product(pmt.doubletwochars(word), ['doubletwochars']),
+        for suggestion in pmt.doubletwochars(word):
+            yield Suggestion(suggestion, 'doubletwochars')
 
         # perhaps we forgot to hit space and two words ran together
-        product(pmt.twowords(word), ['twowords'])
-    )
-
-    for sug, source in iterator:
-        if type(sug) is list:
-            # FIXME: this is how it is in hunspell (see opentaal_forbiddenword1): either BOTH
-            # should be compound, or BOTH should be not. I am not sure it is the right thing
-            # to do, but just want to catch up with tests, for now.
-            # if all(checkword(dic, s, with_compounds=False, allow_break=False) for s in sug) or \
-            #    all(checkword(dic, s, with_compounds=True, allow_break=False) for s in sug):
-            #     yield ' '.join(sug), source
-            #     if dic.aff.use_dash():
-            #         yield '-'.join(sug), source
-            if all(checkword(dic, s, allow_break=False) for s in sug):
-                yield ' '.join(sug), source
-                if dic.aff.use_dash():
-                    yield '-'.join(sug), source
-        elif type(sug) is str:
-            if checkword(dic, sug):
-                yield sug, source
+        for suggestion in pmt.twowords(word):
+            yield Suggestion(suggestion, 'twowords', allow_dash=self.aff.use_dash())
