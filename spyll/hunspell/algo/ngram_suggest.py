@@ -55,23 +55,32 @@ def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff
     for dword in roots:
         if abs(len(dword.stem) - len(word)) > 4:
             continue
-        # TODO: large skip_exceptions block
-        # if lots of conditions: continue
-        # Should be in fact encapsulated by dictionary
+        # TODO: more exceptions -- lift to suggest
+        # ...word is nocap and root is initcap (though, a lot of "unless...")
+        # ...?onlyupcase flag
 
-        root_scores.push(dword, root_score(word, dword.stem))
+        score = root_score(word, dword.stem)
+        if dword.phonetic():
+            score = max(score, root_score(word, dword.phonetic()))
+
+        root_scores.push(dword, score)
 
     threshold = detect_threshold(word)
 
     # now expand affixes on each of these root words and
     # and use length adjusted ngram scores to select
     # possible suggestions
-    guess_scores = ScoredArray[str](MAX_GUESSES)
+    guess_scores = ScoredArray[Tuple[str, str]](MAX_GUESSES)
     for (root, _) in root_scores.result():
-        for form in forms_producer(root, word):
-            score = first_affix_score(word, form.lower())
+        if root.phonetic():
+            score = rough_affix_score(word, root.phonetic())
             if score > threshold:
-                guess_scores.push(form, score)
+                guess_scores.push((root.phonetic(), root.stem), score)
+
+        for form in forms_producer(root, word):
+            score = rough_affix_score(word, form.lower())
+            if score > threshold:
+                guess_scores.push((form, form), score)
 
     # now we are done generating guesses
     # sort in order of decreasing score
@@ -82,8 +91,8 @@ def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff
     # weight suggestions with a similarity index, based on
     # the longest common subsequent algorithm and resort
     guesses2 = [
-        (value, detailed_affix_score(word, value.lower(), fact, base=score))
-        for (value, score) in guesses
+        (real, detailed_affix_score(word, compared.lower(), fact, base=score))
+        for ((compared, real), score) in guesses
     ]
 
     guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
@@ -132,16 +141,16 @@ def detect_threshold(word: str) -> float:
 
 
 def root_score(word1: str, word2: str) -> float:
-    leftcommon = sm.leftcommonsubstring(word1, word2.lower())
-    return sm.ngram(3, word1, word2.lower(), longer_worse=True) + leftcommon
+    return sm.ngram(3, word1, word2.lower(), longer_worse=True) + \
+          sm.leftcommonsubstring(word1, word2.lower())
 
 
-def first_affix_score(word1: str, word2: str) -> float:
-    leftcommon = sm.leftcommonsubstring(word1, word2)
-    return sm.ngram(len(word1), word1, word2, any_mismatch=True) + leftcommon
+def rough_affix_score(word1: str, word2: str) -> float:
+    return sm.ngram(len(word1), word1, word2, any_mismatch=True) + \
+         sm.leftcommonsubstring(word1, word2)
 
 
-def detailed_affix_score(word1: str, word2: str, fact: float, *, base: float) -> Optional[float]:
+def detailed_affix_score(word1: str, word2: str, fact: float, *, base: float) -> float:
     lcs = sm.lcslen(word1, word2)
 
     # same characters with different casing

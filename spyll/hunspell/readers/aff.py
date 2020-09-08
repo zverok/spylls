@@ -20,9 +20,6 @@ class Context:
     flag_synonyms: Dict[str, str] = field(default_factory=dict)
     ignore: str = ''
 
-    def replace(self, **changes):
-        return dataclasses.replace(self, **changes)
-
     def parse_flag(self, string):
         return self.parse_flags(string)[0]
 
@@ -64,17 +61,17 @@ def read_aff(path_or_io):
 
         # Additional actions, changing further reading behavior
         if directive == 'FLAG':
-            context = context.replace(flag_format=value)
+            context.flag_format = value
         elif directive == 'AF':
-            context = context.replace(flag_synonyms=value)
+            context.flag_synonyms = value
         elif directive == 'SET':
-            context = context.replace(encoding=value)
+            context.encoding = value
             source.reset_encoding(value)
         elif directive == 'IGNORE':
-            context = context.replace(ignore=value)
+            context.ignore = value
 
         if directive == 'FLAG' and value == 'UTF-8':
-            context = context.replace(encoding='UTF-8')
+            context.encoding = 'UTF-8'
             data['SET'] = 'UTF-8'
             source.reset_encoding('UTF-8')
 

@@ -1,3 +1,4 @@
+from collections import defaultdict
 import re
 
 from spyll.hunspell.readers import FileReader
@@ -9,7 +10,7 @@ def read_dic(path_or_io, *, context):
 
     def read_word(line):
         parts = re.split(r"\s+", line)
-        word_parts = [part for part in parts if not re.match(r'^(\w{2}:\S+|\d+)$', part)]
+        word_parts = [part for part in parts if not re.match(r'^(\w{2}:\S*|\d+)$', part)]
 
         def morphology(parts):
             # Todo: AM
@@ -18,15 +19,14 @@ def read_dic(path_or_io, *, context):
                 if content:
                     yield id, content
 
-        morphology = {
-            id: content
-            for id, content in morphology(parts)
-        }
+        morph = defaultdict(list)
+        for id, content in morphology(parts):
+            morph[id].append(content)
 
         word, _, flags = ' '.join(word_parts).partition('/')
         word = word.translate(str.maketrans('', '', context.ignore))
 
-        return dic.Word(stem=word, flags={*context.parse_flags(flags)}, morphology=morphology)
+        return dic.Word(stem=word, flags={*context.parse_flags(flags)}, morphology=morph)
 
     words = [
         read_word(line)

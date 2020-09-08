@@ -16,6 +16,10 @@ def test(name):
     dictionary = Dictionary(path)
     bad = readlist(path + '.wrong')
     sug = list(map(lambda s: re.split(r',\s*', s), readlist(path + '.sug', ignoredot=False)))
+    for i, words in enumerate(sug):
+        # ph.sug is the only one with "," in the word :(
+        if words == ['Oh', 'my gosh!'] or words == ['OH', 'MY GOSH!']:
+            sug[i] = [', '.join(words)]
     return [
         {
             'word': word,
@@ -117,8 +121,8 @@ report('opentaal_forbiddenword2')
 section('Phonetical suggestions')
 
 # report('phone')
-# report('ph')
-# report('ph2')
+report('ph')
+report('ph2')
 
 # ==================
 section('IO quirks')

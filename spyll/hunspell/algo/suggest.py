@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple, Optional, List, Union
+from typing import Iterator, Optional, List, Union
 
 import dataclasses
 from dataclasses import dataclass
@@ -53,15 +53,19 @@ class Suggest:
         self.aff = aff
         self.dic = dic
         self.lookup = lookup
+        # TODO: there also could be "pretty ph:prity ph:priti->pretti", "pretty ph:prity*"
+        # TODO: if (captype==INITCAP)
+        self.replacements = [
+            (phonetic, word.stem)
+            for word in dic.words if word.phonetic()
+            for phonetic in word.phonetic()
+        ]
+        # print(self.replacements)
 
     def suggest(self, word: str) -> Iterator[str]:
         yield from (suggestion.text for suggestion in self.suggest_debug(word))
 
-    def suggest_debug(self, word: str) -> Iterator[Tuple[str, str]]:
-        good = Observed()
-        very_good = Observed()
-        seen = set()
-
+    def suggest_debug(self, word: str) -> Iterator[Suggestion]:
         def oconv(word):
             if not self.aff.OCONV:
                 return word
@@ -73,7 +77,6 @@ class Suggest:
             return self.lookup.lookup(word, capitalization=False, allow_nosuggest=False, **kwarg)
 
         def filter_suggestions(suggestions):
-            # TODO: allow_break?
             for suggestion in suggestions:
                 if suggestion.words:
                     if all(check_suggestion(word) for word in suggestion.words):
@@ -90,6 +93,8 @@ class Suggest:
         def is_forbidden(word):
             return self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD)
 
+        handled = set()
+
         def handle_found(suggestion, *, ignore_included=False):
             text = suggestion.text
             if keep_case(text) and not self.aff.CHECKSHARPS:
@@ -101,16 +106,19 @@ class Suggest:
                     text = suggestion.text
             if is_forbidden(text):
                 return
-            if text in seen or ignore_included and any(previous in text for previous in seen):
+            if text in handled or ignore_included and any(previous in text for previous in handled):
                 return
 
-            seen.add(text)
+            handled.add(text)
             yield suggestion.replace(text=oconv(text))
 
         captype, variants = cap.variants(word)
 
         if self.aff.CHECKSHARPS and 'ß' in word and cap.guess(word.replace('ß', '')) == cap.Cap.ALL:
             captype = cap.Cap.ALL
+
+        good = Observed()
+        very_good = Observed()
 
         if self.aff.FORCEUCASE:
             if check_suggestion(word.capitalize()):
@@ -145,17 +153,6 @@ class Suggest:
             if len(ngrams_seen.seen) >= self.aff.MAXNGRAMSUGS:
                 return
 
-    def roots(self, *,
-              with_forbidden=False,
-              with_nosuggest=True,
-              with_onlyincompound=True) -> Iterator[data.dic.Word]:
-
-        for word in self.dic.words:
-            if (with_forbidden or self.aff.FORBIDDENWORD not in word.flags) and \
-               (with_nosuggest or self.aff.NOSUGGEST not in word.flags) and \
-               (with_onlyincompound or self.aff.ONLYINCOMPOUND not in word.flags):
-                yield word
-
     def very_good_permutations(self, word: str) -> Iterator[str]:
         for words in pmt.twowords(word):
             yield Suggestion(' '.join(words), 'spaceword')
@@ -173,6 +170,9 @@ class Suggest:
             if type(suggestion) is list:
                 yield Suggestion(' '.join(suggestion), 'replchars')
             yield Suggestion(suggestion, 'replchars', allow_dash=False)
+
+        for suggestion in pmt.replchars(word, self.replacements):
+            yield Suggestion(suggestion, 'replchars/ph', allow_dash=False)
 
     def questionable_permutations(self, word: str) -> Iterator[str]:
         # wrong char from a related set
@@ -242,6 +242,7 @@ class Suggest:
             ]
 
             for suf in suffixes:
+                # FIXME: this things should be more atomic
                 root = word.stem[0:-len(suf.strip)] if suf.strip else word.stem
                 res.append(root + suf.add)
 
@@ -255,9 +256,15 @@ class Suggest:
 
             return res
 
+        # TODO: also NONGRAMSUGGEST and ONLYUPCASE
+        # TODO: move to constructor
+        bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
+
+        roots = (word for word in self.dic.words if not bad_flags.intersection(word.flags))
+
         yield from ngram_suggest.ngram_suggest(
                     word.lower(),
-                    roots=self.roots(with_nosuggest=False, with_onlyincompound=False),
+                    roots=roots,
                     forms_producer=forms_for,
                     maxdiff=self.aff.MAXDIFF,
                     onlymaxdiff=self.aff.ONLYMAXDIFF)

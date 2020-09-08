@@ -16,6 +16,7 @@ class Affix:
     condition: str
     flags: Set[Flag] = field(default_factory=set)
 
+
 @dataclass
 class Prefix(Affix):
     def __post_init__(self):
