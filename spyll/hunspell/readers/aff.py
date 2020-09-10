@@ -155,6 +155,11 @@ def read_value(source, directive, *values, context):
         }
     elif directive == 'COMPOUNDSYLLABLE':
         return (int(values[0]), values[1])
+    elif directive == 'PHONE':
+        return [
+            (search, '' if replacement == '_' else replacement)
+            for search, replacement in _read_array()
+        ]
     else:
         # TODO: Maybe for ver 0.0.1 it is acceptable to just not recognize some flags?
         raise Exception(f"Can't parse {directive}")

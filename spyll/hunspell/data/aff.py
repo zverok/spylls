@@ -103,6 +103,9 @@ class Aff:
 
     COMPOUNDSYLLABLE: Optional[Tuple[int, str]] = None
 
+    # Suggestion search:
+    PHONE: List[Tuple[str, str]] = field(default_factory=list)
+
     # IO:
     ICONV: List[Tuple[str, str]] = field(default_factory=list)
     OCONV: List[Tuple[str, str]] = field(default_factory=list)
