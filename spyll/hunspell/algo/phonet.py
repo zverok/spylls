@@ -1,7 +1,15 @@
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Iterator, Tuple, TypeVar, Generic, List, Optional
+from operator import itemgetter
+
+from spyll.hunspell import data
+import spyll.hunspell.algo.string_metrics as sm
+from spyll.hunspell.algo.util import ScoredArray
+
+MAX_ROOTS = 100
+
 
 @dataclass
 class Rule:
@@ -44,12 +52,13 @@ class Rule:
             followup=(m.group('lookahead') is not None)
         )
 
+
 # http://aspell.net/man-html/Phonetic-Code.html
-class Phonet:
-    def __init__(self, table: List[Tuple[str, str]]):
+class Table:
+    def __init__(self, source: List[Tuple[str, str]]):
         self.rules = defaultdict(list)
 
-        for search, replacement in table:
+        for search, replacement in source:
             self.rules[search[0]].append(Rule.parse(search, replacement))
 
     def convert(self, word):
@@ -61,6 +70,7 @@ class Phonet:
         word = word.upper()
         res = ''
         while pos < len(word):
+            match = None
             for rule in self.rules[word[pos]]:
                 match = rule.match(word, pos)
                 if match:
@@ -68,6 +78,32 @@ class Phonet:
                     pos += match.span()[1] - match.span()[0]
                     break
             if not match:
-                # res += word[pos]
                 pos += 1
         return res
+
+
+def phonet_suggest(word: str, *, roots, table: Table) -> Iterator[str]:
+    word_ph = table.convert(word)
+
+    scores = ScoredArray[data.dic.Word](MAX_ROOTS)
+
+    # NB: This cycle is repeated from ngram_suggest when both are used.
+    # But it is MUCH easier to understand and test this way.
+    for dword in roots:
+        if abs(len(dword.stem) - len(word)) > 4:
+            continue
+        # TODO: more exceptions
+
+        score = 2 * sm.ngram(3, word_ph, table.convert(dword.stem), longer_worse=True)
+        scores.push(dword.stem, score)
+
+    guesses = sorted(scores.result(), key=itemgetter(1), reverse=True)
+
+    # TODO: Use aff.MAXPHONSUGS setting
+    guesses2 = [(dword, score + detailed_score(word, dword.lower())) for (dword, score) in guesses]
+    guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
+    for (sug, _) in guesses2:
+        yield sug
+
+def detailed_score(word1: str, word2: str) -> float:
+    return 2 * sm.lcslen(word1, word2) - abs(len(word1) - len(word2)) + sm.leftcommonsubstring(word1, word2)

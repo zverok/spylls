@@ -3,6 +3,7 @@ from operator import itemgetter
 
 from spyll.hunspell import data
 import spyll.hunspell.algo.string_metrics as sm
+from spyll.hunspell.algo.util import ScoredArray
 
 
 MAX_ROOTS = 100
@@ -13,45 +14,15 @@ MAXNGRAMSUGS = 4
 MAXPHONSUGS = 2
 MAXCOMPOUNDSUGS = 3
 
-Value = TypeVar('Value')
-
-
-class ScoredArray(Generic[Value]):
-    data: List[Tuple[Optional[Value], float]]
-
-    def __init__(self, size: int):
-        # FIXME: Can't guess how to do it with NamedTuple instead of tuple so mypy would
-        # be happy :(
-        self.data = [(None, -100*i) for i in range(size)]
-        self.insert_at = size - 1
-
-    def push(self, value: Value, score: float):
-        if score <= self.data[self.insert_at][1]:
-            return
-
-        self.data[self.insert_at] = (value, score)
-
-        # Next value should be inserted at the point which currently has minimum score
-        # below current score
-        lowest = score
-        for i, cur in enumerate(self.data):
-            if cur[1] < lowest:
-                self.insert_at = i
-                lowest = cur[1]
-
-    def result(self) -> Iterator[Tuple[Value, float]]:
-        return filter(lambda s: s[0], self.data)
-
 
 def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
     # TODO: lowering depends on BMP of word, true by default
     # low = True
 
-    # TODO: if PHONE table in aff, we also look for phonetic suggestion borrowed from aspell
-
     # exhaustively search through all root words
     # keeping track of the MAX_ROOTS most similar root words
     root_scores = ScoredArray[data.dic.Word](MAX_ROOTS)
+
     for dword in roots:
         if abs(len(dword.stem) - len(word)) > 4:
             continue
@@ -60,6 +31,7 @@ def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff
         # ...?onlyupcase flag
 
         score = root_score(word, dword.stem)
+        # FIXME: actually, there might be several ph: forms
         if dword.phonetic():
             score = max(score, root_score(word, dword.phonetic()))
 
