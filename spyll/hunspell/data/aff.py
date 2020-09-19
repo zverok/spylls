@@ -58,6 +58,7 @@ class Aff:
     ONLYMAXDIFF: bool = False
     MAXNGRAMSUGS: int = 4
     NOSPLITSUGS: bool = False
+    PHONE: List[Tuple[str, str]] = field(default_factory=list)
 
     # Stemming
     AF: Dict[int, Set[Flag]] = field(default_factory=dict)
@@ -102,9 +103,6 @@ class Aff:
     SIMPLIFIEDTRIPLE: bool = False
 
     COMPOUNDSYLLABLE: Optional[Tuple[int, str]] = None
-
-    # Suggestion search:
-    PHONE: List[Tuple[str, str]] = field(default_factory=list)
 
     # IO:
     ICONV: List[Tuple[str, str]] = field(default_factory=list)

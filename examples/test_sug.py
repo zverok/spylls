@@ -52,7 +52,7 @@ def report(name, *, pending=[]):
             if data['word'] in pending:
                 counter['pending'] += 1
             else:
-                out.append(f"  {data['word']}: {data['expected']} vs {data['got']}")
+                out.append(f"  {data['word']}: expected: {data['expected']}, got: {data['got']}")
                 counter['bad'] += 1
 
     summary = f"{name}: {counter['good']} OK"
@@ -120,9 +120,9 @@ report('opentaal_forbiddenword2')
 # ==================
 section('Phonetical suggestions')
 
-# report('phone')
 report('ph')
 report('ph2')
+report('phone')
 
 # ==================
 section('IO quirks')

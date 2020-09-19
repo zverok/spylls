@@ -3,10 +3,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Iterator, Tuple, TypeVar, Generic, List, Optional
 from operator import itemgetter
+from itertools import islice
 
 from spyll.hunspell import data
 import spyll.hunspell.algo.string_metrics as sm
 from spyll.hunspell.algo.util import ScoredArray
+import spyll.hunspell.algo.ngram_suggest as ng
 
 MAX_ROOTS = 100
 
@@ -83,6 +85,7 @@ class Table:
 
 
 def phonet_suggest(word: str, *, roots, table: Table) -> Iterator[str]:
+    word = word.lower()
     word_ph = table.convert(word)
 
     scores = ScoredArray[data.dic.Word](MAX_ROOTS)
@@ -94,8 +97,14 @@ def phonet_suggest(word: str, *, roots, table: Table) -> Iterator[str]:
             continue
         # TODO: more exceptions
 
-        score = 2 * sm.ngram(3, word_ph, table.convert(dword.stem), longer_worse=True)
-        scores.push(dword.stem, score)
+        nscore = ng.root_score(word, dword.stem)
+        if dword.phonetic():
+            for variant in dword.phonetic():
+                nscore = max(nscore, ng.root_score(word, variant))
+
+        if nscore > 2 and abs(len(word) - len(dword.stem)) <= 3:
+            score = 2 * sm.ngram(3, word_ph, table.convert(dword.stem), longer_worse=True)
+            scores.push(dword.stem, score)
 
     guesses = sorted(scores.result(), key=itemgetter(1), reverse=True)
 

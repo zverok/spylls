@@ -4,7 +4,9 @@ import dataclasses
 from dataclasses import dataclass
 
 from spyll.hunspell import data
-from spyll.hunspell.algo import ngram_suggest, permutations as pmt, capitalization as cap
+from spyll.hunspell.algo import ngram_suggest, phonet, permutations as pmt, capitalization as cap
+
+MAXPHONSUGS = 2
 
 
 @dataclass
@@ -151,7 +153,14 @@ class Suggest:
         for sug in self.ngram_suggestions(word):
             yield from ngrams_seen(handle_found(Suggestion(sug, 'ngram'), ignore_included=True))
             if len(ngrams_seen.seen) >= self.aff.MAXNGRAMSUGS:
-                return
+                break
+
+        phonet_seen = Observed()
+        for sug in self.phonet_suggestions(word):
+            yield from phonet_seen(handle_found(Suggestion(sug, 'phonet'), ignore_included=True))
+            if len(phonet_seen.seen) >= MAXPHONSUGS:
+                break
+
 
     def very_good_permutations(self, word: str) -> Iterator[str]:
         for words in pmt.twowords(word):
@@ -260,6 +269,7 @@ class Suggest:
         # TODO: move to constructor
         bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
 
+        # FIXME: maybe better to calc it once and for good?..
         roots = (word for word in self.dic.words if not bad_flags.intersection(word.flags))
 
         yield from ngram_suggest.ngram_suggest(
@@ -268,3 +278,14 @@ class Suggest:
                     forms_producer=forms_for,
                     maxdiff=self.aff.MAXDIFF,
                     onlymaxdiff=self.aff.ONLYMAXDIFF)
+
+    def phonet_suggestions(self, word):
+        if not self.aff.PHONE:
+            return
+
+        bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
+        roots = (word for word in self.dic.words if not bad_flags.intersection(word.flags))
+
+        table = phonet.Table(self.aff.PHONE)
+
+        yield from phonet.phonet_suggest(word, roots=roots, table=table)

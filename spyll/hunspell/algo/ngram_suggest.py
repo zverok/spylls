@@ -31,9 +31,9 @@ def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff
         # ...?onlyupcase flag
 
         score = root_score(word, dword.stem)
-        # FIXME: actually, there might be several ph: forms
         if dword.phonetic():
-            score = max(score, root_score(word, dword.phonetic()))
+            for variant in dword.phonetic():
+                score = max(score, root_score(word, variant))
 
         root_scores.push(dword, score)
 
@@ -45,9 +45,10 @@ def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff
     guess_scores = ScoredArray[Tuple[str, str]](MAX_GUESSES)
     for (root, _) in root_scores.result():
         if root.phonetic():
-            score = rough_affix_score(word, root.phonetic())
-            if score > threshold:
-                guess_scores.push((root.phonetic(), root.stem), score)
+            for variant in root.phonetic():
+                score = rough_affix_score(word, variant)
+                if score > threshold:
+                    guess_scores.push((variant, root.stem), score)
 
         for form in forms_producer(root, word):
             score = rough_affix_score(word, form.lower())
