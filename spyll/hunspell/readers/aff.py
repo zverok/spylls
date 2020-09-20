@@ -1,7 +1,6 @@
 import re
 import itertools
 from dataclasses import dataclass, field
-import dataclasses
 from typing import Dict
 
 from spyll.hunspell.readers import FileReader

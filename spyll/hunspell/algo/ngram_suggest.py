@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple, TypeVar, Generic, List, Optional
+from typing import Iterator, Tuple, List
 from operator import itemgetter
 
 from spyll.hunspell import data

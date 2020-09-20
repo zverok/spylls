@@ -161,7 +161,6 @@ class Suggest:
             if len(phonet_seen.seen) >= MAXPHONSUGS:
                 break
 
-
     def very_good_permutations(self, word: str) -> Iterator[str]:
         for words in pmt.twowords(word):
             yield Suggestion(' '.join(words), 'spaceword')

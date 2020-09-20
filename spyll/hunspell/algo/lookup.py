@@ -172,7 +172,11 @@ class Analyzer:
 
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
-    def lookup(self, word: str, *, capitalization=True, with_compounds=None, allow_nosuggest=True, allow_break=True) -> bool:
+    def lookup(self, word: str, *,
+               capitalization=True,
+               with_compounds=None,
+               allow_nosuggest=True,
+               allow_break=True) -> bool:
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
 
@@ -185,7 +189,10 @@ class Analyzer:
 
         def is_found(variant):
             return any(
-                self.analyze(variant, with_compounds=with_compounds, capitalization=capitalization, allow_nosuggest=allow_nosuggest)
+                self.analyze(variant,
+                             with_compounds=with_compounds,
+                             capitalization=capitalization,
+                             allow_nosuggest=allow_nosuggest)
             )
 
         # Numbers are allowed and considered "good word" always
@@ -223,9 +230,9 @@ class Analyzer:
                 allow_nosuggest=True) -> Iterator[Union[WordForm, Compound]]:
 
         def analyze_internal(variant, captype):
-            if with_compounds != True:
+            if with_compounds is not True:
                 yield from self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
-            if with_compounds != False:
+            if with_compounds is not False:
                 yield from self.compound_parts(variant, captype=captype, allow_nosuggest=allow_nosuggest)
 
         if capitalization:
@@ -491,7 +498,8 @@ class Analyzer:
             # if we try to decompoun "forbiddenword's", AND "forbiddenword" with suffix "'s" is forbidden,
             # we shouldn't even try.
             if aff.FORBIDDENWORD and any(aff.FORBIDDENWORD in candidate.flags()
-                                         for candidate in self.word_forms(word_rest, captype=captype, with_forbidden=True)):
+                                         for candidate in
+                                         self.word_forms(word_rest, captype=captype, with_forbidden=True)):
                 return
 
         if len(word_rest) < aff.COMPOUNDMIN * 2 or \
@@ -508,7 +516,7 @@ class Analyzer:
                                         allow_nosuggest=allow_nosuggest):
                 parts = [*prev_parts, form]
                 for others in self.compound_parts_by_flags(rest, parts, captype=captype,
-                                                         allow_nosuggest=allow_nosuggest):
+                                                           allow_nosuggest=allow_nosuggest):
                     yield [form, *others]
 
             if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
@@ -517,7 +525,7 @@ class Analyzer:
                                             allow_nosuggest=allow_nosuggest):
                     parts = [*prev_parts, form]
                     for others in self.compound_parts_by_flags(rest, parts, captype=captype,
-                                                             allow_nosuggest=allow_nosuggest):
+                                                               allow_nosuggest=allow_nosuggest):
                         yield [form.replace(text=beg), *others]
 
     def compound_parts_by_rules(

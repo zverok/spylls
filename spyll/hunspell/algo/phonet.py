@@ -1,9 +1,8 @@
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Iterator, Tuple, TypeVar, Generic, List, Optional
+from typing import Iterator, Tuple, List
 from operator import itemgetter
-from itertools import islice
 
 from spyll.hunspell import data
 import spyll.hunspell.algo.string_metrics as sm
@@ -15,6 +14,10 @@ MAX_ROOTS = 100
 
 @dataclass
 class Rule:
+    PATTERN = re.compile(
+                r'(?P<letters>\w+)(\((?P<optional>\w+)\))?(?P<lookahead>[-]+)?(?P<flags>[\^$<]*)(?P<priority>\d)?'
+            )
+
     search: re.Pattern
     replacement: str
 
@@ -34,7 +37,8 @@ class Rule:
             return self.search.match(word, pos)
 
     def parse(search, replacement):
-        m = re.fullmatch(r'(?P<letters>\w+)(\((?P<optional>\w+)\))?(?P<lookahead>[-]+)?(?P<flags>[\^$<]*)(?P<priority>\d)?', search)
+        m = Rule.PATTERN.fullmatch(search)
+
         if not m:
             raise ValueError(f'Not a proper rule: {search!r}')
         text = [*m.group('letters')]
@@ -113,6 +117,7 @@ def phonet_suggest(word: str, *, roots, table: Table) -> Iterator[str]:
     guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
     for (sug, _) in guesses2:
         yield sug
+
 
 def detailed_score(word1: str, word2: str) -> float:
     return 2 * sm.lcslen(word1, word2) - abs(len(word1) - len(word2)) + sm.leftcommonsubstring(word1, word2)
