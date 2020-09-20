@@ -2,6 +2,7 @@ import re
 import itertools
 import functools
 
+from collections import defaultdict
 from enum import Enum
 from typing import List, Iterator, Union, Optional
 
@@ -128,9 +129,6 @@ class Analyzer:
         self.compile()
 
     def compile(self):
-        self.suffixes = Affixes()
-        self.prefixes = Affixes()
-
         def suffix_regexp(suffix):
             cond_parts = re.findall(r'(\[.+\]|[^\[])', suffix.condition)
             if suffix.strip:
@@ -152,21 +150,17 @@ class Analyzer:
                 cond = ''
             return re.compile('^' + prefix.add + cond)
 
-        suffixes = {}
+        suffixes = defaultdict(list)
         for suf in itertools.chain.from_iterable(self.aff.SFX.values()):
-            key = suf.add[::-1]
-            suffixes[key] = [*suffixes.get(key, []), (suf, suffix_regexp(suf))]
+            suffixes[suf.add[::-1]].append((suf, suffix_regexp(suf)))
 
-        for key, sufs in suffixes.items():
-            self.suffixes[key] = sufs
+        self.suffixes = Affixes(suffixes)
 
-        prefixes = {}
+        prefixes = defaultdict(list)
         for pref in itertools.chain.from_iterable(self.aff.PFX.values()):
-            key = pref.add
-            prefixes[key] = [*prefixes.get(key, []), (pref, prefix_regexp(pref))]
+            prefixes[pref.add].append((pref, prefix_regexp(pref)))
 
-        for key, prefs in prefixes.items():
-            self.prefixes[key] = prefs
+        self.prefixes = Affixes(prefixes)
 
         self.compoundrules = [CompoundRule(r) for r in self.aff.COMPOUNDRULE]
         self.compoundpatterns = [CompoundPattern(*row) for row in self.aff.CHECKCOMPOUNDPATTERN]
