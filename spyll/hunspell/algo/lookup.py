@@ -4,14 +4,15 @@ import functools
 
 from collections import defaultdict
 from enum import Enum
-from typing import List, Iterator, Union, Optional
+from typing import List, Iterator, Union, Optional, Sequence
 
 import dataclasses
 from dataclasses import dataclass
 
-from pygtrie import CharTrie
+from pygtrie import CharTrie # type: ignore
 
 from spyll.hunspell import data
+from spyll.hunspell.data.aff import Flag
 import spyll.hunspell.algo.capitalization as cap
 import spyll.hunspell.algo.permutations as pmt
 
@@ -123,7 +124,7 @@ class Counted:
 
 
 class Analyzer:
-    def __init__(self, aff: data.aff, dic: data.dic):
+    def __init__(self, aff: data.aff.Aff, dic: data.dic.Dic):
         self.aff = aff
         self.dic = dic
         self.compile()
@@ -314,6 +315,10 @@ class Analyzer:
 
         aff = self.aff
 
+        # Shouldn't happen, just to make mypy happy (to not complain "if root is None, you can't take its flags" below)
+        if not form.root:
+            return False
+
         root_flags = form.root.flags
         all_flags = form.flags()
         root_capitalization = cap.guess(form.root.stem)
@@ -381,6 +386,8 @@ class Analyzer:
 
         aff = self.aff
 
+        # FIXME: This is incredibly dirty and should be done on "compounder" side, just passing
+        # "...please find me forms with THIS flags/without THOSE flags"
         if compoundpos:
             suffix_allowed = compoundpos == CompoundPos.END or aff.COMPOUNDPERMITFLAG
             prefix_allowed = compoundpos == CompoundPos.BEGIN or aff.COMPOUNDPERMITFLAG
@@ -401,7 +408,7 @@ class Analyzer:
             for form in self.deprefix(word, required_flags=prefix_required_flags, forbidden_flags=forbidden_flags):
                 yield form
 
-                if suffix_allowed and form.prefix.crossproduct:
+                if suffix_allowed and form.prefix and form.prefix.crossproduct:
                     yield from (
                         form2.replace(text=form.text, prefix=form.prefix)
                         for form2 in self.desuffix(form.stem,
@@ -413,8 +420,8 @@ class Analyzer:
     def desuffix(
             self,
             word: str,
-            required_flags: List[str] = [],
-            forbidden_flags: List[str] = [],
+            required_flags: Sequence[Optional[Flag]] = [],
+            forbidden_flags: Sequence[Optional[Flag]] = [],
             nested: bool = False,
             crossproduct: bool = False) -> Iterator[WordForm]:
 
@@ -445,8 +452,8 @@ class Analyzer:
     def deprefix(
             self,
             word: str,
-            required_flags: List[str] = [],
-            forbidden_flags: List[str] = [],
+            required_flags: Sequence[Optional[Flag]] = [],
+            forbidden_flags: Sequence[Optional[Flag]] = [],
             nested: bool = False) -> Iterator[WordForm]:
 
         def good_prefix(prefix):

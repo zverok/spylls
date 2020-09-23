@@ -10,7 +10,7 @@ MAX_CHAR_DISTANCE = 4
 # differs with more than 1 letter from the right form.
 #
 # uses .aff's file REP table
-def replchars(word: str, reptable: List[Tuple[str, str]]) -> Iterator[Union[str, Tuple[str, str]]]:
+def replchars(word: str, reptable: List[Tuple[str, str]]) -> Iterator[Union[str, List[str]]]:
     if len(word) < 2 or not reptable:
         return
 
@@ -158,6 +158,6 @@ def doubletwochars(word: str) -> Iterator[str]:
 # return value is true, if there is a dictionary word pair,
 # or there was already a good suggestion before calling
 # this function.
-def twowords(word: str) -> Iterator[Tuple[str, str]]:
+def twowords(word: str) -> Iterator[List[str]]:
     for i in range(1, len(word)):
         yield [word[:i], word[i:]]

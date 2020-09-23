@@ -99,7 +99,7 @@ def detect_threshold(word: str) -> float:
     # find minimum threshold for a passable suggestion
     # mangle original word three differnt ways
     # and score them to generate a minimum acceptable score
-    thresh = 0
+    thresh = 0.0
 
     for sp in range(1, 4):
         mangled = list(word)

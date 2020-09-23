@@ -62,8 +62,8 @@ class Aff:
 
     # Stemming
     AF: Dict[int, Set[Flag]] = field(default_factory=dict)
-    PFX: List[Prefix] = field(default_factory=dict)
-    SFX: List[Suffix] = field(default_factory=dict)
+    PFX: Dict[str, List[Prefix]] = field(default_factory=dict)
+    SFX: Dict[str, List[Suffix]] = field(default_factory=dict)
     CIRCUMFIX: Optional[Flag] = None
     NEEDAFFIX: Optional[Flag] = None
     PSEUDOROOT: Optional[Flag] = None

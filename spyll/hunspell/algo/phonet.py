@@ -1,7 +1,7 @@
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Iterator, Tuple, List
+from typing import Iterator, Tuple, List, Dict
 from operator import itemgetter
 
 from spyll.hunspell import data
@@ -36,7 +36,7 @@ class Rule:
         return self.search.match(word, pos)
 
     @staticmethod
-    def parse(search, replacement):
+    def parse(search: str, replacement :str) -> Rule:
         m = Rule.PATTERN.fullmatch(search)
 
         if not m:
@@ -61,6 +61,8 @@ class Rule:
 
 # http://aspell.net/man-html/Phonetic-Code.html
 class Table:
+    rules: Dict[str, List[Rule]]
+
     def __init__(self, source: List[Tuple[str, str]]):
         self.rules = defaultdict(list)
 
@@ -92,7 +94,7 @@ def phonet_suggest(word: str, *, roots, table: Table) -> Iterator[str]:
     word = word.lower()
     word_ph = table.convert(word)
 
-    scores = ScoredArray[data.dic.Word](MAX_ROOTS)
+    scores = ScoredArray[str](MAX_ROOTS)
 
     # NB: This cycle is repeated from ngram_suggest when both are used.
     # But it is MUCH easier to understand and test this way.

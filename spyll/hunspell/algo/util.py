@@ -27,4 +27,8 @@ class ScoredArray(Generic[Value]):
                 lowest = cur[1]
 
     def result(self) -> Iterator[Tuple[Value, float]]:
-        return filter(lambda s: s[0], self.data)
+        # Mypy's unhappy...
+        # return filter(lambda s: s[0], self.data)
+        for value, score in self.data:
+            if value:
+                yield (value, score)

@@ -1,4 +1,4 @@
-from typing import Iterator, Optional, List, Union
+from typing import Iterator, Optional, List, Union, Set
 
 import dataclasses
 from dataclasses import dataclass
@@ -64,7 +64,8 @@ class Suggest:
         # print(self.replacements)
 
     def suggest(self, word: str) -> Iterator[str]:
-        yield from (suggestion.text for suggestion in self.suggest_debug(word))
+        # if just makes mypy happy, shouldn't happen
+        yield from (suggestion.text for suggestion in self.suggest_debug(word) if suggestion.text)
 
     def suggest_debug(self, word: str) -> Iterator[Suggestion]:
         def oconv(word):
@@ -94,7 +95,7 @@ class Suggest:
         def is_forbidden(word):
             return self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD)
 
-        handled = set()
+        handled: Set[str] = set()
 
         def handle_found(suggestion, *, ignore_included=False):
             text = suggestion.text
@@ -160,13 +161,13 @@ class Suggest:
             if len(phonet_seen.seen) >= MAXPHONSUGS:
                 break
 
-    def very_good_permutations(self, word: str) -> Iterator[str]:
+    def very_good_permutations(self, word: str) -> Iterator[Suggestion]:
         for words in pmt.twowords(word):
             yield Suggestion(' '.join(words), 'spaceword')
             if self.aff.use_dash():
                 yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
 
-    def good_permutations(self, word: str) -> Iterator[str]:
+    def good_permutations(self, word: str) -> Iterator[Suggestion]:
         # suggestions for an uppercase word (html -> HTML)
         yield Suggestion(word.upper(), 'uppercase')
 
@@ -181,7 +182,7 @@ class Suggest:
         for suggestion in pmt.replchars(word, self.replacements):
             yield Suggestion(suggestion, 'replchars/ph', allow_dash=False)
 
-    def questionable_permutations(self, word: str) -> Iterator[str]:
+    def questionable_permutations(self, word: str) -> Iterator[Suggestion]:
         # wrong char from a related set
         for suggestion in pmt.mapchars(word, self.aff.MAP):
             yield Suggestion(suggestion, 'mapchars')
@@ -219,10 +220,10 @@ class Suggest:
             yield Suggestion(suggestion, 'doubletwochars')
 
         # perhaps we forgot to hit space and two words ran together
-        for suggestion in pmt.twowords(word):
-            yield Suggestion(suggestion, 'twowords', allow_dash=self.aff.use_dash())
+        for suggestion_pair in pmt.twowords(word):
+            yield Suggestion(suggestion_pair, 'twowords', allow_dash=self.aff.use_dash())
 
-    def ngram_suggestions(self, word):
+    def ngram_suggestions(self, word: str) -> Iterator[str]:
         def forms_for(word: data.dic.Word, candidate: str):
             # word without prefixes/suffixes is also present...
             # TODO: unless it is forbidden :)
@@ -277,7 +278,7 @@ class Suggest:
                     maxdiff=self.aff.MAXDIFF,
                     onlymaxdiff=self.aff.ONLYMAXDIFF)
 
-    def phonet_suggestions(self, word):
+    def phonet_suggestions(self, word: str) -> Iterator[str]:
         if not self.aff.PHONE:
             return
 
