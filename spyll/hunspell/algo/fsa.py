@@ -11,7 +11,7 @@ class FSA:
     def put(self, path, payload):
         cur = self.root
         for p in path:
-            if not p in cur.children:
+            if p not in cur.children:
                 cur.children[p] = Leaf()
 
             cur = cur.children[p]

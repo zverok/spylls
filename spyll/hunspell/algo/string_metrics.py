@@ -15,7 +15,7 @@ def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
             diffpos.append(i)
 
     if len(diffpos) == 2:   # two string differ only by exactly two chars swaped
-        p1, p2 = diffpos # pylint: disable=unbalanced-tuple-unpacking
+        p1, p2 = diffpos    # pylint: disable=unbalanced-tuple-unpacking
         swap = len(s1) == len(s2) and s1[p1] == s2[p2] and s1[p2] == s2[p1]
     else:
         swap = False
