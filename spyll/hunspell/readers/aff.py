@@ -32,14 +32,14 @@ class Context:
         # TODO: what if string format doesn't match expected (odd number of chars for long, etc.)?
         if self.flag_format == 'short':
             return string
-        elif self.flag_format == 'long':
+        if self.flag_format == 'long':
             return re.findall(r'..', string)
-        elif self.flag_format == 'num':
+        if self.flag_format == 'num':
             return re.findall(r'\d+(?=,|$)', string)
-        elif self.flag_format == 'UTF-8':
+        if self.flag_format == 'UTF-8':
             return string
-        else:
-            raise ValueError(f"Unknown flag format {self.flag_format}")
+
+        raise ValueError(f"Unknown flag format {self.flag_format}")
 
 
 def read_aff(path_or_io):
@@ -47,7 +47,7 @@ def read_aff(path_or_io):
     data = {'SFX': {}, 'PFX': {}, 'FLAG': 'short'}
     context = Context()
 
-    for (num, line) in source:
+    for (_, line) in source:
         directive, value = read_directive(source, line, context=context)
 
         if not directive:
@@ -107,23 +107,23 @@ def read_value(source, directive, *values, context):
 
     if directive in ['SET', 'FLAG', 'KEY', 'TRY', 'WORDCHARS', 'IGNORE', 'LANG']:
         return value
-    elif directive in ['MAXDIFF', 'MAXNGRAMSUGS', 'MAXCPDSUGS', 'COMPOUNDMIN', 'COMPOUNDWORDMAX']:
+    if directive in ['MAXDIFF', 'MAXNGRAMSUGS', 'MAXCPDSUGS', 'COMPOUNDMIN', 'COMPOUNDWORDMAX']:
         return int(value)
-    elif directive in ['NOSUGGEST', 'KEEPCASE', 'CIRCUMFIX', 'NEEDAFFIX', 'FORBIDDENWORD', 'WARN',
+    if directive in ['NOSUGGEST', 'KEEPCASE', 'CIRCUMFIX', 'NEEDAFFIX', 'FORBIDDENWORD', 'WARN',
                        'COMPOUNDFLAG', 'COMPOUNDBEGIN', 'COMPOUNDMIDDLE', 'COMPOUNDEND',
                        'ONLYINCOMPOUND',
                        'COMPOUNDPERMITFLAG', 'COMPOUNDFORBIDFLAG', 'FORCEUCASE']:
         return aff.Flag(context.parse_flag(value))
-    elif directive in ['COMPLEXPREFIXES', 'FULLSTRIP', 'NOSPLITSUGS', 'CHECKSHARPS',
+    if directive in ['COMPLEXPREFIXES', 'FULLSTRIP', 'NOSPLITSUGS', 'CHECKSHARPS',
                        'CHECKCOMPOUNDCASE', 'CHECKCOMPOUNDDUP', 'CHECKCOMPOUNDREP', 'CHECKCOMPOUNDTRIPLE',
                        'SIMPLIFIEDTRIPLE']:
         # Presense of directive always means "turn it on"
         return True
-    elif directive in ['BREAK', 'COMPOUNDRULE']:
+    if directive in ['BREAK', 'COMPOUNDRULE']:
         return [first for first, *_ in _read_array()]
-    elif directive in ['REP', 'ICONV', 'OCONV']:
+    if directive in ['REP', 'ICONV', 'OCONV']:
         return [tuple(ln) for ln in _read_array()]
-    elif directive in ['MAP']:
+    if directive in ['MAP']:
         return [
             [
                 re.sub(r'[()]', '', s)
@@ -131,37 +131,36 @@ def read_value(source, directive, *values, context):
             ]
             for ln in _read_array()
         ]
-    elif directive in ['SFX', 'PFX']:
+    if directive in ['SFX', 'PFX']:
         flag, crossproduct, count = values
         return [
             make_affix(directive, flag, crossproduct, *line, context=context)
             for line in _read_array(int(count))
         ]
-    elif directive == 'CHECKCOMPOUNDPATTERN':
+    if directive == 'CHECKCOMPOUNDPATTERN':
         return [
             (left, right, rest[0] if rest else None)
             for left, right, *rest in _read_array()
         ]
-    elif directive == 'AF':
+    if directive == 'AF':
         return {
             str(i + 1): {*context.parse_flags(ln[0])}
             for i, ln in enumerate(_read_array())
         }
-    elif directive == 'AM':
+    if directive == 'AM':
         return {
             str(i + 1): {*ln}
             for i, ln in enumerate(_read_array())
         }
-    elif directive == 'COMPOUNDSYLLABLE':
+    if directive == 'COMPOUNDSYLLABLE':
         return (int(values[0]), values[1])
-    elif directive == 'PHONE':
+    if directive == 'PHONE':
         return [
             (search, '' if replacement == '_' else replacement)
             for search, replacement in _read_array()
         ]
-    else:
-        # TODO: Maybe for ver 0.0.1 it is acceptable to just not recognize some flags?
-        raise Exception(f"Can't parse {directive}")
+    # TODO: Maybe for ver 0.0.1 it is acceptable to just not recognize some flags?
+    raise Exception(f"Can't parse {directive}")
 
 
 def make_affix(kind, flag, crossproduct, _, strip, add, *rest, context):

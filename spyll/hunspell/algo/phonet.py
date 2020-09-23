@@ -33,9 +33,9 @@ class Rule:
             return False
         if self.end:
             return self.search.fullmatch(word, pos)
-        else:
-            return self.search.match(word, pos)
+        return self.search.match(word, pos)
 
+    @staticmethod
     def parse(search, replacement):
         m = Rule.PATTERN.fullmatch(search)
 

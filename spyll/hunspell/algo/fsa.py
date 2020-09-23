@@ -11,9 +11,7 @@ class FSA:
     def put(self, path, payload):
         cur = self.root
         for p in path:
-            if p in cur.children:
-                cur.children[p]
-            else:
+            if not p in cur.children:
                 cur.children[p] = Leaf()
 
             cur = cur.children[p]
@@ -21,7 +19,7 @@ class FSA:
         cur.payloads.append(payload)
 
     def lookup(self, path):
-        for path, leaf in self.traverse(self.root, path):
+        for _, leaf in self.traverse(self.root, path):
             for payload in leaf.payloads:
                 yield payload
 

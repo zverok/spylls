@@ -33,12 +33,10 @@ class Dic:
     def homonyms(self, word, *, ignorecase=False):
         if ignorecase:
             return self.index_l.get(word, [])
-        else:
-            return self.index.get(word, [])
+        return self.index.get(word, [])
 
     def has_flag(self, word, flag, *, for_all=False):
         homonyms = self.homonyms(word)
         if for_all:
             return homonyms and all(flag in homonym.flags for homonym in homonyms)
-        else:
-            return homonyms and any(flag in homonym.flags for homonym in homonyms)
+        return homonyms and any(flag in homonym.flags for homonym in homonyms)

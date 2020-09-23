@@ -15,7 +15,7 @@ def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
             diffpos.append(i)
 
     if len(diffpos) == 2:   # two string differ only by exactly two chars swaped
-        p1, p2 = diffpos
+        p1, p2 = diffpos # pylint: disable=unbalanced-tuple-unpacking
         swap = len(s1) == len(s2) and s1[p1] == s2[p2] and s1[p2] == s2[p1]
     else:
         swap = False
@@ -35,7 +35,7 @@ def ngram(n: int, s1: str, s2: str, *,
           weighted=False, any_mismatch=False, longer_worse=False) -> float:
 
     l2 = len(s2)
-    if (l2 == 0):
+    if l2 == 0:
         return 0
     l1 = len(s1)
 
@@ -47,7 +47,7 @@ def ngram(n: int, s1: str, s2: str, *,
                 ns += 1
             elif weighted:
                 ns -= 1
-                if (i == 0 or i == l1 - j):
+                if i in (0, l1 - j):
                     ns -= 1  # side weight
         nscore += ns
         if ns < 2 and not weighted:
@@ -59,10 +59,7 @@ def ngram(n: int, s1: str, s2: str, *,
     if any_mismatch:
         ns = abs(l2 - l1) - 2
 
-    if ns > 0:
-        return nscore - ns
-    else:
-        return nscore
+    return nscore - ns if ns > 0 else nscore
 
 
 def lcslen(s1: str, s2: str) -> int:

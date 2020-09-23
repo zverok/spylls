@@ -75,8 +75,7 @@ def longswapchar(word: str) -> Iterator[str]:
 
 # error is wrong char in place of correct one (case and keyboard related version)
 def badcharkey(word: str, layout: str) -> Iterator[str]:
-    for i in range(0, len(word)):
-        c = word[i]
+    for i, c in enumerate(word):
         before = word[:i]
         after = word[i+1:]
         if c != c.upper():
@@ -119,9 +118,9 @@ def movechar(word: str) -> Iterator[str]:
     if len(word) < 2:
         return
 
-    for frompos in range(0, len(word)):
+    for frompos, char in enumerate(word):
         for topos in range(frompos + 3, min(len(word), frompos + MAX_CHAR_DISTANCE + 1)):
-            yield word[:frompos] + word[frompos+1:topos] + word[frompos] + word[topos:]
+            yield word[:frompos] + word[frompos+1:topos] + char + word[topos:]
 
     for frompos in reversed(range(0, len(word))):
         for topos in reversed(range(max(0, frompos - MAX_CHAR_DISTANCE + 1), frompos - 1)):

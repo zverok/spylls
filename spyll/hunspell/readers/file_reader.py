@@ -34,7 +34,7 @@ class FileReader:
 
         if self.path is not None:
             # skipping only makes sense when it was reopened
-            for i in range(self.skip_lines):
+            for _ in range(self.skip_lines):
                 self.io.readline()
 
     def readlines(self):

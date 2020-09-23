@@ -23,9 +23,9 @@ class Suggestion:
         if self.text or self.words:
             return
 
-        if type(self.text_or_words) is list:
+        if isinstance(self.text_or_words, list):
             self.words = self.text_or_words
-        elif type(self.text_or_words) is str:
+        elif isinstance(self.text_or_words, str):
             self.text = self.text_or_words
         else:
             raise ValueError(f"Expected string or list, got {self.text_or_words!r}")
@@ -33,8 +33,7 @@ class Suggestion:
     def __repr__(self):
         if self.text:
             return f"Suggestion[{self.source}]({self.text})"
-        else:
-            return f"Suggestion[{self.source}]({self.words!r})"
+        return f"Suggestion[{self.source}]({self.words!r})"
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
@@ -175,7 +174,7 @@ class Suggest:
         # ...in this case we should suggest both "<word1> <word2>" as one dictionary entry, and
         # "<word1>" "<word1>" as a sequence -- but clarifying this sequence might NOT be joined by "-"
         for suggestion in pmt.replchars(word, self.aff.REP):
-            if type(suggestion) is list:
+            if isinstance(suggestion, list):
                 yield Suggestion(' '.join(suggestion), 'replchars')
             yield Suggestion(suggestion, 'replchars', allow_dash=False)
 

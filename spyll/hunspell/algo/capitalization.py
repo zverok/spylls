@@ -7,23 +7,21 @@ Cap = Enum('Cap', 'NO INIT ALL HUHINIT HUH')
 def guess(word: str) -> Cap:
     if word.lower() == word:
         return Cap.NO
-    elif word[:1].lower() + word[1:] == word.lower():
+    if word[:1].lower() + word[1:] == word.lower():
         return Cap.INIT
-    elif word.upper() == word:
+    if word.upper() == word:
         return Cap.ALL
-    elif word[:1].lower() != word[:1]:
+    if word[:1].lower() != word[:1]:
         return Cap.HUHINIT
-    else:
-        return Cap.HUH
+    return Cap.HUH
 
 
 def coerce(word: str, cap: Cap) -> str:
-    if cap == Cap.INIT or cap == Cap.HUHINIT:
+    if cap in (Cap.INIT, Cap.HUHINIT):
         return upperfirst(word)
-    elif cap == Cap.ALL:
+    if cap == Cap.ALL:
         return word.upper()
-    else:
-        return word
+    return word
 
 
 def lowerfirst(word: str) -> str:
@@ -51,24 +49,21 @@ def variants(word: str, *, lang_with_dot_i=False) -> Tuple[Cap, List[str]]:
 
     if captype == Cap.NO:
         return (captype, [word])
-    elif captype == Cap.INIT:
+    if captype == Cap.INIT:
         if allow_lower:
             return (captype, [word, lower(word)])
-        else:
-            return (captype, [word])
-    elif captype == Cap.HUHINIT:
+        return (captype, [word])
+    if captype == Cap.HUHINIT:
         if allow_lower:
             return (captype, [word, lowerfirst(word), lower(word), capitalize(word)])
-        else:
-            return (captype, [word, capitalize(word)])
+        return (captype, [word, capitalize(word)])
         # TODO: also here and below, consider the theory FooBar meant Foo Bar
-    elif captype == Cap.HUH:
+    if captype == Cap.HUH:
         return (captype, [word, lower(word)])
-    elif captype == Cap.ALL:
-        if allow_lower:
-            return (captype, [word, lower(word), capitalize(word)])
-        else:
-            return (captype, [word, capitalize(word)])
+    # Cap.ALL:
+    if allow_lower:
+        return (captype, [word, lower(word), capitalize(word)])
+    return (captype, [word, capitalize(word)])
 
 
 class Collation:
@@ -77,6 +72,13 @@ class Collation:
         self.dotless_i = dotless_i
 
     def lower(self, word):
+        def sharp_s_variants(text, start=0):
+            pos = text.find('ss', start)
+            if pos == -1:
+                return []
+            replaced = text[:pos] + 'ß' + text[pos+2:]
+            return [replaced, *sharp_s_variants(replaced, pos+1), *sharp_s_variants(text, pos+2)]
+
         if word[0] == 'İ' and not self.dotless_i:
             return []
 
@@ -85,39 +87,32 @@ class Collation:
             return []
 
         if self.dotless_i:
-            lower = word.translate(str.maketrans('İI', 'iı')).lower()
+            lowered = word.translate(str.maketrans('İI', 'iı')).lower()
         else:
             # turkic "lowercase dot i" to latinic "i"
-            lower = word.lower().replace('i̇', 'i')
-
-        def sharp_s_variants(text, start=0):
-            pos = text.find('ss', start)
-            if pos == -1:
-                return []
-            replaced = text[:pos] + 'ß' + text[pos+2:]
-            return [replaced, *sharp_s_variants(replaced, pos+1), *sharp_s_variants(text, pos+2)]
+            lowered = word.lower().replace('i̇', 'i')
 
         if self.sharp_s and 'SS' in word:
-            return [*sharp_s_variants(lower), lower]
+            return [*sharp_s_variants(lowered), lowered]
 
-        return [lower]
+        return [lowered]
 
     def variants(self, word: str) -> Tuple[Cap, List[str]]:
         captype = guess(word)
 
         if captype == Cap.NO:
-            variants = [word]
+            result = [word]
         elif captype == Cap.INIT:
-            variants = [word, *self.lower(word)]
+            result = [word, *self.lower(word)]
         elif captype == Cap.HUHINIT:
-            variants = [word,
+            result = [word,
                         *(l + word[1:] for l in self.lower(word[0]))]
             # TODO: also here and below, consider the theory FooBar meant Foo Bar
         elif captype == Cap.HUH:
-            variants = [word]
+            result = [word]
         elif captype == Cap.ALL:
-            variants = [word,
+            result = [word,
                         *self.lower(word),
                         *(word[0] + lower for lower in self.lower(word[1:]))]
 
-        return (captype, variants)
+        return (captype, result)

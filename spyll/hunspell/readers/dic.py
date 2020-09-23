@@ -15,13 +15,13 @@ def read_dic(path_or_io, *, context):
         def morphology(parts):
             # Todo: AM
             for part in parts:
-                id, _, content = part.partition(':')
+                tag, _, content = part.partition(':')
                 if content:
-                    yield id, content
+                    yield tag, content
 
         morph = defaultdict(list)
-        for id, content in morphology(parts):
-            morph[id].append(content)
+        for tag, content in morphology(parts):
+            morph[tag].append(content)
 
         word, _, flags = ' '.join(word_parts).partition('/')
         word = word.translate(str.maketrans('', '', context.ignore))

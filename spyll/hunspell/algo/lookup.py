@@ -358,17 +358,16 @@ class Analyzer:
 
         if not compoundpos:
             return aff.ONLYINCOMPOUND not in all_flags
-        elif aff.COMPOUNDFLAG in all_flags:
+        if aff.COMPOUNDFLAG in all_flags:
             return True
-        elif compoundpos == CompoundPos.BEGIN:
+        if compoundpos == CompoundPos.BEGIN:
             return aff.COMPOUNDBEGIN in all_flags
-        elif compoundpos == CompoundPos.END:
+        if compoundpos == CompoundPos.END:
             return aff.COMPOUNDEND in all_flags
-        elif compoundpos == CompoundPos.MIDDLE:
+        if compoundpos == CompoundPos.MIDDLE:
             return aff.COMPOUNDMIDDLE in all_flags
-        else:
-            # shoulnd't happen
-            return False
+        # shoulnd't happen
+        return False
 
     # Affixes-related algorithms
     # --------------------------
