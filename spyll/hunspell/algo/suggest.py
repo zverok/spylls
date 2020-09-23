@@ -63,8 +63,8 @@ class Suggest:
         ]
         # print(self.replacements)
 
-    def suggest(self, word: str) -> Iterator[str]:
-        # if just makes mypy happy, shouldn't happen
+    def __call__(self, word: str) -> Iterator[str]:
+        # `if` just makes mypy happy, shouldn't happen
         yield from (suggestion.text for suggestion in self.suggest_debug(word) if suggestion.text)
 
     def suggest_debug(self, word: str) -> Iterator[Suggestion]:
@@ -76,7 +76,7 @@ class Suggest:
             return word
 
         def check_suggestion(word, **kwarg):
-            return self.lookup.lookup(word, capitalization=False, allow_nosuggest=False, **kwarg)
+            return self.lookup(word, capitalization=False, allow_nosuggest=False, **kwarg)
 
         def filter_suggestions(suggestions):
             for suggestion in suggestions:

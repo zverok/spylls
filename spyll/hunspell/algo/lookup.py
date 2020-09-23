@@ -123,7 +123,7 @@ class Counted:
             yield item
 
 
-class Analyzer:
+class Lookup:
     def __init__(self, aff: data.aff.Aff, dic: data.dic.Dic):
         self.aff = aff
         self.dic = dic
@@ -173,11 +173,11 @@ class Analyzer:
 
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
-    def lookup(self, word: str, *,
-               capitalization=True,
-               with_compounds=None,
-               allow_nosuggest=True,
-               allow_break=True) -> bool:
+    def __call__(self, word: str, *,
+                 capitalization=True,
+                 with_compounds=None,
+                 allow_nosuggest=True,
+                 allow_break=True) -> bool:
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
 
