@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import re
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Iterator, Tuple, List, Dict
 from operator import itemgetter
 
-from spyll.hunspell import data
 import spyll.hunspell.algo.string_metrics as sm
 from spyll.hunspell.algo.util import ScoredArray
 import spyll.hunspell.algo.ngram_suggest as ng
@@ -36,7 +37,7 @@ class Rule:
         return self.search.match(word, pos)
 
     @staticmethod
-    def parse(search: str, replacement :str) -> Rule:
+    def parse(search: str, replacement: str) -> Rule:
         m = Rule.PATTERN.fullmatch(search)
 
         if not m:

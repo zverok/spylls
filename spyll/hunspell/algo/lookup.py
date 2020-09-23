@@ -9,7 +9,7 @@ from typing import List, Iterator, Union, Optional, Sequence
 import dataclasses
 from dataclasses import dataclass
 
-from pygtrie import CharTrie # type: ignore
+from pygtrie import CharTrie  # type: ignore
 
 from spyll.hunspell import data
 from spyll.hunspell.data.aff import Flag
