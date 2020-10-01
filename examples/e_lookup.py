@@ -5,7 +5,7 @@ from spyll.hunspell.dictionary import Dictionary
 # from spyll.hunspell.algo.lookup import analyze
 from spyll.hunspell.algo.lookup import CompoundPos
 
-dic = Dictionary('tests/fixtures/hunspell-orig/germancompounding')
+dic = Dictionary.from_folder('tests/fixtures/hunspell-orig/opentaal_keepcase')
 
 # print(dic.aff.pfx)
 # print(list(analyze(dic.aff, dic.dic, 'foo-bar')))

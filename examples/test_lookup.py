@@ -200,7 +200,7 @@ section('Misc')
 
 report('ngram_utf_fix')
 
-# report('opentaal_keepcase') -- reader fail, `break #`
+report('opentaal_keepcase') #-- reader fail, `break #`
 
 report('ph2')
 report('morph')

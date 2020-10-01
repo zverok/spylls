@@ -20,7 +20,7 @@ class Context:
     ignore: str = ''
 
     def parse_flag(self, string):
-        return self.parse_flags(string)[0]
+        return list(self.parse_flags(string))[0]
 
     def parse_flags(self, string):
         if string is None:
@@ -82,7 +82,18 @@ def read_directive(source, line, *, context):
 
     # base_utf has lines like McDonalds’sá/w -- at the end...
     # TODO: Check what's hunspell's logic to deal with this
-    if not re.match(r'^[A-Z]+$', name):
+    # FIRST in Firefox's Valencian, TODO: investigate?
+    # LEFTHYPHENMIN in Firefox's Gaelic (Scotland), TODO: investigate?
+    # NAME, HOME, VERSION in Firefox's hungarian_optional_accents_spell_checker-0.1.xpi
+    # SUBSTANDARD in Firefox's Croatian, TODO: should be supported
+    # ONLYMAXDIFF in Firefox's Danish, TODO: should be supported
+    # SYLLABLENUM, COMPOUNDFIRST (?), ONLYROOT (?) is exotic Hungarian
+    # COMPOUNDMORESUFFIXES -- Korean (undocumented?)
+    if not re.match(r'^[A-Z]+$', name) or name in [
+        'FIRST', 'SUBSTANDARD', 'ONLYMAXDIFF', 'LEFTHYPHENMIN',
+        'NAME', 'HOME', 'VERSION',
+        'SYLLABLENUM', 'COMPOUNDFIRST', 'ONLYROOT',
+        'COMPOUNDMORESUFFIXES']:
         return (None, None)
 
     name = SYNONYMS.get(name, name)
@@ -132,6 +143,7 @@ def read_value(source, directive, *values, context):
             for ln in _read_array()
         ]
     if directive in ['SFX', 'PFX']:
+        # print(values)
         flag, crossproduct, count = values
         return [
             make_affix(directive, flag, crossproduct, *line, context=context)
@@ -159,6 +171,7 @@ def read_value(source, directive, *values, context):
             (search, '' if replacement == '_' else replacement)
             for search, replacement in _read_array()
         ]
+
     # TODO: Maybe for ver 0.0.1 it is acceptable to just not recognize some flags?
     raise Exception(f"Can't parse {directive}")
 

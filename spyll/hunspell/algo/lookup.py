@@ -139,6 +139,8 @@ class Lookup:
                 cond = '(?<=' + ''.join(cond_parts) + ')'
             else:
                 cond = ''
+
+            # print(cond)
             return re.compile(cond + suffix.add + '$')
 
         def prefix_regexp(prefix):
@@ -167,7 +169,7 @@ class Lookup:
         self.compoundpatterns = [CompoundPattern(*row) for row in self.aff.CHECKCOMPOUNDPATTERN]
 
         self.breakpatterns = [
-            re.compile(f"({pat})") if pat.startswith('^') or pat.endswith('$') else re.compile(f".({pat}).")
+            re.compile(f"({re.escape(pat)})") if pat.startswith('^') or pat.endswith('$') else re.compile(f".({re.escape(pat)}).")
             for pat in self.aff.BREAK
         ]
 

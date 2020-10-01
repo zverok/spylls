@@ -40,7 +40,7 @@ class FileReader:
         elif self.zipfile is not None:
             zipname, path = self.zipfile
             # FIXME: Like, really?..
-            self.io = io.TextIOWrapper(zipfile.ZipFile(zipname).open(path), encoding=encoding)
+            self.io = io.TextIOWrapper(zipfile.ZipFile(zipname).open(path), encoding=encoding, errors='ignore')
             reopened = True
 
         self.iter = filter(lambda l: l[1] != '', enumerate(self.readlines(), 1))
