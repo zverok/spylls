@@ -1,5 +1,7 @@
 import re
 import io
+import zipfile
+import copy
 
 
 class FileReader:
@@ -12,6 +14,10 @@ class FileReader:
         elif isinstance(path_or_io, io.TextIOBase):
             self.path = None
             self.io = path_or_io
+        elif isinstance(path_or_io, zipfile.ZipExtFile):
+            self.path = None
+            self.zipfile = (path_or_io._fileobj._file.name, path_or_io.name)
+            self.io = io.TextIOWrapper(path_or_io, encoding=encoding)
         else:
             raise ValueError(f"Expected path or IO, got {type(path_or_io)}")
 
@@ -27,13 +33,19 @@ class FileReader:
     def reset_encoding(self, encoding):
         # was initialized with StringIO or something, can't reopen.
         # FIXME: Isn't there a method to reopen the stream by its variable, yet?..
+        reopened = False
         if self.path is not None:
             self.io = open(self.path, 'r', encoding=encoding, errors='ignore')
+            reopened = True
+        elif self.zipfile is not None:
+            zipname, path = self.zipfile
+            # FIXME: Like, really?..
+            self.io = io.TextIOWrapper(zipfile.ZipFile(zipname).open(path), encoding=encoding)
+            reopened = True
 
         self.iter = filter(lambda l: l[1] != '', enumerate(self.readlines(), 1))
 
-        if self.path is not None:
-            # skipping only makes sense when it was reopened
+        if reopened:
             for _ in range(self.skip_lines):
                 self.io.readline()
 

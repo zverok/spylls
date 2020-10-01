@@ -13,7 +13,7 @@ def readlist(path, ignoredot=True):
 
 def test(name):
     path = f'tests/fixtures/hunspell-orig/{name}'
-    dictionary = Dictionary(path)
+    dictionary = Dictionary.from_folder(path)
     bad = readlist(path + '.wrong')
     sug = list(map(lambda s: re.split(r',\s*', s), readlist(path + '.sug', ignoredot=False)))
     for i, words in enumerate(sug):

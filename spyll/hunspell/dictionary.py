@@ -1,4 +1,5 @@
 from typing import Iterator
+import zipfile
 
 from spyll.hunspell import data, readers
 from spyll.hunspell.algo import lookup, suggest
@@ -8,9 +9,26 @@ class Dictionary:
     aff: data.Aff
     dic: data.Dic
 
-    def __init__(self, path):
-        self.aff, context = readers.read_aff(path + '.aff')
-        self.dic = readers.read_dic(path + '.dic', context=context)
+    @classmethod
+    def from_xpi(cls, path):
+        zip = zipfile.ZipFile(path)
+        aff_path = [name for name in zip.namelist() if name.endswith('.aff')][0]
+        dic_path = [name for name in zip.namelist() if name.endswith('.dic')][0]
+        aff, context = readers.read_aff(zip.open(aff_path))
+        dic = readers.read_dic(zip.open(dic_path), context=context)
+
+        return cls(aff, dic)
+
+    @classmethod
+    def from_folder(cls, path):
+        aff, context = readers.read_aff(path + '.aff')
+        dic = readers.read_dic(path + '.dic', context=context)
+
+        return cls(aff, dic)
+
+    def __init__(self, aff, dic):
+        self.aff = aff
+        self.dic = dic
 
         self.lookuper = lookup.Lookup(self.aff, self.dic)
         self.suggester = suggest.Suggest(self.aff, self.dic, self.lookuper)
