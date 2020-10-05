@@ -30,6 +30,7 @@ class Prefix(Affix):
 @dataclass
 class Suffix(Affix):
     def __post_init__(self):
+        # print(self.condition)
         self.cond_regexp = re.compile(self.condition + '$')
 
     def __repr__(self):

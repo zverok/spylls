@@ -12,6 +12,10 @@ from spyll.hunspell.data import aff
 SYNONYMS = {'PSEUDOROOT': 'NEEDAFFIX', 'COMPOUNDLAST': 'COMPOUNDEND'}
 
 
+DIGITS_REGEXP = re.compile(r'^\d+')
+FLAG_LONG_REGEXP = re.compile(r'..')
+FLAG_NUM_REGEXP = re.compile(r'\d+(?=,|$)')
+
 @dataclass
 class Context:
     encoding: str = 'Windows-1252'
@@ -26,16 +30,16 @@ class Context:
         if string is None:
             return []
 
-        if re.match(r'^\d+', string) and self.flag_synonyms:
+        if self.flag_synonyms and DIGITS_REGEXP.match(string):
             return self.flag_synonyms[string]
 
         # TODO: what if string format doesn't match expected (odd number of chars for long, etc.)?
         if self.flag_format == 'short':
             return string
         if self.flag_format == 'long':
-            return re.findall(r'..', string)
+            return FLAG_LONG_REGEXP.findall(string)
         if self.flag_format == 'num':
-            return re.findall(r'\d+(?=,|$)', string)
+            return FLAG_NUM_REGEXP.findall(string)
         if self.flag_format == 'UTF-8':
             return string
 
@@ -89,11 +93,13 @@ def read_directive(source, line, *, context):
     # ONLYMAXDIFF in Firefox's Danish, TODO: should be supported
     # SYLLABLENUM, COMPOUNDFIRST (?), ONLYROOT (?) is exotic Hungarian
     # COMPOUNDMORESUFFIXES -- Korean (undocumented?)
+    # LANGCODE - libreoffice/bo/bo
     if not re.match(r'^[A-Z]+$', name) or name in [
         'FIRST', 'SUBSTANDARD', 'ONLYMAXDIFF', 'LEFTHYPHENMIN',
         'NAME', 'HOME', 'VERSION',
         'SYLLABLENUM', 'COMPOUNDFIRST', 'ONLYROOT',
-        'COMPOUNDMORESUFFIXES']:
+        'COMPOUNDMORESUFFIXES',
+        'LANGCODE']:
         return (None, None)
 
     name = SYNONYMS.get(name, name)

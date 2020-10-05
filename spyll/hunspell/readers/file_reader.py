@@ -8,16 +8,17 @@ class FileReader:
     COMMENT_RE = re.compile(r'\#.*$')
 
     def __init__(self, path_or_io, encoding='Windows-1252'):
+        self.zipfile = None
+        self.path = None
+
         if isinstance(path_or_io, str):
             self.path = path_or_io
             self.io = open(path_or_io, 'r', encoding=encoding, errors='ignore')
         elif isinstance(path_or_io, io.TextIOBase):
-            self.path = None
             self.io = path_or_io
         elif isinstance(path_or_io, zipfile.ZipExtFile):
-            self.path = None
             self.zipfile = (path_or_io._fileobj._file.name, path_or_io.name)
-            self.io = io.TextIOWrapper(path_or_io, encoding=encoding)
+            self.io = io.TextIOWrapper(path_or_io, encoding=encoding, errors='ignore')
         else:
             raise ValueError(f"Expected path or IO, got {type(path_or_io)}")
 
@@ -43,7 +44,7 @@ class FileReader:
             self.io = io.TextIOWrapper(zipfile.ZipFile(zipname).open(path), encoding=encoding, errors='ignore')
             reopened = True
 
-        self.iter = filter(lambda l: l[1] != '', enumerate(self.readlines(), 1))
+        self.iter = filter(lambda l: l[1] != '', enumerate(self.readlines(), self.skip_lines+1))
 
         if reopened:
             for _ in range(self.skip_lines):

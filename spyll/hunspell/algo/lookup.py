@@ -32,6 +32,7 @@ class CompoundRule:
         # TODO: proper flag parsing! Long is (aa)(bb)*(cc), numeric is (1001)(1002)*(1003)
         self.flags = set(re.sub(r'[\*\?]', '', self.text))
         parts = re.findall(r'[^*?][*?]?', self.text)
+        # print(self.text)
         self.re = re.compile(self.text)
         self.partial_re = re.compile(
             functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1])
