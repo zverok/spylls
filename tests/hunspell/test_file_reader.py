@@ -23,3 +23,8 @@ def test_stringio():
   reader = FileReader(strigio)
 
   assert list(reader) == [(1, 'line'), (4, 'content')]
+
+def test_bom():
+  reader = FileReader('tests/fixtures/utf8_bom.txt')
+
+  assert list(reader) == [(1, 'SET UTF-8')]

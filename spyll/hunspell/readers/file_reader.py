@@ -53,6 +53,8 @@ class FileReader:
     def readlines(self):
         ln = self.io.readline()
         while ln != '':
-            self.skip_lines += 1
+            self.skip_lines += 1 # TODO: rename to just lineno? and can be yielded instead of enumerate...
+            if self.skip_lines == 1 and ln.startswith("\xef\xbb\xbf"):
+                ln = ln.replace("\xef\xbb\xbf", '')
             yield self.COMMENT_RE.sub('', ln).strip()
             ln = self.io.readline()

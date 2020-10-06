@@ -30,8 +30,13 @@ class CompoundRule:
 
     def __post_init__(self):
         # TODO: proper flag parsing! Long is (aa)(bb)*(cc), numeric is (1001)(1002)*(1003)
-        self.flags = set(re.sub(r'[\*\?]', '', self.text))
-        parts = re.findall(r'[^*?][*?]?', self.text)
+        # This works but is super ad-hoc!
+        if '(' in self.text:
+            self.flags = set(re.findall(r'\((.+?)\)', self.text))
+            parts = re.findall(r'\([^*?]+?\)[*?]?', self.text)
+        else:
+            self.flags = set(re.sub(r'[\*\?]', '', self.text))
+            parts = re.findall(r'[^*?][*?]?', self.text)
         # print(self.text)
         self.re = re.compile(self.text)
         self.partial_re = re.compile(
@@ -169,10 +174,15 @@ class Lookup:
         self.compoundrules = [CompoundRule(r) for r in self.aff.COMPOUNDRULE]
         self.compoundpatterns = [CompoundPattern(*row) for row in self.aff.CHECKCOMPOUNDPATTERN]
 
-        self.breakpatterns = [
-            re.compile(f"({re.escape(pat)})") if pat.startswith('^') or pat.endswith('$') else re.compile(f".({re.escape(pat)}).")
-            for pat in self.aff.BREAK
-        ]
+        def pattern2regexp(pattern):
+            # special chars like #, -, * etc should be escaped, but ^ and $ should be treated as in regexps
+            pattern = re.escape(pattern).replace('\\^', '^').replace('\\$', '$')
+            if pattern.startswith('^') or pattern.endswith('$'):
+                return re.compile(f"({pattern})")
+            else:
+                return re.compile(f".({pattern}).")
+
+        self.breakpatterns = [pattern2regexp(pat) for pat in self.aff.BREAK]
 
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
@@ -571,7 +581,7 @@ class Lookup:
                 flag_sets = [w.flags for w in parts]
                 compoundrules = [r for r in rules if r.partial_match(flag_sets)]
                 if compoundrules:
-                    by_rules = self.compound_parts_by_rules(word_rest[pos:], rules=rules, prev_parts=parts)
+                    by_rules = self.compound_parts_by_rules(word_rest[pos:], rules=compoundrules, prev_parts=parts)
                     for rest in by_rules:
                         yield [WordForm(beg, beg), *rest]
 

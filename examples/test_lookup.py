@@ -34,9 +34,15 @@ def section(title):
 
 ok = 0
 err = 0
+pending = 0
 
-def report(name):
-    global ok, err
+def report(name, pending_comment=None):
+    global ok, err, pending
+
+    if pending_comment:
+        pending += 1
+        print(f"*{name}: pending {'' if pending_comment is True else '(' + pending_comment + ')'}")
+        return
 
     start = time.monotonic()
     result = test(name)
@@ -89,9 +95,9 @@ report('alias2')
 report('alias3')
 report('encoding')
 report('utf8')
-# report('utf8_bom')    # TODO: file reader support for BOM
-# report('utf8_bom2')   # TODO: file reader support for BOM
-# report('right_to_left_mark') # TODO: file reader should remove \u200f
+report('utf8_bom')
+report('utf8_bom2')
+report('right_to_left_mark') # TODO: file reader should remove \u200f
 
 # ===============================
 section('Affixes')
@@ -153,7 +159,7 @@ section('Compounding')
 
 report('compoundflag')           # + basic "it can be compounding"
 report('onlyincompound')         # + some of word is ONLY can be in compound
-# report('onlyincompound2')      # - checkcompoundpattern
+report('onlyincompound2')      # - checkcompoundpattern
 
 report('compoundaffix')          # + in compound, prefix only at begin, suffix only at end
 report('compoundaffix2')         # + affix with permit flag allowed inside!
@@ -166,17 +172,17 @@ report('compoundrule3')
 report('compoundrule4')
 report('compoundrule5')
 report('compoundrule6')
-# report('compoundrule7') # - "long" flags
-# report('compoundrule8') # - "numeric" flags
+report('compoundrule7')
+report('compoundrule8')
 
 report('checkcompoundcase')
 report('checkcompoundcase2')
 report('checkcompoundcaseutf')
 report('checkcompounddup')
 report('checkcompoundpattern')
-# report('checkcompoundpattern2') -- replacement feature of pattern seems to not be used at all
-# report('checkcompoundpattern3')
-# report('checkcompoundpattern4')
+report('checkcompoundpattern2', pending_comment='replacement in pattern') # replacement feature of pattern seems to not be used at all
+report('checkcompoundpattern3', pending_comment='replacement in pattern')
+report('checkcompoundpattern4', pending_comment='replacement in pattern')
 report('checkcompoundrep')
 report('checkcompoundtriple')
 report('compoundforbid')
@@ -200,7 +206,7 @@ section('Misc')
 
 report('ngram_utf_fix')
 
-report('opentaal_keepcase') #-- reader fail, `break #`
+report('opentaal_keepcase', pending_comment='Reader fail: BREAK #')
 
 report('ph2')
 report('morph')
@@ -232,8 +238,8 @@ report('hu')
 # ===============================
 section('Edge cases and bugs')
 
-# report('slash')                # - slash in words -- screened with \ in dictionary
-# report('timelimit')
+report('slash', pending_comment='Slash in dictionary words')
+report('timelimit', pending_comment=True)
 
 report('1592880')
 report('1975530')
@@ -248,4 +254,4 @@ report('i58202')
 
 print()
 print("------------")
-print(f"{ok + err} tests: {ok} OK, {err} fails")
+print(f"{ok + err + pending} tests: {ok} OK, {err} fails, {pending} pending")

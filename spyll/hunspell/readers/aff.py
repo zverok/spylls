@@ -86,6 +86,7 @@ def read_directive(source, line, *, context):
 
     # base_utf has lines like McDonalds’sá/w -- at the end...
     # TODO: Check what's hunspell's logic to deal with this
+    #
     # FIRST in Firefox's Valencian, TODO: investigate?
     # LEFTHYPHENMIN in Firefox's Gaelic (Scotland), TODO: investigate?
     # NAME, HOME, VERSION in Firefox's hungarian_optional_accents_spell_checker-0.1.xpi
