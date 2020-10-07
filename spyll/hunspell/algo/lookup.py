@@ -87,6 +87,7 @@ class CompoundPattern:
                (not self.left_flag or self.left_flag in left.flags()) and \
                (not self.right_flag or self.right_flag in right.flags())
 
+
 class ConvTable:
     def __init__(self, pairs):
         def compile_row(pat1, pat2):
@@ -99,17 +100,16 @@ class ConvTable:
 
             return (pat1clean, re.compile(pat1re), pat2.replace('_', ' '))
 
-        self.table = [
-            (search, pattern, replacement)
-            for search, pattern, replacement
-            in sorted([compile_row(*row) for row in pairs], key=itemgetter(0))]
+        self.table = sorted([compile_row(*row) for row in pairs], key=itemgetter(0))
 
     def __call__(self, word):
         pos = 0
         res = ''
         while pos < len(word):
             matches = sorted(
-                [(search, pattern, replacement) for search, pattern, replacement in self.table if pattern.match(word, pos)],
+                [(search, pattern, replacement)
+                 for search, pattern, replacement in self.table
+                 if pattern.match(word, pos)],
                 key=lambda r: len(r[0]),
                 reverse=True
             )

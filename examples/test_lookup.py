@@ -206,7 +206,7 @@ section('Misc')
 
 report('ngram_utf_fix')
 
-report('opentaal_keepcase', pending_comment='Reader fail: BREAK #')
+report('opentaal_keepcase')
 
 report('ph2')
 report('morph')
@@ -237,6 +237,9 @@ report('hu')
 
 # ===============================
 section('Edge cases and bugs')
+
+# "\/" signs slash in words (not affix separator)
+# "/" at beginning of the line is word character (not affix separator)
 
 report('slash', pending_comment='Slash in dictionary words') # TODO: check with hunspell: what it does when it is not wordchar? will it handle flags?
 report('timelimit', pending_comment=True)

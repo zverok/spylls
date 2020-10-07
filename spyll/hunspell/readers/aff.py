@@ -117,6 +117,7 @@ def read_value(source, directive, *values, context):
             count = int(value)
 
         # TODO: handle if fetching it we'll find something NOT starting with teh expected directive name
+        # TODO: \s+ => only space and tab, no unicode whitespaces
         return [
             re.split(r'\s+', ln)[1:]
             for num, ln in itertools.islice(source, count)
@@ -139,18 +140,18 @@ def read_value(source, directive, *values, context):
     if directive in ['BREAK', 'COMPOUNDRULE']:
         return [first for first, *_ in _read_array()]
     if directive in ['REP', 'ICONV', 'OCONV']:
-        return [tuple(ln) for ln in _read_array()]
+        return [(pat1, pat2) for pat1, pat2, *_ in _read_array()]
     if directive in ['MAP']:
         return [
             [
                 re.sub(r'[()]', '', s)
-                for s in re.findall(r'(\([^()]+?\)|[^()])', ln[0])
+                for s in re.findall(r'(\([^()]+?\)|[^()])', chars)
             ]
-            for ln in _read_array()
+            for chars, *_ in _read_array()
         ]
     if directive in ['SFX', 'PFX']:
         # print(values)
-        flag, crossproduct, count = values
+        flag, crossproduct, count, *_ = values
         return [
             make_affix(directive, flag, crossproduct, *line, context=context)
             for line in _read_array(int(count))
@@ -175,7 +176,7 @@ def read_value(source, directive, *values, context):
     if directive == 'PHONE':
         return [
             (search, '' if replacement == '_' else replacement)
-            for search, replacement in _read_array()
+            for search, replacement, *_ in _read_array()
         ]
 
     # TODO: Maybe for ver 0.0.1 it is acceptable to just not recognize some flags?
