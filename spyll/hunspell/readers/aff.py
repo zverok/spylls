@@ -11,10 +11,10 @@ from spyll.hunspell.data import aff
 # Outdated directive names
 SYNONYMS = {'PSEUDOROOT': 'NEEDAFFIX', 'COMPOUNDLAST': 'COMPOUNDEND'}
 
-
 DIGITS_REGEXP = re.compile(r'^\d+')
 FLAG_LONG_REGEXP = re.compile(r'..')
 FLAG_NUM_REGEXP = re.compile(r'\d+(?=,|$)')
+
 
 @dataclass
 class Context:
@@ -95,12 +95,11 @@ def read_directive(source, line, *, context):
     # SYLLABLENUM, COMPOUNDFIRST (?), ONLYROOT (?) is exotic Hungarian
     # COMPOUNDMORESUFFIXES -- Korean (undocumented?)
     # LANGCODE - libreoffice/bo/bo
-    if not re.match(r'^[A-Z]+$', name) or name in [
-        'FIRST', 'SUBSTANDARD', 'ONLYMAXDIFF', 'LEFTHYPHENMIN',
-        'NAME', 'HOME', 'VERSION',
-        'SYLLABLENUM', 'COMPOUNDFIRST', 'ONLYROOT',
-        'COMPOUNDMORESUFFIXES',
-        'LANGCODE']:
+    if not re.match(r'^[A-Z]+$', name) or name in ['FIRST', 'SUBSTANDARD', 'ONLYMAXDIFF', 'LEFTHYPHENMIN',
+                                                   'NAME', 'HOME', 'VERSION',
+                                                   'SYLLABLENUM', 'COMPOUNDFIRST', 'ONLYROOT',
+                                                   'COMPOUNDMORESUFFIXES',
+                                                   'LANGCODE']:
         return (None, None)
 
     name = SYNONYMS.get(name, name)

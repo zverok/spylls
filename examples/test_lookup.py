@@ -159,7 +159,7 @@ section('Compounding')
 
 report('compoundflag')           # + basic "it can be compounding"
 report('onlyincompound')         # + some of word is ONLY can be in compound
-report('onlyincompound2')      # - checkcompoundpattern
+report('onlyincompound2', pending_comment='replacement in pattern')        # - checkcompoundpattern
 
 report('compoundaffix')          # + in compound, prefix only at begin, suffix only at end
 report('compoundaffix2')         # + affix with permit flag allowed inside!
@@ -225,7 +225,7 @@ report('ignoreutf')
 report('checksharps')
 report('checksharpsutf')
 
-report('dotless_i')            # - turkish capitalization rules
+report('dotless_i')             # + turkish capitalization rules
 report('IJ')
 
 report('nepali')                # - conversion of invisible characters
@@ -238,7 +238,7 @@ report('hu')
 # ===============================
 section('Edge cases and bugs')
 
-report('slash', pending_comment='Slash in dictionary words')
+report('slash', pending_comment='Slash in dictionary words') # TODO: check with hunspell: what it does when it is not wordchar? will it handle flags?
 report('timelimit', pending_comment=True)
 
 report('1592880')

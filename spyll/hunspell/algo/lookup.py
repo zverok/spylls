@@ -1,6 +1,7 @@
 import re
 import itertools
 import functools
+from operator import itemgetter
 
 from collections import defaultdict
 from enum import Enum
@@ -85,6 +86,42 @@ class CompoundPattern:
                (not self.right_no_affix or not right.is_base()) and \
                (not self.left_flag or self.left_flag in left.flags()) and \
                (not self.right_flag or self.right_flag in right.flags())
+
+class ConvTable:
+    def __init__(self, pairs):
+        def compile_row(pat1, pat2):
+            pat1clean = pat1.replace('_', '')
+            pat1re = pat1clean
+            if pat1.startswith('_'):
+                pat1re = '^' + pat1re
+            if pat1.endswith('_'):
+                pat1re = pat1re + '$'
+
+            return (pat1clean, re.compile(pat1re), pat2.replace('_', ' '))
+
+        self.table = [
+            (search, pattern, replacement)
+            for search, pattern, replacement
+            in sorted([compile_row(*row) for row in pairs], key=itemgetter(0))]
+
+    def __call__(self, word):
+        pos = 0
+        res = ''
+        while pos < len(word):
+            matches = sorted(
+                [(search, pattern, replacement) for search, pattern, replacement in self.table if pattern.match(word, pos)],
+                key=lambda r: len(r[0]),
+                reverse=True
+            )
+            if matches:
+                search, pattern, replacement = matches[0]
+                res += replacement
+                pos += len(search)
+            else:
+                res += word[pos]
+                pos += 1
+
+        return res
 
 
 @dataclass
@@ -179,12 +216,14 @@ class Lookup:
             pattern = re.escape(pattern).replace('\\^', '^').replace('\\$', '$')
             if pattern.startswith('^') or pattern.endswith('$'):
                 return re.compile(f"({pattern})")
-            else:
-                return re.compile(f".({pattern}).")
+            return re.compile(f".({pattern}).")
 
         self.breakpatterns = [pattern2regexp(pat) for pat in self.aff.BREAK]
 
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
+
+        self.iconv = ConvTable(self.aff.ICONV)
+        self.oconv = ConvTable(self.aff.OCONV)
 
     def __call__(self, word: str, *,
                  capitalization=True,
@@ -195,11 +234,12 @@ class Lookup:
             return False
 
         if self.aff.ICONV:
-            for (i, o) in sorted(self.aff.ICONV, key=lambda io: len(io[1]), reverse=True):
-                word = word.replace(i, o)
+            word = self.iconv(word)
 
+        # print(list(word))
         if self.aff.IGNORE:
             word = word.translate(str.maketrans('', '', self.aff.IGNORE))
+            # print(list(word))
 
         def is_found(variant):
             return any(

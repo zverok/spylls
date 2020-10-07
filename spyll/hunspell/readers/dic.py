@@ -28,7 +28,8 @@ def read_dic(path_or_io, *, context):
             morph[tag].append(content)
 
         word, _, flags = ' '.join(word_parts).partition('/')
-        word = word.translate(tr)
+        if context.ignore:
+            word = word.translate(tr)
 
         return dic.Word(stem=word, flags={*context.parse_flags(flags)}, morphology=morph)
 
