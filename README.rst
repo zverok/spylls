@@ -15,6 +15,7 @@ Usage as a library
 ==================
 
 .. code-block:: python
+
   from spyll.hunspell import Dictionary
 
   # from folder where en_US.aff and en_US.dic are present
@@ -24,11 +25,9 @@ Usage as a library
   # or, from system folders (on Linux)
   dictionary = Dictionary.from_system('en_US')
 
-  # then...
-  dictionary.lookup('spyll')
-  # False
-  list(dictionary.suggest('spyll'))
-  # ['spell', 'spill', 'spy ll', 'spy-ll']
+  dictionary.lookup('spyll') # False
+
+  list(dictionary.suggest('spyll')) # ['spell', 'spill', 'spy ll', 'spy-ll']
 
 See `Dictionary class docs <TODO>`_ for more details.
 
@@ -65,9 +64,9 @@ Performance
 
 It is not stellar, neither completely unusable (YMMV).
 
-Dictionary reading is avg (linearly dependent on dictionary size)
-Lookup is (...)
-Suggest is (up to ... for ...)
+* Dictionary reading is avg (linearly dependent on dictionary size)
+* Lookup is (...)
+* Suggest is (up to ... for ...)
 
 I believe that significantly better performance is hard/impossibe to achieve *in pure Python*, preserving the *straightforward port of the algorithms*. As clear representation of algorithm is the *main* goal, I am leaving it at that. Appropriate data structures are chosen when necessary (the most non-trivial example is trie for affixes), and code is profiled thoroughly to remove bottlenecks that were hanging low (lost in metaphor, sorry). Maybe overuse of ``re`` might be rethought a bit.
 
@@ -77,7 +76,7 @@ Other ports
 Here only "pure" ports of Hunspell to other languages are listed, not wrappers around the original hunspell (of which there are plenty):
 
 * .NET: `WeCantSpell <https://github.com/aarondandy/WeCantSpell.Hunspell>`_
-* JS: `nspell <https://github.com/wooorm/nspell>`_ (only some directie)
+* JS: `nspell <https://github.com/wooorm/nspell>`_ (only some directives)
 * C++: `nuspell <https://github.com/nuspell/nuspell>`_ (weirdly, pretends to be independent project with no relations to anything, while at the same time seeming to support the same format of aff/dic, and striving to conform to hunspell's test suite)
 
 Other approaches to spellchecking
