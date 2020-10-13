@@ -9,9 +9,11 @@ class Dictionary:
     aff: data.Aff
     dic: data.Dic
 
+    # .xpi, .odt
     @classmethod
-    def from_xpi(cls, path):
+    def from_zip(cls, path):
         zip = zipfile.ZipFile(path)
+        # TODO: fail if there are several
         aff_path = [name for name in zip.namelist() if name.endswith('.aff')][0]
         dic_path = [name for name in zip.namelist() if name.endswith('.dic')][0]
         aff, context = readers.read_aff(zip.open(aff_path))
@@ -26,6 +28,8 @@ class Dictionary:
 
         return cls(aff, dic)
 
+    # TODO: from_system
+
     def __init__(self, aff, dic):
         self.aff = aff
         self.dic = dic
@@ -35,18 +39,6 @@ class Dictionary:
 
     def lookup(self, word: str, **kwarg) -> bool:
         return self.lookuper(word, **kwarg)
-
-    def is_forbidden(self, word: str) -> bool:
-        if not self.aff.FORBIDDENWORD:
-            return False
-
-        return self.dic.has_flag(word, self.aff.FORBIDDENWORD)
-
-    def keepcase(self, word: str) -> bool:
-        if not self.aff.KEEPCASE:
-            return False
-
-        return self.dic.has_flag(word, self.aff.KEEPCASE)
 
     def suggest(self, word: str) -> Iterator[str]:
         yield from self.suggester(word)
