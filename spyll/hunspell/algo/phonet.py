@@ -42,6 +42,7 @@ class Rule:
 
         if not m:
             raise ValueError(f'Not a proper rule: {search!r}')
+
         text = [*m.group('letters')]
         if m.group('optional'):
             text.append('[' + m.group('optional') + ']')

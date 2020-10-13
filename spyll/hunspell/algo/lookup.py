@@ -230,6 +230,7 @@ class Lookup:
                  with_compounds=None,
                  allow_nosuggest=True,
                  allow_break=True) -> bool:
+
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
 
@@ -241,6 +242,11 @@ class Lookup:
             word = word.translate(str.maketrans('', '', self.aff.IGNORE))
             # print(list(word))
 
+        # Numbers are allowed and considered "good word" always
+        # TODO: check in hunspell's code, if there are some exceptions?..
+        if re.fullmatch(r'^\d+(\.\d+)?$', word):
+            return True
+
         def is_found(variant):
             return any(
                 self.analyze(variant,
@@ -248,11 +254,6 @@ class Lookup:
                              capitalization=capitalization,
                              allow_nosuggest=allow_nosuggest)
             )
-
-        # Numbers are allowed and considered "good word" always
-        # TODO: check in hunspell's code, if there are some exceptions?..
-        if re.fullmatch(r'^\d+(\.\d+)?$', word):
-            return True
 
         if is_found(word):
             return True
@@ -668,4 +669,5 @@ class Lookup:
                 # duplication only forbidden at the end (TODO: check, that's what I guess from test)
                 if left == right and idx == len(compound) - 2:
                     return True
+
         return False

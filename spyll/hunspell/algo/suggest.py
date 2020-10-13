@@ -1,4 +1,4 @@
-from typing import Iterator, Optional, List, Union, Set
+from typing import Iterator, List, Set
 
 import dataclasses
 from dataclasses import dataclass
@@ -9,44 +9,33 @@ from spyll.hunspell.algo import ngram_suggest, phonet, permutations as pmt, capi
 MAXPHONSUGS = 2
 
 
+# TODO: Split MultiWordSuggestion alone!
 @dataclass
 class Suggestion:
-    text_or_words: Union[str, List[str]]
+    text: str
     source: str
-    allow_dash: bool = True
+
     allow_break: bool = True
 
-    text: Optional[str] = None
-    words: Optional[List[str]] = None
-
-    def __post_init__(self):
-        if self.text or self.words:
-            return
-
-        if isinstance(self.text_or_words, list):
-            self.words = self.text_or_words
-        elif isinstance(self.text_or_words, str):
-            self.text = self.text_or_words
-        else:
-            raise ValueError(f"Expected string or list, got {self.text_or_words!r}")
-
     def __repr__(self):
-        if self.text:
-            return f"Suggestion[{self.source}]({self.text})"
-        return f"Suggestion[{self.source}]({self.words!r})"
+        return f"Suggestion[{self.source}]({self.text})"
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
 
 
-class Observed:
-    def __init__(self):
-        self.seen = []
+@dataclass
+class MultiWordSuggestion:
+    words: List[str]
+    source: str
 
-    def __call__(self, generator):
-        for item in generator:
-            self.seen.append(item)
-            yield item
+    allow_dash: bool = True
+
+    def stringify(self, separator=' '):
+        return Suggestion(separator.join(self.words), self.source)
+
+    def __repr__(self):
+        return f"Suggestion[{self.source}]({self.words!r})"
 
 
 class Suggest:
@@ -69,6 +58,7 @@ class Suggest:
 
     def suggest_debug(self, word: str) -> Iterator[Suggestion]:
         def oconv(word):
+            # TODO: Use ConvTable
             if not self.aff.OCONV:
                 return word
             for src, dst in self.aff.OCONV:
@@ -80,11 +70,11 @@ class Suggest:
 
         def filter_suggestions(suggestions):
             for suggestion in suggestions:
-                if suggestion.words:
+                if isinstance(suggestion, MultiWordSuggestion):
                     if all(check_suggestion(word) for word in suggestion.words):
-                        yield suggestion.replace(text=' '.join(suggestion.words))
+                        yield suggestion.stringify()
                         if suggestion.allow_dash:
-                            yield suggestion.replace(text='-'.join(suggestion.words))
+                            yield suggestion.stringify('-')
                 else:
                     if check_suggestion(suggestion.text, allow_break=suggestion.allow_break):
                         yield suggestion
@@ -119,8 +109,8 @@ class Suggest:
         if self.aff.CHECKSHARPS and 'ß' in word and cap.guess(word.replace('ß', '')) == cap.Cap.ALL:
             captype = cap.Cap.ALL
 
-        good = Observed()
-        very_good = Observed()
+        good = False
+        very_good = False
 
         if self.aff.FORCEUCASE:
             if check_suggestion(word.capitalize()):
@@ -133,37 +123,46 @@ class Suggest:
 
         for variant in variants:
             for suggestion in filter_suggestions(self.good_permutations(variant)):
-                yield from good(handle_found(suggestion))
+                for res in handle_found(suggestion):
+                    good = True
+                    yield res
 
         for variant in variants:
             for suggestion in filter_suggestions(self.very_good_permutations(variant)):
-                yield from very_good(handle_found(suggestion))
+                for res in handle_found(suggestion):
+                    very_good = True
+                    yield res
 
-        if very_good.seen:
+        if very_good:
             return
 
         for variant in variants:
             for suggestion in filter_suggestions(self.questionable_permutations(variant)):
                 yield from handle_found(suggestion)
 
-        if very_good.seen or good.seen or self.aff.MAXNGRAMSUGS == 0:
+        if very_good or good or self.aff.MAXNGRAMSUGS == 0:
             return
 
-        ngrams_seen = Observed()
+        ngrams_seen = 0
         for sug in self.ngram_suggestions(word):
-            yield from ngrams_seen(handle_found(Suggestion(sug, 'ngram'), ignore_included=True))
-            if len(ngrams_seen.seen) >= self.aff.MAXNGRAMSUGS:
+            for res in handle_found(Suggestion(sug, 'ngram'), ignore_included=True):
+                ngrams_seen += 1
+                yield res
+            if ngrams_seen >= self.aff.MAXNGRAMSUGS:
                 break
 
-        phonet_seen = Observed()
+        phonet_seen = 0
         for sug in self.phonet_suggestions(word):
-            yield from phonet_seen(handle_found(Suggestion(sug, 'phonet'), ignore_included=True))
-            if len(phonet_seen.seen) >= MAXPHONSUGS:
+            for res in handle_found(Suggestion(sug, 'phonet'), ignore_included=True):
+                phonet_seen += 1
+                yield res
+            if phonet_seen >= MAXPHONSUGS:
                 break
 
     def very_good_permutations(self, word: str) -> Iterator[Suggestion]:
         for words in pmt.twowords(word):
             yield Suggestion(' '.join(words), 'spaceword')
+
             if self.aff.use_dash():
                 yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
 
@@ -177,10 +176,15 @@ class Suggest:
         for suggestion in pmt.replchars(word, self.aff.REP):
             if isinstance(suggestion, list):
                 yield Suggestion(' '.join(suggestion), 'replchars')
-            yield Suggestion(suggestion, 'replchars', allow_dash=False)
+                yield MultiWordSuggestion(suggestion, 'replchars', allow_dash=False)
+            else:
+                yield Suggestion(suggestion, 'replchars')
 
         for suggestion in pmt.replchars(word, self.replacements):
-            yield Suggestion(suggestion, 'replchars/ph', allow_dash=False)
+            if isinstance(suggestion, list):
+                yield MultiWordSuggestion(suggestion, 'replchars/ph', allow_dash=False)
+            else:
+                yield Suggestion(suggestion, 'replchars/ph')
 
     def questionable_permutations(self, word: str) -> Iterator[Suggestion]:
         # wrong char from a related set
@@ -221,7 +225,7 @@ class Suggest:
 
         # perhaps we forgot to hit space and two words ran together
         for suggestion_pair in pmt.twowords(word):
-            yield Suggestion(suggestion_pair, 'twowords', allow_dash=self.aff.use_dash())
+            yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.aff.use_dash())
 
     def ngram_suggestions(self, word: str) -> Iterator[str]:
         def forms_for(word: data.dic.Word, candidate: str):
@@ -282,6 +286,7 @@ class Suggest:
         if not self.aff.PHONE:
             return
 
+        # TODO: All of it should go to the constructor
         bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
         roots = (word for word in self.dic.words if not bad_flags.intersection(word.flags))
 

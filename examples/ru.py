@@ -1,6 +1,6 @@
 import time
 
-from spyll.hunspell.dictionary import Dictionary
+from spyll.hunspell import Dictionary
 
 t1 = time.time()
 

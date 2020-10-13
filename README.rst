@@ -5,7 +5,7 @@ Reasons
 
 Spellchecking is a notoriously hard task that looks easy. It consists of a) checking, whether the word is in the dictionary and b) if it is not, suggesting what the correct form might be.
 
-Even (a) is "easy" (look through the list of known correct words) only for some languages, like English, while for others, having rich word forms (say, Slavic ones) or word compounding (like German), requires either millions of word forms prepared, or non-trivial word analysis logic.
+Even (a) is "easy" (look through the list of known correct words) only for some languages, like English. For others, having rich word forms (say, Slavic ones) or word compounding (like German), requires either millions of word forms prepared, or non-trivial word analysis logic.
 
 The second task (suggestion) is even trickier. TODO
 
@@ -38,7 +38,7 @@ Design goals
 Reading the code
 ================
 
-Modules inside ``spyll/hunspell`` folder (except for small public interface of the ``Dictionary``) are written in a style akin to literal programming (explanations interweaved with code in supposedly readable manner). They could be read right in the GitHub (or your preferred code editor), but we suggest a rendering on `the dedicated site <https://spyll.github.io/hunspell/code>`_.
+Modules inside ``spyll/hunspell`` folder (except for small public interface of the ``Dictionary``) are written in a style akin to literate programming (explanations interweaved with code in supposedly readable manner). They could be read right in the GitHub (or your preferred code editor), but we suggest a rendering on `the dedicated site <https://spyll.github.io/hunspell/code>`_.
 
 * It is suggested that you start from hunspell concepts explanations
 * data.aff and data.dic modules declare data structures (data.aff also provides **very** thorough explanation of each and every directive, and points where in code they are used)
@@ -69,6 +69,15 @@ It is not stellar, neither completely unusable (YMMV).
 * Suggest is (up to ... for ...)
 
 I believe that significantly better performance is hard/impossibe to achieve *in pure Python*, preserving the *straightforward port of the algorithms*. As clear representation of algorithm is the *main* goal, I am leaving it at that. Appropriate data structures are chosen when necessary (the most non-trivial example is trie for affixes), and code is profiled thoroughly to remove bottlenecks that were hanging low (lost in metaphor, sorry). Maybe overuse of ``re`` might be rethought a bit.
+
+Q&A
+===
+
+Why ``spyll.hunspell``?
+
+Delusion of grandeur
+
+What about Norvig's?
 
 Other ports
 ===========
