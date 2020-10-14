@@ -4,7 +4,7 @@ from spyll.hunspell.dictionary import Dictionary
 from spyll.hunspell.algo import suggest
 
 # t = time.time()
-d = Dictionary.from_folder('/home/zverok/projects/1foreign/LibreOffice-dictionaries/ar/ar')
+d = Dictionary.from_files('/home/zverok/projects/1foreign/LibreOffice-dictionaries/ar/ar')
 # print(f'Loading: {time.time() - t}')
 
 # t = time.time()

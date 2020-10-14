@@ -5,7 +5,7 @@ from spyll.hunspell.dictionary import Dictionary
 # from spyll.hunspell.algo.lookup import analyze
 from spyll.hunspell.algo.lookup import CompoundPos
 
-dic = Dictionary.from_folder('tests/fixtures/hunspell-orig/iconv2')
+dic = Dictionary.from_files('tests/fixtures/hunspell-orig/iconv2')
 
 # print(dic.aff)
 # print(list('र्‌य'))

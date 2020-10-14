@@ -11,7 +11,7 @@ def readlist(path, ignoredot=True):
 
 def test(name):
     path = f'tests/fixtures/hunspell-orig/{name}'
-    dictionary = Dictionary.from_folder(path)
+    dictionary = Dictionary.from_files(path)
     good = readlist(path + '.good')
     bad = readlist(path + '.wrong')
 

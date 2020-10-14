@@ -4,7 +4,7 @@ from spyll.hunspell import Dictionary
 
 t1 = time.time()
 
-d = Dictionary.from_folder('dictionaries/ru_RU')
+d = Dictionary.from_files('dictionaries/ru_RU')
 
 t2 = time.time()
 print(f"loaded in {t2-t1}")

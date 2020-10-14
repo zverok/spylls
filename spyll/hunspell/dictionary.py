@@ -1,5 +1,7 @@
-from typing import Iterator
+import glob
 import zipfile
+
+from typing import Iterator
 
 from spyll.hunspell import data, readers
 from spyll.hunspell.readers.file_reader import FileReader, ZipReader
@@ -9,6 +11,37 @@ from spyll.hunspell.algo import lookup, suggest
 class Dictionary:
     aff: data.Aff
     dic: data.Dic
+
+    # TODO: Firefox dictionaries path
+    # TODO: Windows pathes
+    PATHES = [
+        # lib
+        "/usr/share/hunspell",
+        "/usr/share/myspell",
+        "/usr/share/myspell/dicts",
+        "/Library/Spelling",
+
+        # OpenOffice
+        "/opt/openoffice.org/basis3.0/share/dict/ooo",
+        "/usr/lib/openoffice.org/basis3.0/share/dict/ooo",
+        "/opt/openoffice.org2.4/share/dict/ooo",
+        "/usr/lib/openoffice.org2.4/share/dict/ooo",
+        "/opt/openoffice.org2.3/share/dict/ooo",
+        "/usr/lib/openoffice.org2.3/share/dict/ooo",
+        "/opt/openoffice.org2.2/share/dict/ooo",
+        "/usr/lib/openoffice.org2.2/share/dict/ooo",
+        "/opt/openoffice.org2.1/share/dict/ooo",
+        "/usr/lib/openoffice.org2.1/share/dict/ooo",
+        "/opt/openoffice.org2.0/share/dict/ooo",
+        "/usr/lib/openoffice.org2.0/share/dict/ooo"
+    ]
+
+    @classmethod
+    def from_files(cls, path):
+        aff, context = readers.read_aff(FileReader(path + '.aff'))
+        dic = readers.read_dic(FileReader(path + '.dic', encoding=context.encoding), context=context)
+
+        return cls(aff, dic)
 
     # .xpi, .odt
     @classmethod
@@ -23,13 +56,11 @@ class Dictionary:
         return cls(aff, dic)
 
     @classmethod
-    def from_folder(cls, path):
-        aff, context = readers.read_aff(FileReader(path + '.aff'))
-        dic = readers.read_dic(FileReader(path + '.dic', encoding=context.encoding), context=context)
-
-        return cls(aff, dic)
-
-    # TODO: from_system
+    def from_system(cls, name):
+        for folder in cls.PATHES:
+            pathes = glob.glob(f'{folder}/{name}.aff')
+            if pathes:
+                return cls.from_files(pathes[0].replace('.aff', ''))
 
     def __init__(self, aff, dic):
         self.aff = aff
