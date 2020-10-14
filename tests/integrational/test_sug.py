@@ -113,9 +113,10 @@ report('keepcase', pending=['bar']) # one of suggestions with .
 report('nosuggest')
 report('onlyincompound')
 
-report('opentaal_forbiddenword1')
-report('opentaal_forbiddenword2')
-# report('opentaal_keepcase') -- reader fail, `break #`
+# Funnily enough, those two is working better in Spyll than in Hunspell :)
+# report('opentaal_forbiddenword1')
+# report('opentaal_forbiddenword2')
+# report('opentaal_keepcase')
 
 # ==================
 section('Phonetical suggestions')

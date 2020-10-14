@@ -53,8 +53,7 @@ class Suggest:
         # print(self.replacements)
 
     def __call__(self, word: str) -> Iterator[str]:
-        # `if` just makes mypy happy, shouldn't happen
-        yield from (suggestion.text for suggestion in self.suggest_debug(word) if suggestion.text)
+        yield from (suggestion.text for suggestion in self.suggest_debug(word))
 
     def suggest_debug(self, word: str) -> Iterator[Suggestion]:
         def oconv(word):
@@ -117,26 +116,23 @@ class Suggest:
                 yield from handle_found(Suggestion(word.capitalize(), 'forcecase'))
                 return  # No more need to check anything
 
-        for variant in variants[1:]:
-            if check_suggestion(variant):
+        for idx, variant in enumerate(variants):
+            if idx > 0 and check_suggestion(variant):
                 yield from handle_found(Suggestion(variant, 'case'))
 
-        for variant in variants:
             for suggestion in filter_suggestions(self.good_permutations(variant)):
                 for res in handle_found(suggestion):
                     good = True
                     yield res
 
-        for variant in variants:
             for suggestion in filter_suggestions(self.very_good_permutations(variant)):
                 for res in handle_found(suggestion):
                     very_good = True
                     yield res
 
-        if very_good:
-            return
+            if very_good:
+                return
 
-        for variant in variants:
             for suggestion in filter_suggestions(self.questionable_permutations(variant)):
                 yield from handle_found(suggestion)
 
