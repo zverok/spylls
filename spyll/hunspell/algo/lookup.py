@@ -37,9 +37,12 @@ class CompoundRule:
             parts = re.findall(r'\([^*?]+?\)[*?]?', self.text)
         else:
             self.flags = set(re.sub(r'[\*\?]', '', self.text))
-            parts = re.findall(r'[^*?][*?]?', self.text)
-        # print(self.text)
-        self.re = re.compile(self.text)
+            # There are ) flags used in real-life sv_* dictionaries
+            # Obviously it is quite ad-hoc (other chars that have special meaning in regexp might be
+            # used eventually)
+            parts = [part.replace(')', '\\)') for part in re.findall(r'[^*?][*?]?', self.text)]
+        # print(parts)
+        self.re = re.compile(''.join(parts))
         self.partial_re = re.compile(
             functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1])
         )
@@ -179,9 +182,11 @@ class Lookup:
                 cond_parts = cond_parts[:-len(suffix.strip)]
 
             if cond_parts and cond_parts != ['.']:
-                cond = '(?<=' + ''.join(cond_parts) + ')'
+                # We can't use actual Regexp lookbehind feature, as it has limited functionality
+                # (should have known string length)
+                cond = '(?P<lookbehind>' + ''.join(cond_parts) + ')'
             else:
-                cond = ''
+                cond = '(?P<lookbehind>)'
 
             # print(cond)
             return re.compile(cond + suffix.add + '$')
@@ -491,7 +496,9 @@ class Lookup:
         )
 
         for suffix, regexp in possible_suffixes:
-            stem = regexp.sub(suffix.strip, word)
+            # TODO: probably it would make sense to have two independent regepxs in suffix:
+            # one to search, another to replace, then we wouldn't need this \g
+            stem = regexp.sub(f'\\g<lookbehind>{suffix.strip}', word)
 
             yield WordForm(word, stem, suffix=suffix)
 

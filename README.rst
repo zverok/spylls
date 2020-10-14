@@ -55,9 +55,11 @@ Current state of the port:
 
 * Only lookup (whether word in the dictionary) and suggest (for misspelled words) are ported; it means no morphological analysis (which some dictionaries allow), and no tokenization of source text (Python has enough libraries for that)
 * Of known directives, X are supported, the rest is silently ignored (none of those are used in the dictionaries available in Firefox or LibreOffice repositories)
-* Of hunspell's lookup tests, X are successful, 6 are pending (due to the same rare form of COMPOUNDRULE directive, which used in no humanly known dictionary), and 1 is failing (ironically as it is, Hungarian one)
+* Of hunspell's lookup tests, X are successful, 6 are pending (due to the same rare form of COMPOUNPATTERN directive, which used in no humanly known dictionary), and 1 is failing (ironically as it is, Hungarian one, which in the original Hunspell is handled by several exceptional branches with explicit "if this is hungarian..." clauses)
 * Of hunspell's suggest tests, X are failing and Y pending
 * spyll is confirmed to at least read successfully all dictionaries available in Firefox and LibreOffice official dictionary repositories
+
+So, it is, like ~80% theoretically complete and ~95% pragmatically complete.
 
 Performance
 ===========
@@ -78,6 +80,8 @@ Why ``spyll.hunspell``?
 Delusion of grandeur
 
 What about Norvig's?
+
+Where do I get the dictionaries?
 
 Other ports
 ===========

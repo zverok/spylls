@@ -46,8 +46,7 @@ class Context:
         raise ValueError(f"Unknown flag format {self.flag_format}")
 
 
-def read_aff(path_or_io):
-    source = FileReader(path_or_io)
+def read_aff(source):
     data = {'SFX': {}, 'PFX': {}, 'FLAG': 'short'}
     context = Context()
 
@@ -83,23 +82,21 @@ def read_aff(path_or_io):
 
 def read_directive(source, line, *, context):
     name, *arguments = re.split(r'\s+', line)
+    # print([line, name, arguments])
 
     # base_utf has lines like McDonalds’sá/w -- at the end...
     # TODO: Check what's hunspell's logic to deal with this
     #
-    # FIRST in Firefox's Valencian, TODO: investigate?
-    # LEFTHYPHENMIN in Firefox's Gaelic (Scotland), TODO: investigate?
-    # NAME, HOME, VERSION in Firefox's hungarian_optional_accents_spell_checker-0.1.xpi
-    # SUBSTANDARD in Firefox's Croatian, TODO: should be supported
-    # ONLYMAXDIFF in Firefox's Danish, TODO: should be supported
-    # SYLLABLENUM, COMPOUNDFIRST (?), ONLYROOT (?) is exotic Hungarian
-    # COMPOUNDMORESUFFIXES -- Korean (undocumented?)
-    # LANGCODE - libreoffice/bo/bo
-    if not re.match(r'^[A-Z]+$', name) or name in ['FIRST', 'SUBSTANDARD', 'ONLYMAXDIFF', 'LEFTHYPHENMIN',
+    # Directive-alike things that are seen in the wild, but actually not known:
+    #   FIRST in Firefox's Valencian
+    #   LEFTHYPHENMIN in Firefox's Gaelic (Scotland)
+    #   LANGCODE - libreoffice/bo/bo
+    # COMPOUNDFIRST, ONLYROOT are old flags, removed in 2003, and ignored currently
+    # GENERATE is hungarian
+    if not re.match(r'^[A-Z]+$', name) or name in ['FIRST', 'LEFTHYPHENMIN',
                                                    'NAME', 'HOME', 'VERSION',
-                                                   'SYLLABLENUM', 'COMPOUNDFIRST', 'ONLYROOT',
-                                                   'COMPOUNDMORESUFFIXES',
-                                                   'LANGCODE']:
+                                                   'COMPOUNDFIRST', 'ONLYROOT',
+                                                   'LANGCODE', 'GENERATE']:
         return (None, None)
 
     name = SYNONYMS.get(name, name)
@@ -130,11 +127,13 @@ def read_value(source, directive, *values, context):
     if directive in ['NOSUGGEST', 'KEEPCASE', 'CIRCUMFIX', 'NEEDAFFIX', 'FORBIDDENWORD', 'WARN',
                      'COMPOUNDFLAG', 'COMPOUNDBEGIN', 'COMPOUNDMIDDLE', 'COMPOUNDEND',
                      'ONLYINCOMPOUND',
-                     'COMPOUNDPERMITFLAG', 'COMPOUNDFORBIDFLAG', 'FORCEUCASE']:
+                     'COMPOUNDPERMITFLAG', 'COMPOUNDFORBIDFLAG', 'FORCEUCASE',
+                     'SUBSTANDARD',
+                     'SYLLABLENUM', 'COMPOUNDROOT']:
         return aff.Flag(context.parse_flag(value))
     if directive in ['COMPLEXPREFIXES', 'FULLSTRIP', 'NOSPLITSUGS', 'CHECKSHARPS',
                      'CHECKCOMPOUNDCASE', 'CHECKCOMPOUNDDUP', 'CHECKCOMPOUNDREP', 'CHECKCOMPOUNDTRIPLE',
-                     'SIMPLIFIEDTRIPLE']:
+                     'SIMPLIFIEDTRIPLE', 'ONLYMAXDIFF', 'COMPOUNDMORESUFFIXES']:
         # Presense of directive always means "turn it on"
         return True
     if directive in ['BREAK', 'COMPOUNDRULE']:

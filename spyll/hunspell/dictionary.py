@@ -2,6 +2,7 @@ from typing import Iterator
 import zipfile
 
 from spyll.hunspell import data, readers
+from spyll.hunspell.readers.file_reader import FileReader, ZipReader
 from spyll.hunspell.algo import lookup, suggest
 
 
@@ -16,15 +17,15 @@ class Dictionary:
         # TODO: fail if there are several
         aff_path = [name for name in zip.namelist() if name.endswith('.aff')][0]
         dic_path = [name for name in zip.namelist() if name.endswith('.dic')][0]
-        aff, context = readers.read_aff(zip.open(aff_path))
-        dic = readers.read_dic(zip.open(dic_path), context=context)
+        aff, context = readers.read_aff(ZipReader(zip.open(aff_path)))
+        dic = readers.read_dic(ZipReader(zip.open(dic_path), encoding=context.encoding), context=context)
 
         return cls(aff, dic)
 
     @classmethod
     def from_folder(cls, path):
-        aff, context = readers.read_aff(path + '.aff')
-        dic = readers.read_dic(path + '.dic', context=context)
+        aff, context = readers.read_aff(FileReader(path + '.aff'))
+        dic = readers.read_dic(FileReader(path + '.dic', encoding=context.encoding), context=context)
 
         return cls(aff, dic)
 

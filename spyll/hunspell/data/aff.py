@@ -105,12 +105,22 @@ class Aff:
 
     COMPOUNDSYLLABLE: Optional[Tuple[int, str]] = None
 
+    # Undocumented in most of publicly-available renderings, but documented in hunspell's source
+    COMPOUNDMORESUFFIXES: bool = False
+
+    # Hu-only, COMPLICATED
+    SYLLABLENUM: Optional[Flag] = None
+    COMPOUNDROOT: Optional[Flag] = None
+
     # IO:
     ICONV: List[Tuple[str, str]] = field(default_factory=list)
     OCONV: List[Tuple[str, str]] = field(default_factory=list)
 
     # Morphology
     AM: Dict[int, Set[str]] = field(default_factory=dict)
+
+    # Ignored
+    SUBSTANDARD: Optional[Flag] = None
 
     def use_dash(self) -> bool:
         return '-' in self.TRY or 'a' in self.TRY
