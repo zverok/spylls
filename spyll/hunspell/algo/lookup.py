@@ -663,9 +663,9 @@ class Lookup:
                     return True
 
             if aff.CHECKCOMPOUNDCASE:
-                r = right[0]
-                l = left[-1]
-                if (r == r.upper() or l == l.upper()) and r != '-' and l != '-':
+                right_c = right[0]
+                left_c = left[-1]
+                if (right_c == right_c.upper() or left_c == left_c.upper()) and right_c != '-' and left_c != '-':
                     return True
 
             if aff.CHECKCOMPOUNDPATTERN:

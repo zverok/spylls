@@ -3,7 +3,6 @@ import itertools
 from dataclasses import dataclass, field
 from typing import Dict
 
-from spyll.hunspell.readers import FileReader
 from spyll.hunspell.data import Aff
 from spyll.hunspell.data import aff
 
@@ -139,7 +138,7 @@ def read_value(source, directive, *values, context):
     if directive in ['BREAK', 'COMPOUNDRULE']:
         return [first for first, *_ in _read_array()]
     if directive in ['REP', 'ICONV', 'OCONV']:
-        return [(pat1, pat2) for pat1, pat2, *_ in _read_array()]
+        return [(pat1, pat2) for pat1, pat2, *_rest in _read_array()]
     if directive in ['MAP']:
         return [
             [

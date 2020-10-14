@@ -1,7 +1,6 @@
 from collections import defaultdict
 import re
 
-from spyll.hunspell.readers import FileReader
 from spyll.hunspell.data import dic
 
 SPACES_REGEXP = re.compile(r"\s+")

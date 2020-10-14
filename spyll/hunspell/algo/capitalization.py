@@ -105,7 +105,7 @@ class Collation:
         elif captype == Cap.INIT:
             result = [word, *self.lower(word)]
         elif captype == Cap.HUHINIT:
-            result = [word, *(l + word[1:] for l in self.lower(word[0]))]
+            result = [word, *(letter + word[1:] for letter in self.lower(word[0]))]
             # TODO: also here and below, consider the theory FooBar meant Foo Bar
         elif captype == Cap.HUH:
             result = [word]

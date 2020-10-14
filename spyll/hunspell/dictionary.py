@@ -46,12 +46,12 @@ class Dictionary:
     # .xpi, .odt
     @classmethod
     def from_zip(cls, path):
-        zip = zipfile.ZipFile(path)
+        file = zipfile.ZipFile(path)
         # TODO: fail if there are several
-        aff_path = [name for name in zip.namelist() if name.endswith('.aff')][0]
-        dic_path = [name for name in zip.namelist() if name.endswith('.dic')][0]
-        aff, context = readers.read_aff(ZipReader(zip.open(aff_path)))
-        dic = readers.read_dic(ZipReader(zip.open(dic_path), encoding=context.encoding), context=context)
+        aff_path = [name for name in file.namelist() if name.endswith('.aff')][0]
+        dic_path = [name for name in file.namelist() if name.endswith('.dic')][0]
+        aff, context = readers.read_aff(ZipReader(file.open(aff_path)))
+        dic = readers.read_dic(ZipReader(file.open(dic_path), encoding=context.encoding), context=context)
 
         return cls(aff, dic)
 
@@ -61,6 +61,8 @@ class Dictionary:
             pathes = glob.glob(f'{folder}/{name}.aff')
             if pathes:
                 return cls.from_files(pathes[0].replace('.aff', ''))
+
+        raise LookupError(f'{name}.aff not found (search pathes are {cls.PATHES!r})')
 
     def __init__(self, aff, dic):
         self.aff = aff

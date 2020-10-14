@@ -1,4 +1,4 @@
-from typing import Iterator, List, Set
+from typing import Iterator, List, Set, Union
 
 import dataclasses
 from dataclasses import dataclass
@@ -166,7 +166,7 @@ class Suggest:
             if self.aff.use_dash():
                 yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
 
-    def good_permutations(self, word: str) -> Iterator[Suggestion]:
+    def good_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         # suggestions for an uppercase word (html -> HTML)
         yield Suggestion(word.upper(), 'uppercase')
 
@@ -186,7 +186,7 @@ class Suggest:
             else:
                 yield Suggestion(suggestion, 'replchars/ph')
 
-    def questionable_permutations(self, word: str) -> Iterator[Suggestion]:
+    def questionable_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         # wrong char from a related set
         for suggestion in pmt.mapchars(word, self.aff.MAP):
             yield Suggestion(suggestion, 'mapchars')
