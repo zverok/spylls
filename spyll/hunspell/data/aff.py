@@ -10,6 +10,9 @@ from typing import List, Set, Dict, Tuple, Optional, NewType
 
 from pygtrie import CharTrie  # type: ignore
 
+# FIXME: It is both data and algo, as most of the helper classes below...
+from spyll.hunspell.algo import phonet
+
 
 Flag = NewType('Flag', str)
 
@@ -25,6 +28,15 @@ class BreakPattern:
             self.regexp = re.compile(f"({pattern})")
         else:
             self.regexp = re.compile(f".({pattern}).")
+
+
+@dataclass
+class RepPattern:
+    pattern: str
+    replacement: str
+
+    def __post_init__(self):
+        self.regexp = re.compile(self.pattern)
 
 
 @dataclass
@@ -206,13 +218,13 @@ class Aff:
     NOSUGGEST: Optional[Flag] = None
     KEEPCASE: Optional[Flag] = None
     MAXCPDSUGS: int = 0
-    REP: List[Tuple[str, str]] = field(default_factory=list)
+    REP: List[RepPattern] = field(default_factory=list)
     MAP: List[Set[str]] = field(default_factory=list)
     MAXDIFF: int = -1
     ONLYMAXDIFF: bool = False
     MAXNGRAMSUGS: int = 4
     NOSPLITSUGS: bool = False
-    PHONE: List[Tuple[str, str]] = field(default_factory=list)
+    PHONE: Optional[phonet.Table] = None
 
     # Stemming
     AF: Dict[int, Set[Flag]] = field(default_factory=dict)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Iterator, Tuple, List, Dict
+from typing import Iterator, Tuple, List
 from operator import itemgetter
 
 import spyll.hunspell.algo.string_metrics as sm
@@ -62,13 +62,14 @@ class Rule:
 
 
 # http://aspell.net/man-html/Phonetic-Code.html
+@dataclass
 class Table:
-    rules: Dict[str, List[Rule]]
+    table: List[Tuple[str, str]]
 
-    def __init__(self, source: List[Tuple[str, str]]):
+    def __post_init__(self):
         self.rules = defaultdict(list)
 
-        for search, replacement in source:
+        for search, replacement in self.table:
             self.rules[search[0]].append(Rule.parse(search, replacement))
 
     def convert(self, word):

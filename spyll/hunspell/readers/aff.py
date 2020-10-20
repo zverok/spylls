@@ -5,6 +5,7 @@ from typing import Dict
 
 from spyll.hunspell.data import Aff
 from spyll.hunspell.data import aff
+from spyll.hunspell.algo import phonet
 
 
 # Outdated directive names
@@ -141,8 +142,8 @@ def read_value(source, directive, *values, context):
         return [aff.CompoundRule(first) for first, *_ in _read_array()]
     if directive in ['ICONV', 'OCONV']:
         return aff.ConvTable([(pat1, pat2) for pat1, pat2, *_rest in _read_array()])
-    if directive in 'REP':
-        return [(pat1, pat2) for pat1, pat2, *_rest in _read_array()]
+    if directive == 'REP':
+        return [aff.RepPattern(pat1, pat2) for pat1, pat2, *_rest in _read_array()]
     if directive in ['MAP']:
         return [
             [
@@ -176,10 +177,10 @@ def read_value(source, directive, *values, context):
     if directive == 'COMPOUNDSYLLABLE':
         return (int(values[0]), values[1])
     if directive == 'PHONE':
-        return [
+        return phonet.Table([
             (search, '' if replacement == '_' else replacement)
             for search, replacement, *_ in _read_array()
-        ]
+        ])
 
     # TODO: Maybe for ver 0.0.1 it is acceptable to just not recognize some flags?
     raise Exception(f"Can't parse {directive}")

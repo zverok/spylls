@@ -4,6 +4,7 @@ import dataclasses
 from dataclasses import dataclass
 
 from spyll.hunspell import data
+from spyll.hunspell.data.aff import RepPattern
 from spyll.hunspell.algo import ngram_suggest, phonet, permutations as pmt, capitalization as cap
 
 MAXPHONSUGS = 2
@@ -45,7 +46,8 @@ class Suggest:
         # TODO: there also could be "pretty ph:prity ph:priti->pretti", "pretty ph:prity*"
         # TODO: if (captype==INITCAP)
         self.replacements = [
-            (phonetic, word.stem)
+            # FIXME: Shouldn't work, probably...
+            RepPattern(phonetic, word.stem)
             for word in dic.words if word.phonetic()
             for phonetic in word.phonetic()
         ]
@@ -280,6 +282,4 @@ class Suggest:
         bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
         roots = (word for word in self.dic.words if not bad_flags.intersection(word.flags))
 
-        table = phonet.Table(self.aff.PHONE)
-
-        yield from phonet.phonet_suggest(word, roots=roots, table=table)
+        yield from phonet.phonet_suggest(word, roots=roots, table=self.aff.PHONE)

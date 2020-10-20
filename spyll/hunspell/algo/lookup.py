@@ -51,10 +51,6 @@ class Lookup:
     def __init__(self, aff: data.aff.Aff, dic: data.dic.Dic):
         self.aff = aff
         self.dic = dic
-        self.compile()
-
-    def compile(self):
-
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
     def __call__(self, word: str, *,

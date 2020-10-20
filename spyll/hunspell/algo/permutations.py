@@ -1,6 +1,6 @@
-import re
+from typing import Iterator, Union, List, Set
 
-from typing import Iterator, Union, List, Tuple, Set
+from spyll.hunspell.data import aff
 
 
 MAX_CHAR_DISTANCE = 4
@@ -10,14 +10,14 @@ MAX_CHAR_DISTANCE = 4
 # differs with more than 1 letter from the right form.
 #
 # uses .aff's file REP table
-def replchars(word: str, reptable: List[Tuple[str, str]]) -> Iterator[Union[str, List[str]]]:
+def replchars(word: str, reptable: List[aff.RepPattern]) -> Iterator[Union[str, List[str]]]:
     if len(word) < 2 or not reptable:
         return
 
-    for (pattern, replacement) in reptable:
+    for pattern in reptable:
         # TODO: compiled at aff loading
-        for match in re.compile(pattern).finditer(word):
-            suggestion = word[:match.start()] + replacement.replace('_', ' ') + word[match.end():]
+        for match in pattern.regexp.finditer(word):
+            suggestion = word[:match.start()] + pattern.replacement.replace('_', ' ') + word[match.end():]
             yield suggestion
             if ' ' in suggestion:
                 yield suggestion.split(' ', 2)
