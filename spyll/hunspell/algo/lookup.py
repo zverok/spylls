@@ -1,7 +1,5 @@
 import re
 import itertools
-import functools
-from operator import itemgetter
 
 from collections import defaultdict
 from enum import Enum
@@ -23,108 +21,6 @@ CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
 class Affixes(CharTrie):
     def lookup(self, prefix):
         return [val for _, vals in self.prefixes(prefix) for val in vals]
-
-
-@dataclass
-class CompoundRule:
-    text: str
-
-    def __post_init__(self):
-        # TODO: proper flag parsing! Long is (aa)(bb)*(cc), numeric is (1001)(1002)*(1003)
-        # This works but is super ad-hoc!
-        if '(' in self.text:
-            self.flags = set(re.findall(r'\((.+?)\)', self.text))
-            parts = re.findall(r'\([^*?]+?\)[*?]?', self.text)
-        else:
-            self.flags = set(re.sub(r'[\*\?]', '', self.text))
-            # There are ) flags used in real-life sv_* dictionaries
-            # Obviously it is quite ad-hoc (other chars that have special meaning in regexp might be
-            # used eventually)
-            parts = [part.replace(')', '\\)') for part in re.findall(r'[^*?][*?]?', self.text)]
-        # print(parts)
-        self.re = re.compile(''.join(parts))
-        self.partial_re = re.compile(
-            functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1])
-        )
-
-    def fullmatch(self, flag_sets):
-        relevant_flags = [self.flags.intersection(f) for f in flag_sets]
-        return any(
-            self.re.fullmatch(''.join(fc))
-            for fc in itertools.product(*relevant_flags)
-        )
-
-    def partial_match(self, flag_sets):
-        relevant_flags = [self.flags.intersection(f) for f in flag_sets]
-        return any(
-            self.partial_re.fullmatch(''.join(fc))
-            for fc in itertools.product(*relevant_flags)
-        )
-
-
-@dataclass
-class CompoundPattern:
-    left: str
-    right: str
-    replacement: Optional[str] = None
-
-    def __post_init__(self):
-        self.left_stem, _, self.left_flag = self.left.partition('/')
-        self.right_stem, _, self.right_flag = self.right.partition('/')
-        if self.left_stem == '0':
-            self.left_stem = ''
-            self.left_no_affix = True
-        else:
-            self.left_no_affix = False
-
-        if self.right_stem == '0':
-            self.right_stem = ''
-            self.right_no_affix = True
-        else:
-            self.right_no_affix = False
-
-    def match(self, left, right):
-        return (left.stem.endswith(self.left_stem)) and (right.stem.startswith(self.right_stem)) and \
-               (not self.left_no_affix or not left.is_base()) and \
-               (not self.right_no_affix or not right.is_base()) and \
-               (not self.left_flag or self.left_flag in left.flags()) and \
-               (not self.right_flag or self.right_flag in right.flags())
-
-
-class ConvTable:
-    def __init__(self, pairs):
-        def compile_row(pat1, pat2):
-            pat1clean = pat1.replace('_', '')
-            pat1re = pat1clean
-            if pat1.startswith('_'):
-                pat1re = '^' + pat1re
-            if pat1.endswith('_'):
-                pat1re = pat1re + '$'
-
-            return (pat1clean, re.compile(pat1re), pat2.replace('_', ' '))
-
-        self.table = sorted([compile_row(*row) for row in pairs], key=itemgetter(0))
-
-    def __call__(self, word):
-        pos = 0
-        res = ''
-        while pos < len(word):
-            matches = sorted(
-                [(search, pattern, replacement)
-                 for search, pattern, replacement in self.table
-                 if pattern.match(word, pos)],
-                key=lambda r: len(r[0]),
-                reverse=True
-            )
-            if matches:
-                search, pattern, replacement = matches[0]
-                res += replacement
-                pos += len(search)
-            else:
-                res += word[pos]
-                pos += 1
-
-        return res
 
 
 @dataclass
@@ -159,16 +55,6 @@ class WordForm:
 Compound = List[WordForm]
 
 
-class Counted:
-    def __init__(self):
-        self.counter = 0
-
-    def count(self, generator):
-        for item in generator:
-            self.counter += 1
-            yield item
-
-
 class Lookup:
     def __init__(self, aff: data.aff.Aff, dic: data.dic.Dic):
         self.aff = aff
@@ -176,59 +62,19 @@ class Lookup:
         self.compile()
 
     def compile(self):
-        def suffix_regexp(suffix):
-            cond_parts = re.findall(r'(\[.+\]|[^\[])', suffix.condition)
-            if suffix.strip:
-                cond_parts = cond_parts[:-len(suffix.strip)]
-
-            if cond_parts and cond_parts != ['.']:
-                # We can't use actual Regexp lookbehind feature, as it has limited functionality
-                # (should have known string length)
-                cond = '(?P<lookbehind>' + ''.join(cond_parts) + ')'
-            else:
-                cond = '(?P<lookbehind>)'
-
-            # print(cond)
-            return re.compile(cond + suffix.add + '$')
-
-        def prefix_regexp(prefix):
-            cond_parts = re.findall(r'(\[.+\]|[^\[])', prefix.condition)
-            cond_parts = cond_parts[len(prefix.strip):]
-
-            if cond_parts and cond_parts != ['.']:
-                cond = '(?=' + ''.join(cond_parts) + ')'
-            else:
-                cond = ''
-            return re.compile('^' + prefix.add + cond)
-
         suffixes = defaultdict(list)
         for suf in itertools.chain.from_iterable(self.aff.SFX.values()):
-            suffixes[suf.add[::-1]].append((suf, suffix_regexp(suf)))
+            suffixes[suf.add[::-1]].append(suf)
 
         self.suffixes = Affixes(suffixes)
 
         prefixes = defaultdict(list)
         for pref in itertools.chain.from_iterable(self.aff.PFX.values()):
-            prefixes[pref.add].append((pref, prefix_regexp(pref)))
+            prefixes[pref.add].append(pref)
 
         self.prefixes = Affixes(prefixes)
 
-        self.compoundrules = [CompoundRule(r) for r in self.aff.COMPOUNDRULE]
-        self.compoundpatterns = [CompoundPattern(*row) for row in self.aff.CHECKCOMPOUNDPATTERN]
-
-        def pattern2regexp(pattern):
-            # special chars like #, -, * etc should be escaped, but ^ and $ should be treated as in regexps
-            pattern = re.escape(pattern).replace('\\^', '^').replace('\\$', '$')
-            if pattern.startswith('^') or pattern.endswith('$'):
-                return re.compile(f"({pattern})")
-            return re.compile(f".({pattern}).")
-
-        self.breakpatterns = [pattern2regexp(pat) for pat in self.aff.BREAK]
-
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
-
-        self.iconv = ConvTable(self.aff.ICONV)
-        self.oconv = ConvTable(self.aff.OCONV)
 
     def __call__(self, word: str, *,
                  capitalization=True,
@@ -240,7 +86,7 @@ class Lookup:
             return False
 
         if self.aff.ICONV:
-            word = self.iconv(word)
+            word = self.aff.ICONV(word)
 
         # print(list(word))
         if self.aff.IGNORE:
@@ -271,8 +117,8 @@ class Lookup:
                 return
 
             yield [text]
-            for pat in self.breakpatterns:
-                for m in re.finditer(pat, text):
+            for pat in self.aff.BREAK:
+                for m in re.finditer(pat.regexp, text):
                     start = text[:m.start(1)]
                     rest = text[m.end(1):]
                     for breaking in try_break(rest, depth=depth+1):
@@ -352,7 +198,7 @@ class Lookup:
         else:
             by_flags = iter(())
 
-        if self.compoundrules:
+        if self.aff.COMPOUNDRULE:
             by_rules = self.compound_parts_by_rules(word, allow_nosuggest=allow_nosuggest)
         else:
             by_rules = iter(())
@@ -490,15 +336,13 @@ class Lookup:
                     all(f not in suffix.flags for f in forbidden_flags)
 
         possible_suffixes = (
-            (suffix, regexp)
-            for suffix, regexp in self.suffixes.lookup(word[::-1])
-            if good_suffix(suffix) and regexp.search(word)
+            suffix
+            for suffix in self.suffixes.lookup(word[::-1])
+            if good_suffix(suffix) and suffix.lookup_regexp.search(word)
         )
 
-        for suffix, regexp in possible_suffixes:
-            # TODO: probably it would make sense to have two independent regepxs in suffix:
-            # one to search, another to replace, then we wouldn't need this \g
-            stem = regexp.sub(f'\\g<lookbehind>{suffix.strip}', word)
+        for suffix in possible_suffixes:
+            stem = suffix.replace_regexp.sub(suffix.strip, word)
 
             yield WordForm(word, stem, suffix=suffix)
 
@@ -522,13 +366,13 @@ class Lookup:
                    all(f not in prefix.flags for f in forbidden_flags)
 
         possible_prefixes = (
-            (prefix, regexp)
-            for prefix, regexp in self.prefixes.lookup(word)
-            if good_prefix(prefix) and regexp.search(word)
+            prefix
+            for prefix in self.prefixes.lookup(word)
+            if good_prefix(prefix) and prefix.lookup_regexp.search(word)
         )
 
-        for prefix, regexp in possible_prefixes:
-            stem = regexp.sub(prefix.strip, word)
+        for prefix in possible_prefixes:
+            stem = prefix.lookup_regexp.sub(prefix.strip, word)
 
             yield WordForm(word, stem, prefix=prefix)
 
@@ -599,13 +443,13 @@ class Lookup:
             self,
             word_rest: str,
             prev_parts: List[data.dic.Word] = [],
-            rules: Optional[List[CompoundRule]] = None,
+            rules: Optional[List[data.aff.CompoundRule]] = None,
             allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
         # initial run
         if rules is None:
-            rules = self.compoundrules
+            rules = self.aff.COMPOUNDRULE
 
         # FIXME: ignores flags like FORBIDDENWORD and nosuggest
 
@@ -669,7 +513,7 @@ class Lookup:
                     return True
 
             if aff.CHECKCOMPOUNDPATTERN:
-                if any(pattern.match(left_paradigm, right_paradigm) for pattern in self.compoundpatterns):
+                if any(pattern.match(left_paradigm, right_paradigm) for pattern in aff.CHECKCOMPOUNDPATTERN):
                     return True
 
             if aff.CHECKCOMPOUNDDUP:

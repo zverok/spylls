@@ -57,12 +57,7 @@ class Suggest:
 
     def suggest_debug(self, word: str) -> Iterator[Suggestion]:
         def oconv(word):
-            # TODO: Use ConvTable
-            if not self.aff.OCONV:
-                return word
-            for src, dst in self.aff.OCONV:
-                word = word.replace(src, dst)
-            return word
+            return self.aff.OCONV(word) if self.aff.OCONV else word
 
         def check_suggestion(word, **kwarg):
             return self.lookup(word, capitalization=False, allow_nosuggest=False, **kwarg)

@@ -135,9 +135,13 @@ def read_value(source, directive, *values, context):
                      'SIMPLIFIEDTRIPLE', 'ONLYMAXDIFF', 'COMPOUNDMORESUFFIXES']:
         # Presense of directive always means "turn it on"
         return True
-    if directive in ['BREAK', 'COMPOUNDRULE']:
-        return [first for first, *_ in _read_array()]
-    if directive in ['REP', 'ICONV', 'OCONV']:
+    if directive == 'BREAK':
+        return [aff.BreakPattern(first) for first, *_ in _read_array()]
+    if directive == 'COMPOUNDRULE':
+        return [aff.CompoundRule(first) for first, *_ in _read_array()]
+    if directive in ['ICONV', 'OCONV']:
+        return aff.ConvTable([(pat1, pat2) for pat1, pat2, *_rest in _read_array()])
+    if directive in 'REP':
         return [(pat1, pat2) for pat1, pat2, *_rest in _read_array()]
     if directive in ['MAP']:
         return [
@@ -156,7 +160,7 @@ def read_value(source, directive, *values, context):
         ]
     if directive == 'CHECKCOMPOUNDPATTERN':
         return [
-            (left, right, rest[0] if rest else None)
+            aff.CompoundPattern(left, right, rest[0] if rest else None)
             for left, right, *rest in _read_array()
         ]
     if directive == 'AF':
