@@ -9,7 +9,6 @@ from spyll.hunspell.algo import ngram_suggest, phonet, permutations as pmt, capi
 MAXPHONSUGS = 2
 
 
-# TODO: Split MultiWordSuggestion alone!
 @dataclass
 class Suggestion:
     text: str

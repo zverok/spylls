@@ -1,14 +1,11 @@
 import re
 import itertools
 
-from collections import defaultdict
 from enum import Enum
 from typing import List, Iterator, Union, Optional, Sequence
 
 import dataclasses
 from dataclasses import dataclass
-
-from pygtrie import CharTrie  # type: ignore
 
 from spyll.hunspell import data
 from spyll.hunspell.data.aff import Flag
@@ -16,11 +13,6 @@ import spyll.hunspell.algo.capitalization as cap
 import spyll.hunspell.algo.permutations as pmt
 
 CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
-
-
-class Affixes(CharTrie):
-    def lookup(self, prefix):
-        return [val for _, vals in self.prefixes(prefix) for val in vals]
 
 
 @dataclass
@@ -62,17 +54,6 @@ class Lookup:
         self.compile()
 
     def compile(self):
-        suffixes = defaultdict(list)
-        for suf in itertools.chain.from_iterable(self.aff.SFX.values()):
-            suffixes[suf.add[::-1]].append(suf)
-
-        self.suffixes = Affixes(suffixes)
-
-        prefixes = defaultdict(list)
-        for pref in itertools.chain.from_iterable(self.aff.PFX.values()):
-            prefixes[pref.add].append(pref)
-
-        self.prefixes = Affixes(prefixes)
 
         self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
@@ -337,7 +318,7 @@ class Lookup:
 
         possible_suffixes = (
             suffix
-            for suffix in self.suffixes.lookup(word[::-1])
+            for suffix in self.aff.suffixes_index.lookup(word[::-1])
             if good_suffix(suffix) and suffix.lookup_regexp.search(word)
         )
 
@@ -367,7 +348,7 @@ class Lookup:
 
         possible_prefixes = (
             prefix
-            for prefix in self.prefixes.lookup(word)
+            for prefix in self.aff.prefixes_index.lookup(word)
             if good_prefix(prefix) and prefix.lookup_regexp.search(word)
         )
 

@@ -3,8 +3,12 @@ import functools
 import itertools
 from operator import itemgetter
 
+from collections import defaultdict
+
 from dataclasses import dataclass, field
 from typing import List, Set, Dict, Tuple, Optional, NewType
+
+from pygtrie import CharTrie  # type: ignore
 
 
 Flag = NewType('Flag', str)
@@ -182,6 +186,11 @@ class ConvTable:
         return res
 
 
+class AffixesIndex(CharTrie):
+    def lookup(self, prefix):
+        return [val for _, vals in self.prefixes(prefix) for val in vals]
+
+
 @dataclass
 class Aff:
     # General
@@ -266,6 +275,19 @@ class Aff:
 
     # Ignored
     SUBSTANDARD: Optional[Flag] = None
+
+    def __post_init__(self):
+        suffixes = defaultdict(list)
+        for suf in itertools.chain.from_iterable(self.SFX.values()):
+            suffixes[suf.add[::-1]].append(suf)
+
+        self.suffixes_index = AffixesIndex(suffixes)
+
+        prefixes = defaultdict(list)
+        for pref in itertools.chain.from_iterable(self.PFX.values()):
+            prefixes[pref.add].append(pref)
+
+        self.prefixes_index = AffixesIndex(prefixes)
 
     def use_dash(self) -> bool:
         return '-' in self.TRY or 'a' in self.TRY
