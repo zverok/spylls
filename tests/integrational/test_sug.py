@@ -1,25 +1,26 @@
 import re
 import time
-import os.path
 from collections import Counter
 
-from spyll.hunspell.dictionary import Dictionary
+import time
+import sys
 
-def readlist(path, ignoredot=True):
-    if not os.path.isfile(path):
-        return []
-    # we ignore "incomplete tokenization" feature
-    return [ln for ln in open(path).read().splitlines() if not ignoredot or ln[-1:] != '.']
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent))
+
+from base import read_list, read_dictionary, section, summary
+
+stats = Counter()
 
 def test(name):
-    path = f'tests/fixtures/hunspell-orig/{name}'
-    dictionary = Dictionary.from_files(path)
-    bad = readlist(path + '.wrong')
-    sug = list(map(lambda s: re.split(r',\s*', s), readlist(path + '.sug', ignoredot=False)))
+    dictionary = read_dictionary(name)
+    bad = read_list(f'{name}.wrong')
+    sug = list(map(lambda s: re.split(r',\s*', s), read_list(f'{name}.sug', ignoredot=False)))
     for i, words in enumerate(sug):
         # ph.sug is the only one with "," in the word :(
         if words == ['Oh', 'my gosh!'] or words == ['OH', 'MY GOSH!']:
             sug[i] = [', '.join(words)]
+
     return [
         {
             'word': word,
@@ -27,13 +28,6 @@ def test(name):
             'got': list(dictionary.suggest(word))
         } for i, word in enumerate(bad)
     ]
-
-stats = Counter()
-
-def section(title):
-    print()
-    print(title)
-    print('=' * len(title))
 
 def report(name, *, pending=[]):
     global stats
@@ -149,6 +143,4 @@ report('i54633')
 report('i58202', pending=['fooBar', 'FooBar', 'BazFoo'])
 
 
-print()
-print("------------")
-print(f"{stats['total']} tests: {stats['ok']} OK, {stats['pending']} pending, {stats['fail']} fails ({stats['slow']} slow)")
+summary(stats)

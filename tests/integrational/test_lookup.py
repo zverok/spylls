@@ -1,19 +1,18 @@
 import time
-import os.path
+import sys
+from collections import Counter
 
-from spyll.hunspell.dictionary import Dictionary
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent))
 
-def readlist(path, ignoredot=True):
-    if not os.path.isfile(path):
-        return []
-    # we ignore "incomplete tokenization" feature
-    return [ln.strip() for ln in open(path).read().splitlines() if not ignoredot or ln[-1:] != '.']
+from base import read_list, read_dictionary, section, summary
+
+stats = Counter()
 
 def test(name):
-    path = f'tests/fixtures/hunspell-orig/{name}'
-    dictionary = Dictionary.from_files(path)
-    good = readlist(path + '.good')
-    bad = readlist(path + '.wrong')
+    dictionary = read_dictionary(name)
+    good = read_list(f'{name}.good')
+    bad = read_list(f'{name}.wrong')
 
     # morph.good has "drink eat" pairs, which hunspell treats as just two words :shrug:
     def lookup(word):
@@ -27,20 +26,13 @@ def test(name):
         'bad': {word: lookup(word) for word in bad},
     }
 
-def section(title):
-    print()
-    print(title)
-    print('=' * len(title))
-
-ok = 0
-err = 0
-pending = 0
-
 def report(name, pending_comment=None):
-    global ok, err, pending
+    global stats
+
+    stats['total'] += 1
 
     if pending_comment:
-        pending += 1
+        stats['pending'] += 1
         print(f"*{name}: pending {'' if pending_comment is True else '(' + pending_comment + ')'}")
         return
 
@@ -68,6 +60,7 @@ def report(name, pending_comment=None):
 
     if duration > 0.05:
         summary += f" [{duration:.4f}s]"
+        stats['slow'] += 1
 
     print(summary)
     if nogood:
@@ -75,9 +68,9 @@ def report(name, pending_comment=None):
     if nobad:
         print(f"  Bad words found: {', '.join(nobad)}")
     if nogood or nobad:
-        err += 1
+        stats['fail'] += 1
     else:
-        ok += 1
+        stats['ok'] += 1
 
 
 # ==============================
@@ -97,7 +90,7 @@ report('encoding')
 report('utf8')
 report('utf8_bom')
 report('utf8_bom2')
-report('right_to_left_mark') # TODO: file reader should remove \u200f
+report('right_to_left_mark')
 
 # ===============================
 section('Affixes')
@@ -255,6 +248,4 @@ report('i54633')
 report('i54980')
 report('i58202')
 
-print()
-print("------------")
-print(f"{ok + err + pending} tests: {ok} OK, {err} fails, {pending} pending")
+summary(stats)

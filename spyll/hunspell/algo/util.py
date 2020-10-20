@@ -21,10 +21,10 @@ class ScoredArray(Generic[Value]):
         # Next value should be inserted at the point which currently has minimum score
         # below current score
         lowest = score
-        for i, cur in enumerate(self.data):
-            if cur[1] < lowest:
+        for i, (_, sc) in enumerate(self.data):
+            if sc < lowest:
                 self.insert_at = i
-                lowest = cur[1]
+                lowest = sc
 
     def result(self) -> Iterator[Tuple[Value, float]]:
         # Mypy's unhappy...
