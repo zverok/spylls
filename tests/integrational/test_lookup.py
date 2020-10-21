@@ -231,10 +231,7 @@ report('hu')
 # ===============================
 section('Edge cases and bugs')
 
-# "\/" signs slash in words (not affix separator)
-# "/" at beginning of the line is word character (not affix separator)
-
-report('slash', pending_comment='Slash in dictionary words') # TODO: check with hunspell: what it does when it is not wordchar? will it handle flags?
+report('slash')
 report('timelimit', pending_comment=True)
 
 report('1592880')

@@ -5,7 +5,7 @@ from spyll.hunspell.data import dic
 
 SPACES_REGEXP = re.compile(r"\s+")
 MORPH_REGEXP = re.compile(r'^(\w{2}:\S*|\d+)$')
-
+SLASH_REGEXP = re.compile(r'(?<!\\)/')
 
 def read_dic(source, *, context):
     tr = str.maketrans('', '', context.ignore)
@@ -25,7 +25,16 @@ def read_dic(source, *, context):
         for tag, content in morphology(parts):
             morph[tag].append(content)
 
-        word, _, flags = ' '.join(word_parts).partition('/')
+        word = ' '.join(word_parts)
+        if word.startswith('/'):
+            flags = ''
+        else:
+            word_with_flags = SLASH_REGEXP.split(word, 2)
+            if len(word_with_flags) == 2:
+                word, flags = word_with_flags
+            else:
+                flags = ''
+        word = word.replace('\\/', '/')
         if context.ignore:
             word = word.translate(tr)
 
