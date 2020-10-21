@@ -10,8 +10,7 @@ from typing import List, Set, Dict, Tuple, Optional, NewType
 
 from pygtrie import CharTrie  # type: ignore
 
-# FIXME: It is both data and algo, as most of the helper classes below...
-from spyll.hunspell.algo import phonet
+from spyll.hunspell.data import phonet
 
 
 Flag = NewType('Flag', str)

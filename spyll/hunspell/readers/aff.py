@@ -3,9 +3,7 @@ import itertools
 from dataclasses import dataclass, field
 from typing import Dict
 
-from spyll.hunspell.data import Aff
-from spyll.hunspell.data import aff
-from spyll.hunspell.algo import phonet
+from spyll.hunspell.data import aff, phonet
 
 
 # Outdated directive names
@@ -77,7 +75,7 @@ def read_aff(source):
             data['SET'] = 'UTF-8'
             source.reset_encoding('UTF-8')
 
-    return (Aff(**data), context)
+    return (aff.Aff(**data), context)
 
 
 def read_directive(source, line, *, context):
