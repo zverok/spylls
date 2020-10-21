@@ -7,6 +7,7 @@ SPACES_REGEXP = re.compile(r"\s+")
 MORPH_REGEXP = re.compile(r'^(\w{2}:\S*|\d+)$')
 SLASH_REGEXP = re.compile(r'(?<!\\)/')
 
+
 def read_dic(source, *, context):
     tr = str.maketrans('', '', context.ignore)
 

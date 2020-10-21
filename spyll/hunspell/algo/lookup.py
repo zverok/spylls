@@ -1,5 +1,4 @@
 import re
-import itertools
 
 from enum import Enum
 from typing import List, Iterator, Union, Optional, Sequence
@@ -13,6 +12,8 @@ import spyll.hunspell.algo.capitalization as cap
 import spyll.hunspell.algo.permutations as pmt
 
 CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
+
+NUMBER_REGEXP = re.compile(r'^\d+(\.\d+)?$')
 
 
 @dataclass
@@ -72,7 +73,7 @@ class Lookup:
 
         # Numbers are allowed and considered "good word" always
         # TODO: check in hunspell's code, if there are some exceptions?..
-        if re.fullmatch(r'^\d+(\.\d+)?$', word):
+        if NUMBER_REGEXP.fullmatch(word):
             return True
 
         def is_found(variant):
@@ -130,6 +131,9 @@ class Lookup:
             self,
             word: str,
             captype: cap.Cap,
+            prefix_flags: List[Flag] = [],
+            suffix_flags: List[Flag] = [],
+            forbidden_flags: List[Flag] = [],
             compoundpos: Optional[CompoundPos] = None,
             allow_nosuggest=True,
             with_forbidden=False) -> Iterator[WordForm]:
@@ -140,7 +144,9 @@ class Lookup:
                                   allow_nosuggest=allow_nosuggest,
                                   **kwarg)
 
-        for form in self.try_affix_forms(word, compoundpos=compoundpos):
+        for form in self.try_affix_forms(word, compoundpos=compoundpos,
+                                         prefix_flags=prefix_flags, suffix_flags=suffix_flags,
+                                         forbidden_flags=forbidden_flags):
             found = False
             # Base (no suffixes) homonym is allowed if exists.
             # And if it would not, we would not be here at all.
@@ -171,21 +177,14 @@ class Lookup:
 
     def compound_parts(self, word: str, captype: cap.Cap, allow_nosuggest=True) -> Iterator[Compound]:
         if self.aff.COMPOUNDBEGIN or self.aff.COMPOUNDFLAG:
-            by_flags = self.compound_parts_by_flags(word, captype=captype, allow_nosuggest=allow_nosuggest)
-        else:
-            by_flags = iter(())
+            for compound in self.compound_parts_by_flags(word, captype=captype, allow_nosuggest=allow_nosuggest):
+                if not self.bad_compound(compound, captype):
+                    yield compound
 
         if self.aff.COMPOUNDRULE:
-            by_rules = self.compound_parts_by_rules(word, allow_nosuggest=allow_nosuggest)
-        else:
-            by_rules = iter(())
-
-        def bad_compound(compound):
-            return self.bad_compound(compound, captype)
-
-        yield from (compound
-                    for compound in itertools.chain(by_flags, by_rules)
-                    if not bad_compound(compound))
+            for compound in self.compound_parts_by_rules(word, allow_nosuggest=allow_nosuggest):
+                if not self.bad_compound(compound, captype):
+                    yield compound
 
     def good_form(
             self,
@@ -262,39 +261,30 @@ class Lookup:
     def try_affix_forms(
             self,
             word: str,
+            prefix_flags: List[Flag],
+            suffix_flags: List[Flag],
+            forbidden_flags: List[Flag],
             compoundpos: Optional[CompoundPos] = None) -> Iterator[WordForm]:
 
         yield WordForm(word, word)    # "Whole word" is always existing option
 
         aff = self.aff
 
-        # FIXME: This is incredibly dirty and should be done on "compounder" side, just passing
-        # "...please find me forms with THIS flags/without THOSE flags"
-        if compoundpos:
-            suffix_allowed = compoundpos == CompoundPos.END or aff.COMPOUNDPERMITFLAG
-            prefix_allowed = compoundpos == CompoundPos.BEGIN or aff.COMPOUNDPERMITFLAG
-            prefix_required_flags = [] if compoundpos == CompoundPos.BEGIN else [aff.COMPOUNDPERMITFLAG]
-            suffix_required_flags = [] if compoundpos == CompoundPos.END else [aff.COMPOUNDPERMITFLAG]
-            forbidden_flags = [aff.COMPOUNDFORBIDFLAG] if aff.COMPOUNDFORBIDFLAG else []
-        else:
-            suffix_allowed = True
-            prefix_allowed = True
-            prefix_required_flags = []
-            suffix_required_flags = []
-            forbidden_flags = []
+        suffix_allowed = compoundpos in [None, CompoundPos.END] or aff.COMPOUNDPERMITFLAG
+        prefix_allowed = compoundpos in [None, CompoundPos.BEGIN] or aff.COMPOUNDPERMITFLAG
 
         if suffix_allowed:
-            yield from self.desuffix(word, required_flags=suffix_required_flags, forbidden_flags=forbidden_flags)
+            yield from self.desuffix(word, required_flags=suffix_flags, forbidden_flags=forbidden_flags)
 
         if prefix_allowed:
-            for form in self.deprefix(word, required_flags=prefix_required_flags, forbidden_flags=forbidden_flags):
+            for form in self.deprefix(word, required_flags=prefix_flags, forbidden_flags=forbidden_flags):
                 yield form
 
                 if suffix_allowed and form.prefix and form.prefix.crossproduct:
                     yield from (
                         form2.replace(text=form.text, prefix=form.prefix)
                         for form2 in self.desuffix(form.stem,
-                                                   required_flags=suffix_required_flags,
+                                                   required_flags=suffix_flags,
                                                    forbidden_flags=forbidden_flags,
                                                    crossproduct=True)
                     )
@@ -373,6 +363,18 @@ class Lookup:
             allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
+        forbidden_flags = compact(aff.COMPOUNDFORBIDFLAG)
+        permitflags = compact(aff.COMPOUNDPERMITFLAG)
+        prefix_flags = {
+            CompoundPos.BEGIN: [],
+            CompoundPos.MIDDLE: permitflags,
+            CompoundPos.END: permitflags,
+        }
+        suffix_flags = {
+            CompoundPos.BEGIN: [],
+            CompoundPos.MIDDLE: permitflags,
+            CompoundPos.END: permitflags,
+        }
 
         # If it is middle of compounding process "the rest of the word is the whole last part" is always
         # possible
@@ -380,6 +382,8 @@ class Lookup:
             for form in self.word_forms(word_rest,
                                         captype=captype,
                                         compoundpos=CompoundPos.END,
+                                        prefix_flags=permitflags,
+                                        forbidden_flags=forbidden_flags,
                                         allow_nosuggest=allow_nosuggest):
                 yield [form]
         else:
@@ -401,6 +405,9 @@ class Lookup:
             rest = word_rest[pos:]
 
             for form in self.word_forms(beg, captype=captype, compoundpos=compoundpos,
+                                        prefix_flags=prefix_flags[compoundpos],
+                                        suffix_flags=suffix_flags[compoundpos],
+                                        forbidden_flags=forbidden_flags,
                                         allow_nosuggest=allow_nosuggest):
                 parts = [*prev_parts, form]
                 for others in self.compound_parts_by_flags(rest, parts, captype=captype,
@@ -410,6 +417,9 @@ class Lookup:
             if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
                 # FIXME: for now, we only try duplicating the first word's letter
                 for form in self.word_forms(beg + beg[-1], captype=captype, compoundpos=compoundpos,
+                                            prefix_flags=prefix_flags[compoundpos],
+                                            suffix_flags=suffix_flags[compoundpos],
+                                            forbidden_flags=forbidden_flags,
                                             allow_nosuggest=allow_nosuggest):
                     parts = [*prev_parts, form]
                     for others in self.compound_parts_by_flags(rest, parts, captype=captype,
@@ -499,3 +509,7 @@ class Lookup:
                     return True
 
         return False
+
+
+def compact(*args):
+    return [*filter(None, args)]
