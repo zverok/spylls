@@ -56,9 +56,11 @@ class Lookup:
 
     def __call__(self, word: str, *,
                  capitalization=True,
-                 with_compounds=None,
                  allow_nosuggest=True,
                  allow_break=True) -> bool:
+
+        def is_correct(variant):
+            return any(self.good_forms(variant, capitalization=capitalization, allow_nosuggest=allow_nosuggest))
 
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
@@ -76,73 +78,59 @@ class Lookup:
         if NUMBER_REGEXP.fullmatch(word):
             return True
 
-        def is_found(variant):
-            return any(
-                self.analyze(variant,
-                             with_compounds=with_compounds,
-                             capitalization=capitalization,
-                             allow_nosuggest=allow_nosuggest)
-            )
-
-        if is_found(word):
+        if is_correct(word):
             return True
 
         if not allow_break:
             return False
 
-        def try_break(text, depth=0):
-            if depth > 10:
-                return
-
-            yield [text]
-            for pat in self.aff.BREAK:
-                for m in re.finditer(pat.regexp, text):
-                    start = text[:m.start(1)]
-                    rest = text[m.end(1):]
-                    for breaking in try_break(rest, depth=depth+1):
-                        yield [start, *breaking]
-
-        for parts in try_break(word):
-            if all(is_found(part) for part in parts if part):
+        for parts in self.try_break(word):
+            if all(is_correct(part) for part in parts if part):
                 return True
 
         return False
 
-    def analyze(self, word: str, *,
-                capitalization=True,
-                with_compounds=None,
-                allow_nosuggest=True) -> Iterator[Union[WordForm, Compound]]:
+    def try_break(self, text, depth=0):
+        if depth > 10:
+            return
 
-        def analyze_internal(variant, captype):
-            if with_compounds is not True:
-                yield from self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
-            if with_compounds is not False:
-                yield from self.compound_parts(variant, captype=captype, allow_nosuggest=allow_nosuggest)
+        yield [text]
+        for pat in self.aff.BREAK:
+            for m in re.finditer(pat.regexp, text):
+                start = text[:m.start(1)]
+                rest = text[m.end(1):]
+                for breaking in self.try_break(rest, depth=depth+1):
+                    yield [start, *breaking]
+
+    def good_forms(self, word: str, *,
+                   capitalization=True,
+                   allow_nosuggest=True) -> Iterator[Union[WordForm, Compound]]:
 
         if capitalization:
             captype, variants = self.collation.variants(word)
-
-            for v in variants:
-                yield from analyze_internal(v, captype=captype)
         else:
-            yield from analyze_internal(word, captype=cap.guess(word))
+            captype = cap.guess(word)
+            variants = [word]
 
-    def word_forms(
-            self,
-            word: str,
-            captype: cap.Cap,
-            prefix_flags: List[Flag] = [],
-            suffix_flags: List[Flag] = [],
-            forbidden_flags: List[Flag] = [],
-            compoundpos: Optional[CompoundPos] = None,
-            allow_nosuggest=True,
-            with_forbidden=False) -> Iterator[WordForm]:
+        for variant in variants:
+            yield from self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
+            yield from self.compound_parts(variant, captype=captype, allow_nosuggest=allow_nosuggest)
 
-        def good_form(form, **kwarg):
-            return self.good_form(form, compoundpos=compoundpos,
-                                  captype=captype,
-                                  allow_nosuggest=allow_nosuggest,
-                                  **kwarg)
+    def word_forms(self,
+                   word: str,
+                   captype: cap.Cap,
+                   prefix_flags: List[Flag] = [],
+                   suffix_flags: List[Flag] = [],
+                   forbidden_flags: List[Flag] = [],
+                   compoundpos: Optional[CompoundPos] = None,
+                   allow_nosuggest=True,
+                   with_forbidden=False) -> Iterator[WordForm]:
+
+        def is_good_form(form, **kwarg):
+            return self.is_good_form(form, compoundpos=compoundpos,
+                                     captype=captype,
+                                     allow_nosuggest=allow_nosuggest,
+                                     **kwarg)
 
         for form in self.try_affix_forms(word, compoundpos=compoundpos,
                                          prefix_flags=prefix_flags, suffix_flags=suffix_flags,
@@ -156,7 +144,7 @@ class Lookup:
 
             for homonym in self.dic.homonyms(form.stem):
                 candidate = form.replace(root=homonym)
-                if good_form(candidate):
+                if is_good_form(candidate):
                     found = True
                     yield candidate
 
@@ -165,34 +153,33 @@ class Lookup:
             if self.aff.FORCEUCASE and captype == cap.Cap.INIT and compoundpos == CompoundPos.BEGIN:
                 for homonym in self.dic.homonyms(form.stem.lower()):
                     candidate = form.replace(root=homonym)
-                    if good_form(candidate):
+                    if is_good_form(candidate):
                         found = True
                         yield candidate
 
             if not found and not compoundpos:
                 for homonym in self.dic.homonyms(form.stem, ignorecase=True):
                     candidate = form.replace(root=homonym)
-                    if good_form(candidate, check_cap=True):
+                    if is_good_form(candidate, check_cap=True):
                         yield candidate
 
     def compound_parts(self, word: str, captype: cap.Cap, allow_nosuggest=True) -> Iterator[Compound]:
         if self.aff.COMPOUNDBEGIN or self.aff.COMPOUNDFLAG:
             for compound in self.compound_parts_by_flags(word, captype=captype, allow_nosuggest=allow_nosuggest):
-                if not self.bad_compound(compound, captype):
+                if not self.is_bad_compound(compound, captype):
                     yield compound
 
         if self.aff.COMPOUNDRULE:
             for compound in self.compound_parts_by_rules(word, allow_nosuggest=allow_nosuggest):
-                if not self.bad_compound(compound, captype):
+                if not self.is_bad_compound(compound, captype):
                     yield compound
 
-    def good_form(
-            self,
-            form: WordForm,
-            compoundpos: Optional[CompoundPos],
-            captype: cap.Cap,
-            allow_nosuggest=True,
-            check_cap=False) -> bool:
+    def is_good_form(self,
+                     form: WordForm,
+                     compoundpos: Optional[CompoundPos],
+                     captype: cap.Cap,
+                     allow_nosuggest=True,
+                     check_cap=False) -> bool:
 
         aff = self.aff
 
@@ -258,13 +245,12 @@ class Lookup:
     # Affixes-related algorithms
     # --------------------------
 
-    def try_affix_forms(
-            self,
-            word: str,
-            prefix_flags: List[Flag],
-            suffix_flags: List[Flag],
-            forbidden_flags: List[Flag],
-            compoundpos: Optional[CompoundPos] = None) -> Iterator[WordForm]:
+    def try_affix_forms(self,
+                        word: str,
+                        prefix_flags: List[Flag],
+                        suffix_flags: List[Flag],
+                        forbidden_flags: List[Flag],
+                        compoundpos: Optional[CompoundPos] = None) -> Iterator[WordForm]:
 
         yield WordForm(word, word)    # "Whole word" is always existing option
 
@@ -289,13 +275,12 @@ class Lookup:
                                                    crossproduct=True)
                     )
 
-    def desuffix(
-            self,
-            word: str,
-            required_flags: Sequence[Optional[Flag]] = [],
-            forbidden_flags: Sequence[Optional[Flag]] = [],
-            nested: bool = False,
-            crossproduct: bool = False) -> Iterator[WordForm]:
+    def desuffix(self,
+                 word: str,
+                 required_flags: Sequence[Optional[Flag]] = [],
+                 forbidden_flags: Sequence[Optional[Flag]] = [],
+                 nested: bool = False,
+                 crossproduct: bool = False) -> Iterator[WordForm]:
 
         def good_suffix(suffix):
             return (not crossproduct or suffix.crossproduct) and \
@@ -321,12 +306,11 @@ class Lookup:
                                            crossproduct=crossproduct):
                     yield form2.replace(suffix2=suffix, text=word)
 
-    def deprefix(
-            self,
-            word: str,
-            required_flags: Sequence[Optional[Flag]] = [],
-            forbidden_flags: Sequence[Optional[Flag]] = [],
-            nested: bool = False) -> Iterator[WordForm]:
+    def deprefix(self,
+                 word: str,
+                 required_flags: Sequence[Optional[Flag]] = [],
+                 forbidden_flags: Sequence[Optional[Flag]] = [],
+                 nested: bool = False) -> Iterator[WordForm]:
 
         def good_prefix(prefix):
             return all(f in prefix.flags for f in required_flags) and \
@@ -354,13 +338,12 @@ class Lookup:
     # Compounding details
     # -------------------
 
-    def compound_parts_by_flags(
-            self,
-            word_rest: str,
-            prev_parts: List[WordForm] = [],
-            *,
-            captype: cap.Cap,
-            allow_nosuggest=True) -> Iterator[List[WordForm]]:
+    def compound_parts_by_flags(self,
+                                word_rest: str,
+                                prev_parts: List[WordForm] = [],
+                                *,
+                                captype: cap.Cap,
+                                allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
         forbidden_flags = compact(aff.COMPOUNDFORBIDFLAG)
@@ -426,12 +409,11 @@ class Lookup:
                                                                allow_nosuggest=allow_nosuggest):
                         yield [form.replace(text=beg), *others]
 
-    def compound_parts_by_rules(
-            self,
-            word_rest: str,
-            prev_parts: List[data.dic.Word] = [],
-            rules: Optional[List[data.aff.CompoundRule]] = None,
-            allow_nosuggest=True) -> Iterator[List[WordForm]]:
+    def compound_parts_by_rules(self,
+                                word_rest: str,
+                                prev_parts: List[data.dic.Word] = [],
+                                rules: Optional[List[data.aff.CompoundRule]] = None,
+                                allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
         # initial run
@@ -464,7 +446,7 @@ class Lookup:
                     for rest in by_rules:
                         yield [WordForm(beg, beg), *rest]
 
-    def bad_compound(self, compound, captype):
+    def is_bad_compound(self, compound, captype):
         aff = self.aff
 
         if aff.FORCEUCASE and captype not in [cap.Cap.ALL, cap.Cap.INIT]:
