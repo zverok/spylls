@@ -66,7 +66,7 @@ class Suggest:
         def filter_suggestions(suggestions):
             for suggestion in suggestions:
                 if isinstance(suggestion, MultiWordSuggestion):
-                    if all(check_suggestion(word) for word in suggestion.words):
+                    if all(check_suggestion(word, allow_break=False) for word in suggestion.words):
                         yield suggestion.stringify()
                         if suggestion.allow_dash:
                             yield suggestion.stringify('-')
