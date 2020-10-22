@@ -88,7 +88,7 @@ class Suggest:
                 # Don't change text
                 pass
             else:
-                text = cap.coerce(text, captype)
+                text = self.aff.collation.coerce(text, captype)
                 if text != suggestion.text and is_forbidden(text):
                     text = suggestion.text
             if is_forbidden(text):
@@ -99,7 +99,7 @@ class Suggest:
             handled.add(text)
             yield suggestion.replace(text=oconv(text))
 
-        captype, variants = cap.variants(word)
+        captype, variants = self.aff.collation.fix_variants(word)
 
         if self.aff.CHECKSHARPS and 'ß' in word and cap.guess(word.replace('ß', '')) == cap.Cap.ALL:
             captype = cap.Cap.ALL

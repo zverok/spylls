@@ -52,7 +52,6 @@ class Lookup:
     def __init__(self, aff: data.aff.Aff, dic: data.dic.Dic):
         self.aff = aff
         self.dic = dic
-        self.collation = cap.Collation(sharp_s=self.aff.CHECKSHARPS, dotless_i=self.aff.LANG in ['tr', 'az', 'crh'])
 
     def __call__(self, word: str, *,
                  capitalization=True,
@@ -107,7 +106,7 @@ class Lookup:
                    allow_nosuggest=True) -> Iterator[Union[WordForm, Compound]]:
 
         if capitalization:
-            captype, variants = self.collation.variants(word)
+            captype, variants = self.aff.collation.variants(word)
         else:
             captype = cap.guess(word)
             variants = [word]

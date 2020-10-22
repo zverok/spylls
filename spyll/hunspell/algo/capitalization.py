@@ -16,56 +16,6 @@ def guess(word: str) -> Cap:
     return Cap.HUH
 
 
-def coerce(word: str, cap: Cap) -> str:
-    if cap in (Cap.INIT, Cap.HUHINIT):
-        return upperfirst(word)
-    if cap == Cap.ALL:
-        return word.upper()
-    return word
-
-
-def lowerfirst(word: str) -> str:
-    return word[0].lower() + word[1:]
-
-
-def upperfirst(word: str) -> str:
-    return word[0].upper() + word[1:]
-
-
-def lower(word: str) -> str:
-    # turkic "lowercase dot i" to latinic "i"
-    return word.lower().replace('i̇', 'i')
-
-
-def capitalize(word: str) -> str:
-    return word[0].upper() + lower(word[1:])
-
-
-def variants(word: str, *, lang_with_dot_i=False) -> Tuple[Cap, List[str]]:
-    captype = guess(word)
-
-    was_dot_i = word and word[0] == 'İ'
-    allow_lower = not was_dot_i or lang_with_dot_i
-
-    if captype == Cap.NO:
-        return (captype, [word])
-    if captype == Cap.INIT:
-        if allow_lower:
-            return (captype, [word, lower(word)])
-        return (captype, [word])
-    if captype == Cap.HUHINIT:
-        if allow_lower:
-            return (captype, [word, lowerfirst(word), lower(word), capitalize(word)])
-        return (captype, [word, capitalize(word)])
-        # TODO: also here and below, consider the theory FooBar meant Foo Bar
-    if captype == Cap.HUH:
-        return (captype, [word, lower(word)])
-    # Cap.ALL:
-    if allow_lower:
-        return (captype, [word, lower(word), capitalize(word)])
-    return (captype, [word, capitalize(word)])
-
-
 class Collation:
     def __init__(self, sharp_s=False, dotless_i=False):
         self.sharp_s = sharp_s
@@ -97,6 +47,17 @@ class Collation:
 
         return [lowered]
 
+    def upper(self, word):
+        if self.dotless_i:
+            word = word.translate(str.maketrans('iı', 'İI'))
+        return word.upper()
+
+    def capitalize(self, word):
+        return (self.upper(word[0]) + lower for lower in self.lower(word[1:]))
+
+    def lowerfirst(self, word):
+        return (letter + word[1:] for letter in self.lower(word[0]))
+
     def variants(self, word: str) -> Tuple[Cap, List[str]]:
         captype = guess(word)
 
@@ -105,12 +66,36 @@ class Collation:
         elif captype == Cap.INIT:
             result = [word, *self.lower(word)]
         elif captype == Cap.HUHINIT:
-            result = [word, *(letter + word[1:] for letter in self.lower(word[0]))]
+            result = [word, *self.lowerfirst(word)]
             # TODO: also here and below, consider the theory FooBar meant Foo Bar
         elif captype == Cap.HUH:
             result = [word]
         elif captype == Cap.ALL:
-            result = [word, *self.lower(word),
-                      *(word[0] + lower for lower in self.lower(word[1:]))]
+            result = [word, *self.lower(word), *self.capitalize(word)]
 
         return (captype, result)
+
+    def fix_variants(self, word: str) -> Tuple[Cap, List[str]]:
+        captype = guess(word)
+
+        if captype == Cap.NO:
+            result = [word]
+        elif captype == Cap.INIT:
+            result = [word, *self.lower(word)]
+        elif captype == Cap.HUHINIT:
+            result = [word, *self.lowerfirst(word), *self.lower(word), *self.capitalize(word)]
+            # TODO: also here and below, consider the theory FooBar meant Foo Bar
+        elif captype == Cap.HUH:
+            result = [word, *self.lower(word)]
+        elif captype == Cap.ALL:
+            result = [word, *self.lower(word), *self.capitalize(word)]
+
+        return (captype, result)
+
+    def coerce(self, word: str, cap: Cap) -> str:
+        if cap in (Cap.INIT, Cap.HUHINIT):
+            return self.upper(word[0]) + word[1:]
+        if cap == Cap.ALL:
+            # FIXME: Turkic?
+            return self.upper(word)
+        return word
