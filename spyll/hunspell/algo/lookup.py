@@ -114,7 +114,7 @@ class Lookup:
 
         for variant in variants:
             yield from self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
-            yield from self.compound_parts(variant, captype=captype, allow_nosuggest=allow_nosuggest)
+            yield from self.compounds(variant, captype=captype, allow_nosuggest=allow_nosuggest)
 
     def word_forms(self,
                    word: str,
@@ -163,14 +163,14 @@ class Lookup:
                     if is_good_form(candidate, check_cap=True):
                         yield candidate
 
-    def compound_parts(self, word: str, captype: cap.Cap, allow_nosuggest=True) -> Iterator[Compound]:
+    def compounds(self, word: str, captype: cap.Cap, allow_nosuggest=True) -> Iterator[Compound]:
         if self.aff.COMPOUNDBEGIN or self.aff.COMPOUNDFLAG:
-            for compound in self.compound_parts_by_flags(word, captype=captype, allow_nosuggest=allow_nosuggest):
+            for compound in self.compounds_by_flags(word, captype=captype, allow_nosuggest=allow_nosuggest):
                 if not self.is_bad_compound(compound, captype):
                     yield compound
 
         if self.aff.COMPOUNDRULE:
-            for compound in self.compound_parts_by_rules(word, allow_nosuggest=allow_nosuggest):
+            for compound in self.compounds_by_rules(word, allow_nosuggest=allow_nosuggest):
                 if not self.is_bad_compound(compound, captype):
                     yield compound
 
@@ -338,12 +338,12 @@ class Lookup:
     # Compounding details
     # -------------------
 
-    def compound_parts_by_flags(self,
-                                word_rest: str,
-                                prev_parts: List[WordForm] = [],
-                                *,
-                                captype: cap.Cap,
-                                allow_nosuggest=True) -> Iterator[List[WordForm]]:
+    def compounds_by_flags(self,
+                           word_rest: str,
+                           prev_parts: List[WordForm] = [],
+                           *,
+                           captype: cap.Cap,
+                           allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
         forbidden_flags = compact(aff.COMPOUNDFORBIDFLAG)
@@ -393,8 +393,8 @@ class Lookup:
                                         forbidden_flags=forbidden_flags,
                                         allow_nosuggest=allow_nosuggest):
                 parts = [*prev_parts, form]
-                for others in self.compound_parts_by_flags(rest, parts, captype=captype,
-                                                           allow_nosuggest=allow_nosuggest):
+                for others in self.compounds_by_flags(rest, parts, captype=captype,
+                                                      allow_nosuggest=allow_nosuggest):
                     yield [form, *others]
 
             if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
@@ -405,15 +405,15 @@ class Lookup:
                                             forbidden_flags=forbidden_flags,
                                             allow_nosuggest=allow_nosuggest):
                     parts = [*prev_parts, form]
-                    for others in self.compound_parts_by_flags(rest, parts, captype=captype,
-                                                               allow_nosuggest=allow_nosuggest):
+                    for others in self.compounds_by_flags(rest, parts, captype=captype,
+                                                          allow_nosuggest=allow_nosuggest):
                         yield [form.replace(text=beg), *others]
 
-    def compound_parts_by_rules(self,
-                                word_rest: str,
-                                prev_parts: List[data.dic.Word] = [],
-                                rules: Optional[List[data.aff.CompoundRule]] = None,
-                                allow_nosuggest=True) -> Iterator[List[WordForm]]:
+    def compounds_by_rules(self,
+                           word_rest: str,
+                           prev_parts: List[data.dic.Word] = [],
+                           rules: Optional[List[data.aff.CompoundRule]] = None,
+                           allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
         # initial run
@@ -442,7 +442,7 @@ class Lookup:
                 flag_sets = [w.flags for w in parts]
                 compoundrules = [r for r in rules if r.partial_match(flag_sets)]
                 if compoundrules:
-                    by_rules = self.compound_parts_by_rules(word_rest[pos:], rules=compoundrules, prev_parts=parts)
+                    by_rules = self.compounds_by_rules(word_rest[pos:], rules=compoundrules, prev_parts=parts)
                     for rest in by_rules:
                         yield [WordForm(beg, beg), *rest]
 
