@@ -5,12 +5,12 @@ from spyll.hunspell.dictionary import Dictionary
 # from spyll.hunspell.algo.lookup import analyze
 from spyll.hunspell.algo.lookup import CompoundPos
 
-dic = Dictionary.from_files('tests/fixtures/hunspell-orig/iconv2')
+dic = Dictionary.from_files('tests/integrational/fixtures/checksharps')
 
 # print(dic.aff)
 # print(list('र्‌य'))
 # print(list('र्‌य'))
-print(dic.lookup('Gag'))
+print(dic.lookup('MÜßIG'))
 
 # print(dic.aff.pfx)
 # print(list(analyze(dic.aff, dic.dic, 'foo-bar')))

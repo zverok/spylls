@@ -11,7 +11,7 @@ from typing import List, Set, Dict, Tuple, Optional, NewType
 from pygtrie import CharTrie  # type: ignore
 
 from spyll.hunspell.data import phonet
-from spyll.hunspell.algo.capitalization import Collation
+from spyll.hunspell.algo.capitalization import Collation, GermanCollation, TurkicCollation
 
 
 Flag = NewType('Flag', str)
@@ -301,8 +301,13 @@ class Aff:
 
         self.prefixes_index = AffixesIndex(prefixes)
 
-        # TODO: more robust language code check!
-        self.collation = Collation(sharp_s=self.CHECKSHARPS, dotless_i=self.LANG in ['tr', 'tr_TR', 'az', 'crh'])
+        if self.CHECKSHARPS:
+            self.collation = GermanCollation()
+        elif self.LANG in ['tr', 'tr_TR', 'az', 'crh']:
+            # TODO: more robust language code check!
+            self.collation = TurkicCollation()
+        else:
+            self.collation = Collation()
 
     def use_dash(self) -> bool:
         return '-' in self.TRY or 'a' in self.TRY

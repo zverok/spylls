@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from spyll.hunspell import data
 from spyll.hunspell.data.aff import Flag
-import spyll.hunspell.algo.capitalization as cap
+from spyll.hunspell.algo.capitalization import Type as CapType
 import spyll.hunspell.algo.permutations as pmt
 
 CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
@@ -108,8 +108,10 @@ class Lookup:
         if capitalization:
             captype, variants = self.aff.collation.variants(word)
         else:
-            captype = cap.guess(word)
+            captype = self.aff.collation.guess(word)
             variants = [word]
+
+        # print(captype, variants)
 
         for variant in variants:
             yield from self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
@@ -117,7 +119,7 @@ class Lookup:
 
     def word_forms(self,
                    word: str,
-                   captype: cap.Cap,
+                   captype: CapType,
                    prefix_flags: List[Flag] = [],
                    suffix_flags: List[Flag] = [],
                    forbidden_flags: List[Flag] = [],
@@ -149,7 +151,7 @@ class Lookup:
 
             # If it then might be required by compound end to be capitalized, we should find it EVEN
             # if the check is "without checking different capitalizations"
-            if self.aff.FORCEUCASE and captype == cap.Cap.INIT and compoundpos == CompoundPos.BEGIN:
+            if self.aff.FORCEUCASE and captype == CapType.INIT and compoundpos == CompoundPos.BEGIN:
                 for homonym in self.dic.homonyms(form.stem.lower()):
                     candidate = form.replace(root=homonym)
                     if is_good_form(candidate):
@@ -162,7 +164,7 @@ class Lookup:
                     if is_good_form(candidate, check_cap=True):
                         yield candidate
 
-    def compounds(self, word: str, captype: cap.Cap, allow_nosuggest=True) -> Iterator[Compound]:
+    def compounds(self, word: str, captype: CapType, allow_nosuggest=True) -> Iterator[Compound]:
         if self.aff.COMPOUNDBEGIN or self.aff.COMPOUNDFLAG:
             for compound in self.compounds_by_flags(word, captype=captype, allow_nosuggest=allow_nosuggest):
                 if not self.is_bad_compound(compound, captype):
@@ -176,7 +178,7 @@ class Lookup:
     def is_good_form(self,
                      form: WordForm,
                      compoundpos: Optional[CompoundPos],
-                     captype: cap.Cap,
+                     captype: CapType,
                      allow_nosuggest=True,
                      check_cap=False) -> bool:
 
@@ -188,7 +190,7 @@ class Lookup:
 
         root_flags = form.root.flags
         all_flags = form.flags()
-        root_capitalization = cap.guess(form.root.stem)
+        root_capitalization = aff.collation.guess(form.root.stem)
 
         # investigate = (form.prefix and form.prefix.flag == 'D' and form.suffix and form.suffix.flag == 'A')
 
@@ -201,7 +203,7 @@ class Lookup:
                 return False
             # If the dictionary word is not lowercase, we accept only exactly that
             # case, or ALLCAPS
-            if check_cap and captype != cap.Cap.ALL and root_capitalization != cap.Cap.NO:
+            if check_cap and captype != CapType.ALL and root_capitalization != CapType.NO:
                 return False
 
         # Check affix flags
@@ -341,7 +343,7 @@ class Lookup:
                            word_rest: str,
                            prev_parts: List[WordForm] = [],
                            *,
-                           captype: cap.Cap,
+                           captype: CapType,
                            allow_nosuggest=True) -> Iterator[List[WordForm]]:
 
         aff = self.aff
@@ -448,7 +450,7 @@ class Lookup:
     def is_bad_compound(self, compound, captype):
         aff = self.aff
 
-        if aff.FORCEUCASE and captype not in [cap.Cap.ALL, cap.Cap.INIT]:
+        if aff.FORCEUCASE and captype not in [CapType.ALL, CapType.INIT]:
             if self.dic.has_flag(compound[-1].text, aff.FORCEUCASE):
                 return True
 

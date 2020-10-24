@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from spyll.hunspell import data
 from spyll.hunspell.data.aff import RepPattern
-from spyll.hunspell.algo import ngram_suggest, phonet, permutations as pmt, capitalization as cap
+from spyll.hunspell.algo import ngram_suggest, phonet, permutations as pmt
 
 MAXPHONSUGS = 2
 
@@ -99,10 +99,10 @@ class Suggest:
             handled.add(text)
             yield suggestion.replace(text=oconv(text))
 
-        captype, variants = self.aff.collation.fix_variants(word)
+        captype, variants = self.aff.collation.corrections(word)
 
-        if self.aff.CHECKSHARPS and 'ß' in word and cap.guess(word.replace('ß', '')) == cap.Cap.ALL:
-            captype = cap.Cap.ALL
+        # if self.aff.CHECKSHARPS and 'ß' in word and cap.guess(word.replace('ß', '')) == cap.Cap.ALL:
+        #     captype = cap.Cap.ALL
 
         good = False
         very_good = False
