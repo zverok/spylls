@@ -93,16 +93,13 @@ class Suggest:
                     text = suggestion.text
             if is_forbidden(text):
                 return
-            if text in handled or ignore_included and any(previous in text for previous in handled):
+            if text in handled or ignore_included and any(previous.lower() in text.lower() for previous in handled):
                 return
 
             handled.add(text)
             yield suggestion.replace(text=oconv(text))
 
         captype, variants = self.aff.collation.corrections(word)
-
-        # if self.aff.CHECKSHARPS and 'ß' in word and cap.guess(word.replace('ß', '')) == cap.Cap.ALL:
-        #     captype = cap.Cap.ALL
 
         good = False
         very_good = False
@@ -136,7 +133,7 @@ class Suggest:
             return
 
         ngrams_seen = 0
-        for sug in self.ngram_suggestions(word):
+        for sug in self.ngram_suggestions(word, handled=handled):
             for res in handle_found(Suggestion(sug, 'ngram'), ignore_included=True):
                 ngrams_seen += 1
                 yield res
@@ -219,7 +216,7 @@ class Suggest:
         for suggestion_pair in pmt.twowords(word):
             yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.aff.use_dash())
 
-    def ngram_suggestions(self, word: str) -> Iterator[str]:
+    def ngram_suggestions(self, word: str, handled: Set[str]) -> Iterator[str]:
         def forms_for(word: data.dic.Word, candidate: str):
             # word without prefixes/suffixes is also present...
             # TODO: unless it is forbidden :)
@@ -271,6 +268,7 @@ class Suggest:
                     word.lower(),
                     roots=roots,
                     forms_producer=forms_for,
+                    known={*(word.lower() for word in handled)},
                     maxdiff=self.aff.MAXDIFF,
                     onlymaxdiff=self.aff.ONLYMAXDIFF)
 

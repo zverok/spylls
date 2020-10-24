@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple, List
+from typing import Iterator, Tuple, List, Set
 from operator import itemgetter
 
 from spyll.hunspell import data
@@ -15,7 +15,8 @@ MAXPHONSUGS = 2
 MAXCOMPOUNDSUGS = 3
 
 
-def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
+def ngram_suggest(word: str, *,
+                  roots, forms_producer, known: Set[str], maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
     # TODO: lowering depends on BMP of word, true by default
     # low = True
 
@@ -70,14 +71,15 @@ def ngram_suggest(word: str, *, roots, forms_producer, maxdiff: int, onlymaxdiff
 
     guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
 
-    yield from filter_guesses(guesses2, onlymaxdiff=onlymaxdiff)
+    yield from filter_guesses(guesses2, known=known, onlymaxdiff=onlymaxdiff)
 
 
-def filter_guesses(guesses: List[Tuple[str, float]], *, onlymaxdiff=True) -> Iterator[str]:
+def filter_guesses(guesses: List[Tuple[str, float]], *, known: Set[str], onlymaxdiff=True) -> Iterator[str]:
     same = False
     found = 0
 
     for (value, score) in guesses:
+        # print(value, score, found, known, any(value in known_word for known_word in known))
         if same and score <= 1000:
             continue
 
@@ -86,13 +88,13 @@ def filter_guesses(guesses: List[Tuple[str, float]], *, onlymaxdiff=True) -> Ite
             same = True
         elif score < -100:  # FIXME: what's that? Seems related to last line of score...
             same = True
-            if found > 0 and onlymaxdiff:
+            if found > 0 or onlymaxdiff:
                 continue
 
-        found += 1
+        if not any(known_word in value for known_word in known):
+            found += 1
 
-        # TODO: 1. guessorig vs guess; 2. don't suggest what already was there...
-        yield value
+            yield value
 
 
 def detect_threshold(word: str) -> float:

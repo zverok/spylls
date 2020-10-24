@@ -138,7 +138,7 @@ report('IJ')
 report('1463589')
 report('1463589_utf')
 report('1695964')
-report('i35725', pending=['pernament', 'Permenant', 'Pernament', 'Pernemant'])
+report('i35725', pending=['pernament', 'Pernament'])
 report('i54633')
 report('i58202', pending=['fooBar', 'FooBar', 'BazFoo'])
 

@@ -5,7 +5,8 @@ from spyll.hunspell.dictionary import Dictionary
 from spyll.hunspell.algo import permutations as pmt
 from spyll.hunspell.algo import ngram_suggest, suggest
 
-dic = Dictionary.from_files('tests/integrational/fixtures/sug')
+dic = Dictionary.from_files('tests/integrational/fixtures/i35725')
+# dic = Dictionary.from_files('tests/integrational/fixtures/base')
 
 # print(list(pmt.permutations('rotten-day', use_dash=True)))
 # print([sug for sug in pmt.twowords('rottenday', use_dash=True) if type(sug) == tuple])
@@ -18,5 +19,5 @@ dic = Dictionary.from_files('tests/integrational/fixtures/sug')
 
 # print([*dic.analyzer.analyze('Foobaz')])
 # print(list(dic.suggester.suggest_debug('Brasillian')))
-print(dic.lookup('permanent-'))
-print(list(dic.suggester.suggest_debug('permanent-vacation')))
+print(list(dic.suggester.suggest_debug('Permenant')))
+# print(list(dic.suggester.suggest_debug('loooked')))
