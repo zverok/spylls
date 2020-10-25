@@ -54,7 +54,7 @@ def report(name, *, pending=[]):
         summary += f", {counter['bad']} fails"
     if counter['pending'] > 0:
         summary += f", {counter['pending']} pending"
-    if duration > 0.05:
+    if duration > 0.1:
         stats['slow'] += 1
         summary += f" [{duration:.4f}s]"
 
@@ -106,6 +106,7 @@ report('forceucase')
 report('keepcase', pending=['bar']) # one of suggestions with .
 report('nosuggest')
 report('onlyincompound')
+report('nosplitsugs')
 
 # Funnily enough, those two is working better in Spyll than in Hunspell :)
 # report('opentaal_forbiddenword1')
@@ -116,7 +117,14 @@ report('onlyincompound')
 section('Phonetical suggestions')
 
 report('ph')
-report('ph2')
+report('ph2', pending=[
+    'rootforbiddenroot', # see opentaal_forbidden comments
+    # Exotic ph: options, never seen in real life...
+    'pritiest',
+    'fubarö',
+    'fubarőt',
+    'hepiest'
+    ])
 report('phone')
 
 # ==================

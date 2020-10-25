@@ -212,9 +212,10 @@ class Suggest:
         for suggestion in pmt.doubletwochars(word):
             yield Suggestion(suggestion, 'doubletwochars')
 
-        # perhaps we forgot to hit space and two words ran together
-        for suggestion_pair in pmt.twowords(word):
-            yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.aff.use_dash())
+        if not self.aff.NOSPLITSUGS:
+            # perhaps we forgot to hit space and two words ran together
+            for suggestion_pair in pmt.twowords(word):
+                yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.aff.use_dash())
 
     def ngram_suggestions(self, word: str, handled: Set[str]) -> Iterator[str]:
         def forms_for(word: data.dic.Word, candidate: str):

@@ -1,0 +1,2 @@
+Added dictionaries:
+* nosplitsugs
