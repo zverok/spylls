@@ -131,7 +131,8 @@ report('phone')
 section('IO quirks')
 
 report('oconv')
-report('utf8_nonbmp')
+# It actually works better than in Hunspell... and doesn't test anything special for us
+# report('utf8_nonbmp')
 
 # ==================
 section('Edge cases and bugs')
