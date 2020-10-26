@@ -1,7 +1,7 @@
 import re
 
 from enum import Enum
-from typing import List, Iterator, Union, Optional, Sequence
+from typing import List, Iterator, Union, Optional
 
 import dataclasses
 from dataclasses import dataclass
@@ -16,15 +16,32 @@ CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
 NUMBER_REGEXP = re.compile(r'^\d+(\.\d+)?$')
 
 
+# AffixForm is a hypothesis of how some word might be split into stem, suffixes and prefixes.
+# It always has full text and stem, and may have up to two suffixes, and up to two prefixes.
+# (Affix form without any affix is also valid.)
+#
+# The following is always true (if we consider absent affixes just empty string):
+#
+# prefix + prefix2 + stem + suffix2 + suffix = text
+#
+# prefix2/suffix2 are "secondary", so if the word has only one suffix, it is stored in ``suffix`` and
+# ``suffix2`` is ``None``.
+#
+# If the word form's stem is found is dictionary ``in_dictionary`` attribute is present (though it
+# does not implies that dictionary word is compatible with suffixes and prefixes).
+#
 @dataclass
-class WordForm:
+class AffixForm:
     text: str
+
     stem: str
+
     prefix: Optional[data.aff.Prefix] = None
     suffix: Optional[data.aff.Suffix] = None
     prefix2: Optional[data.aff.Prefix] = None
     suffix2: Optional[data.aff.Suffix] = None
-    root: Optional[data.dic.Word] = None
+
+    in_dictionary: Optional[data.dic.Word] = None
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
@@ -33,7 +50,7 @@ class WordForm:
         return not self.suffix and not self.prefix
 
     def flags(self):
-        flags = self.root.flags if self.root else set()
+        flags = self.in_dictionary.flags if self.in_dictionary else set()
         if self.prefix:
             flags = flags.union(self.prefix.flags)
         if self.suffix:
@@ -42,10 +59,34 @@ class WordForm:
         return flags
 
     def all_affixes(self):
-        return list(filter(None, [self.prefix2, self.prefix, self.suffix, self.suffix2]))
+        return compact(self.prefix2, self.prefix, self.suffix, self.suffix2)
+
+    def __repr__(self):
+        result = f'AffixForm({self.text} = '
+        if self.prefix:
+            result += f'{self.prefix!r} + '
+        if self.prefix2:
+            result += f'{self.prefix2!r} + '
+        result += self.stem
+        if self.suffix2:
+            result += f' + {self.suffix2!r}'
+        if self.suffix:
+            result += f' + {self.suffix!r}'
+        result += ')'
+        return result
 
 
-Compound = List[WordForm]
+# CompoundForm is a hypothesis of how some word could be split into several AffixForms (word parts
+# with their own stems, and possible affixes).
+# Typically, only first part of compound is allowed to have prefix, and only last part is allowed
+# to have suffix, but there are languages where middle parts can have affixes too, which is
+# specified by special flags.
+CompoundForm = List[AffixForm]
+
+
+# Every word form (hypothesis about "this string may correspond to known affixes/dictionary this way")
+# is either affix form, or compound one.
+WordForm = Union[AffixForm, CompoundForm]
 
 
 class Lookup:
@@ -53,37 +94,69 @@ class Lookup:
         self.aff = aff
         self.dic = dic
 
+    # The outermost word correctness check.
+    #
+    # Basically, prepares word for check (converting/removing chars), and then checks whether
+    # the word is properly spelled. If it is not, also tries to break word by break-points (like
+    # dashes), and check each part separately.
+    #
+    # Boolean flags are used when the Lookup is called from Suggest, meaning:
+    #
+    # * ``capitalization`` -- if ``False``, check ONLY exactly this capitalization
+    # * ``allow_nosuggest`` -- if ``False``, don't consider correct words with NOSUGGEST flag
+    # * ``allow_break`` -- if ``False``, don't try to break word by dashes and check separately
+    #
     def __call__(self, word: str, *,
                  capitalization=True,
                  allow_nosuggest=True,
                  allow_break=True) -> bool:
 
-        def is_correct(variant):
-            return any(self.good_forms(variant, capitalization=capitalization, allow_nosuggest=allow_nosuggest))
+        # The word is considered correct, if it can be deconstructed into a "good form" (the form
+        # that is possible to produce from current dictionary: either it is stem with some affixes,
+        # or compound word: list of stem+affixes groups.
+        def is_correct(w):
+            return any(self.good_forms(w, capitalization=capitalization, allow_nosuggest=allow_nosuggest))
 
+        # If there are entries in the dictionary matching the entire word, and all of those entries
+        # are marked with "forbidden" flag, this word can't be considered correct.
         if self.aff.FORBIDDENWORD and self.dic.has_flag(word, self.aff.FORBIDDENWORD, for_all=True):
             return False
 
+        # Convert word before lookup with ICONV table: usually, it is normalization of apostrophes,
+        # UTF chars with diacritics (which might have several different forms), and such.
+        # See ``aff.ConvTable`` for the full algorithm (it is more complex than just replace one
+        # substring with another).
         if self.aff.ICONV:
             word = self.aff.ICONV(word)
 
-        # print(list(word))
+        # Remove characters that should be ignored (for example, in Arabic and Hebrew, vowels should
+        # be removed before spellchecking)
         if self.aff.IGNORE:
-            word = word.translate(str.maketrans('', '', self.aff.IGNORE))
-            # print(list(word))
+            word = word.translate(self.aff.IGNORE.tr)
 
         # Numbers are allowed and considered "good word" always
         # TODO: check in hunspell's code, if there are some exceptions?..
         if NUMBER_REGEXP.fullmatch(word):
             return True
 
+        # If the whole word is correct
         if is_correct(word):
             return True
 
+        # ``allow_break=False`` might've been passed from ``Suggest`` and mean we shouldn't try to
+        # break word.
         if not allow_break:
             return False
 
+        # ``try_break`` recursively produces all possible lists of word breaking by break patterns
+        # (like dashes). For example, if we are checking the word "pre-processed-meat", we'll
+        # have ["pre", "processed-meat"], ["pre", "processed", "meat"] and ["pre-processed", "meat"].
+        # This is necessary (instead of just breaking the word by all breakpoints, and checking
+        # ["pre", "processed", "meat"]), because the dictionary might contain word "pre-processed"
+        # as a separate entity, so ["pre-processed", "meat"] would be considered correct, and the
+        # other two would not, if there is no separate entry on "pre".
         for parts in self.try_break(word):
+            # If all parts in this variant of the breaking is correct, the whole word considered correct.
             if all(is_correct(part) for part in parts if part):
                 return True
 
@@ -101,31 +174,66 @@ class Lookup:
                 for breaking in self.try_break(rest, depth=depth+1):
                     yield [start, *breaking]
 
+    # The main producer of correct word forms (e.g. ways the proposed string might correspond to our
+    # dictionary/affixes). If there is at least one, the word is correctly spelled. There could be
+    # many correct forms for one spelling (e.g. word "building" might be a noun "building", or infinitive
+    # "build + ing").
+    #
+    # The method returns generator (forms are produced lazy), so it doesn't have performance
+    # overhead when just needs to check "any correct form exists".
+    #
+    # Might be also used for investigative/debugging purpose this way:
+    #
+    # dic = Dictionary.from_files('dictionaries/en_US')
+    # print(*dic.lookuper.good_forms('spells'))
+    # # => AffixForm(spells = spells) -- option 1: "spells" is the whole word, present in dictionary
+    # # => AffixForm(spells = spell + Suffix(s: S×, on [[^sxzhy]]$)) -- option 2: word "spell" + suffix "s"
     def good_forms(self, word: str, *,
                    capitalization=True,
-                   allow_nosuggest=True) -> Iterator[Union[WordForm, Compound]]:
+                   allow_nosuggest=True) -> Iterator[WordForm]:
 
+        # "capitalization" might be ``False`` if it is passed from ``Suggest``, meaning "check only
+        # this exact case"
         if capitalization:
+            # Collaction calculates
+            # * word's capitalization (none -- all letters are small, init -- first
+            # letter is capitalized, all -- all leters are capital, HUH -- some letters are small,
+            # some capitalized, first is small; HUHINIT -- same, but the first is capital)
+            # * how it might've looked in the dictionary, if we assume the current form is correct
+            #
+            # For example, if we pass "Cat", the captype would be INIT, and variants ["Cat", "cat"],
+            # the latter would be found in dictionary. If we pass "Paris", captype is INIT, variants
+            # are ["Paris", "paris"], and the _first_ one is found in the dictionary; that's why
+            # we need to check all variants.
+            #
+            # See ``capitalization.Collation`` for capitalization quirks.
             captype, variants = self.aff.collation.variants(word)
         else:
             captype = self.aff.collation.guess(word)
             variants = [word]
 
-        # print(captype, variants)
-
+        # Now, for each of capitalization variants possible
         for variant in variants:
-            yield from self.word_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
-            yield from self.compounds(variant, captype=captype, allow_nosuggest=allow_nosuggest)
+            # ...we yield all possible affix forms
+            yield from self.affix_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
+            # ...and then all possible compound forms
+            yield from self.compound_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
 
-    def word_forms(self,
-                   word: str,
-                   captype: CapType,
-                   prefix_flags: List[Flag] = [],
-                   suffix_flags: List[Flag] = [],
-                   forbidden_flags: List[Flag] = [],
-                   compoundpos: Optional[CompoundPos] = None,
-                   allow_nosuggest=True,
-                   with_forbidden=False) -> Iterator[WordForm]:
+    # Produces correct affix forms of the given words, e.g. all ways in which it can be split into
+    # stem+affixes, such that the stem would be present in the dictionary, and stem and all affixes
+    # would be compatible with each other.
+    #
+    # prefix flags, suffix flags, forbidden flags and compoundpos are passed when the method is
+    # called from ``compound_xxx`` family of methods.
+    def affix_forms(self,
+                    word: str,
+                    captype: CapType,
+                    allow_nosuggest=True,
+                    prefix_flags: List[Flag] = [],
+                    suffix_flags: List[Flag] = [],
+                    forbidden_flags: List[Flag] = [],
+                    compoundpos: Optional[CompoundPos] = None,
+                    with_forbidden=False) -> Iterator[AffixForm]:
 
         def is_good_form(form, **kwarg):
             return self.is_good_form(form, compoundpos=compoundpos,
@@ -133,9 +241,9 @@ class Lookup:
                                      allow_nosuggest=allow_nosuggest,
                                      **kwarg)
 
-        for form in self.try_affix_forms(word, compoundpos=compoundpos,
-                                         prefix_flags=prefix_flags, suffix_flags=suffix_flags,
-                                         forbidden_flags=forbidden_flags):
+        for form in self.produce_affix_forms(word, compoundpos=compoundpos,
+                                             prefix_flags=prefix_flags, suffix_flags=suffix_flags,
+                                             forbidden_flags=forbidden_flags):
             found = False
             # Base (no suffixes) homonym is allowed if exists.
             # And if it would not, we would not be here at all.
@@ -144,7 +252,7 @@ class Lookup:
                     return
 
             for homonym in self.dic.homonyms(form.stem):
-                candidate = form.replace(root=homonym)
+                candidate = form.replace(in_dictionary=homonym)
                 if is_good_form(candidate):
                     found = True
                     yield candidate
@@ -153,30 +261,134 @@ class Lookup:
             # if the check is "without checking different capitalizations"
             if self.aff.FORCEUCASE and captype == CapType.INIT and compoundpos == CompoundPos.BEGIN:
                 for homonym in self.dic.homonyms(form.stem.lower()):
-                    candidate = form.replace(root=homonym)
+                    candidate = form.replace(in_dictionary=homonym)
                     if is_good_form(candidate):
                         found = True
                         yield candidate
 
             if not found and not compoundpos:
                 for homonym in self.dic.homonyms(form.stem, ignorecase=True):
-                    candidate = form.replace(root=homonym)
+                    candidate = form.replace(in_dictionary=homonym)
                     if is_good_form(candidate, check_cap=True):
                         yield candidate
 
-    def compounds(self, word: str, captype: CapType, allow_nosuggest=True) -> Iterator[Compound]:
+    # Produces all correct compound forms.
+    # Delegates all real work to two different compounding algorithms, and then just check if their
+    # results pass various correctness checks.
+    def compound_forms(self, word: str, captype: CapType, allow_nosuggest=True) -> Iterator[CompoundForm]:
+        # The first algorithm is: split the word into several, in all possible ways, and check if
+        # some combination of them are dictionary words having flags allowing them to be in compound
+        # words. This algorithm should only be used if the relevant flags are present (otherwise,
+        # there is nothing to mark words with).
         if self.aff.COMPOUNDBEGIN or self.aff.COMPOUNDFLAG:
             for compound in self.compounds_by_flags(word, captype=captype, allow_nosuggest=allow_nosuggest):
+                # When we already produced a compounding hypothesis (meaning every part is present
+                # in the dictionary, and allowed to be in this place in a compound), there are still
+                # a lot of possible conditions why this form is _incorrect_ all in all, and we need
+                # to check them.
                 if not self.is_bad_compound(compound, captype):
                     yield compound
 
+        # Another algorithm is: split the word into several, and check if their flag combination is
+        # declared as a "compound rule". Obviosly, needs checking only if some compound rules ARE
+        # declared.
         if self.aff.COMPOUNDRULE:
             for compound in self.compounds_by_rules(word, allow_nosuggest=allow_nosuggest):
+                # Same as above
                 if not self.is_bad_compound(compound, captype):
                     yield compound
 
+    # Affixes-related algorithms
+    # --------------------------
+
+    def produce_affix_forms(self,
+                            word: str,
+                            prefix_flags: List[Flag],
+                            suffix_flags: List[Flag],
+                            forbidden_flags: List[Flag],
+                            compoundpos: Optional[CompoundPos] = None) -> Iterator[AffixForm]:
+
+        yield AffixForm(text=word, stem=word)    # "Whole word" is always existing option
+
+        suffix_allowed = compoundpos in [None, CompoundPos.END] or self.aff.COMPOUNDPERMITFLAG
+        prefix_allowed = compoundpos in [None, CompoundPos.BEGIN] or self.aff.COMPOUNDPERMITFLAG
+
+        if suffix_allowed:
+            yield from self.desuffix(word, required_flags=suffix_flags, forbidden_flags=forbidden_flags)
+
+        if prefix_allowed:
+            for form in self.deprefix(word, required_flags=prefix_flags, forbidden_flags=forbidden_flags):
+                yield form
+
+                if suffix_allowed and form.prefix and form.prefix.crossproduct:
+                    yield from (
+                        form2.replace(text=form.text, prefix=form.prefix)
+                        for form2 in self.desuffix(form.stem,
+                                                   required_flags=suffix_flags,
+                                                   forbidden_flags=forbidden_flags,
+                                                   crossproduct=True)
+                    )
+
+    def desuffix(self, word: str,
+                 required_flags: List[Flag],
+                 forbidden_flags: List[Flag],
+                 nested: bool = False,
+                 crossproduct: bool = False) -> Iterator[AffixForm]:
+
+        def good_suffix(suffix):
+            return (not crossproduct or suffix.crossproduct) and \
+                    all(f in suffix.flags for f in required_flags) and \
+                    all(f not in suffix.flags for f in forbidden_flags)
+
+        possible_suffixes = (
+            suffix
+            for suffix in self.aff.suffixes_index.lookup(word[::-1])
+            if good_suffix(suffix) and suffix.lookup_regexp.search(word)
+        )
+
+        for suffix in possible_suffixes:
+            stem = suffix.replace_regexp.sub(suffix.strip, word)
+
+            yield AffixForm(word, stem, suffix=suffix)
+
+            if not nested:  # only one level depth
+                for form2 in self.desuffix(stem,
+                                           required_flags=[suffix.flag, *required_flags],
+                                           forbidden_flags=forbidden_flags,
+                                           nested=True,
+                                           crossproduct=crossproduct):
+                    yield form2.replace(suffix2=suffix, text=word)
+
+    def deprefix(self, word: str,
+                 required_flags: List[Flag],
+                 forbidden_flags: List[Flag],
+                 nested: bool = False) -> Iterator[AffixForm]:
+
+        def good_prefix(prefix):
+            return all(f in prefix.flags for f in required_flags) and \
+                   all(f not in prefix.flags for f in forbidden_flags)
+
+        possible_prefixes = (
+            prefix
+            for prefix in self.aff.prefixes_index.lookup(word)
+            if good_prefix(prefix) and prefix.lookup_regexp.search(word)
+        )
+
+        for prefix in possible_prefixes:
+            stem = prefix.lookup_regexp.sub(prefix.strip, word)
+
+            yield AffixForm(word, stem, prefix=prefix)
+
+            # TODO: Only if compoundprefixes are allowed in *.aff
+            if not nested:  # only one level depth
+                for form2 in self.deprefix(stem,
+                                           required_flags=[prefix.flag, *required_flags],
+                                           forbidden_flags=forbidden_flags,
+                                           nested=True):
+                    yield form2.replace(prefix2=prefix, text=word)
+
     def is_good_form(self,
-                     form: WordForm,
+                     form: AffixForm,
                      compoundpos: Optional[CompoundPos],
                      captype: CapType,
                      allow_nosuggest=True,
@@ -185,12 +397,13 @@ class Lookup:
         aff = self.aff
 
         # Shouldn't happen, just to make mypy happy (to not complain "if root is None, you can't take its flags" below)
-        if not form.root:
+        if not form.in_dictionary:
             return False
 
-        root_flags = form.root.flags
+        root_flags = form.in_dictionary.flags
         all_flags = form.flags()
-        root_capitalization = aff.collation.guess(form.root.stem)
+        # TODO: Should be guessed on dictionary loading
+        root_capitalization = aff.collation.guess(form.in_dictionary.stem)
 
         # investigate = (form.prefix and form.prefix.flag == 'D' and form.suffix and form.suffix.flag == 'A')
 
@@ -240,111 +453,19 @@ class Lookup:
             return aff.COMPOUNDEND in all_flags
         if compoundpos == CompoundPos.MIDDLE:
             return aff.COMPOUNDMIDDLE in all_flags
+
         # shoulnd't happen
         return False
-
-    # Affixes-related algorithms
-    # --------------------------
-
-    def try_affix_forms(self,
-                        word: str,
-                        prefix_flags: List[Flag],
-                        suffix_flags: List[Flag],
-                        forbidden_flags: List[Flag],
-                        compoundpos: Optional[CompoundPos] = None) -> Iterator[WordForm]:
-
-        yield WordForm(word, word)    # "Whole word" is always existing option
-
-        aff = self.aff
-
-        suffix_allowed = compoundpos in [None, CompoundPos.END] or aff.COMPOUNDPERMITFLAG
-        prefix_allowed = compoundpos in [None, CompoundPos.BEGIN] or aff.COMPOUNDPERMITFLAG
-
-        if suffix_allowed:
-            yield from self.desuffix(word, required_flags=suffix_flags, forbidden_flags=forbidden_flags)
-
-        if prefix_allowed:
-            for form in self.deprefix(word, required_flags=prefix_flags, forbidden_flags=forbidden_flags):
-                yield form
-
-                if suffix_allowed and form.prefix and form.prefix.crossproduct:
-                    yield from (
-                        form2.replace(text=form.text, prefix=form.prefix)
-                        for form2 in self.desuffix(form.stem,
-                                                   required_flags=suffix_flags,
-                                                   forbidden_flags=forbidden_flags,
-                                                   crossproduct=True)
-                    )
-
-    def desuffix(self,
-                 word: str,
-                 required_flags: Sequence[Optional[Flag]] = [],
-                 forbidden_flags: Sequence[Optional[Flag]] = [],
-                 nested: bool = False,
-                 crossproduct: bool = False) -> Iterator[WordForm]:
-
-        def good_suffix(suffix):
-            return (not crossproduct or suffix.crossproduct) and \
-                    all(f in suffix.flags for f in required_flags) and \
-                    all(f not in suffix.flags for f in forbidden_flags)
-
-        possible_suffixes = (
-            suffix
-            for suffix in self.aff.suffixes_index.lookup(word[::-1])
-            if good_suffix(suffix) and suffix.lookup_regexp.search(word)
-        )
-
-        for suffix in possible_suffixes:
-            stem = suffix.replace_regexp.sub(suffix.strip, word)
-
-            yield WordForm(word, stem, suffix=suffix)
-
-            if not nested:  # only one level depth
-                for form2 in self.desuffix(stem,
-                                           required_flags=[suffix.flag, *required_flags],
-                                           forbidden_flags=forbidden_flags,
-                                           nested=True,
-                                           crossproduct=crossproduct):
-                    yield form2.replace(suffix2=suffix, text=word)
-
-    def deprefix(self,
-                 word: str,
-                 required_flags: Sequence[Optional[Flag]] = [],
-                 forbidden_flags: Sequence[Optional[Flag]] = [],
-                 nested: bool = False) -> Iterator[WordForm]:
-
-        def good_prefix(prefix):
-            return all(f in prefix.flags for f in required_flags) and \
-                   all(f not in prefix.flags for f in forbidden_flags)
-
-        possible_prefixes = (
-            prefix
-            for prefix in self.aff.prefixes_index.lookup(word)
-            if good_prefix(prefix) and prefix.lookup_regexp.search(word)
-        )
-
-        for prefix in possible_prefixes:
-            stem = prefix.lookup_regexp.sub(prefix.strip, word)
-
-            yield WordForm(word, stem, prefix=prefix)
-
-            # TODO: Only if compoundpreffixes are allowed in *.aff
-            if not nested:  # only one level depth
-                for form2 in self.deprefix(stem,
-                                           required_flags=[prefix.flag, *required_flags],
-                                           forbidden_flags=forbidden_flags,
-                                           nested=True):
-                    yield form2.replace(prefix2=prefix, text=word)
 
     # Compounding details
     # -------------------
 
     def compounds_by_flags(self,
                            word_rest: str,
-                           prev_parts: List[WordForm] = [],
+                           prev_parts: List[AffixForm] = [],
                            *,
                            captype: CapType,
-                           allow_nosuggest=True) -> Iterator[List[WordForm]]:
+                           allow_nosuggest=True) -> Iterator[List[AffixForm]]:
 
         aff = self.aff
         forbidden_flags = compact(aff.COMPOUNDFORBIDFLAG)
@@ -363,23 +484,22 @@ class Lookup:
         # If it is middle of compounding process "the rest of the word is the whole last part" is always
         # possible
         if prev_parts:
-            for form in self.word_forms(word_rest,
-                                        captype=captype,
-                                        compoundpos=CompoundPos.END,
-                                        prefix_flags=permitflags,
-                                        forbidden_flags=forbidden_flags,
-                                        allow_nosuggest=allow_nosuggest):
+            for form in self.affix_forms(word_rest,
+                                         captype=captype,
+                                         compoundpos=CompoundPos.END,
+                                         prefix_flags=permitflags,
+                                         forbidden_flags=forbidden_flags,
+                                         allow_nosuggest=allow_nosuggest):
                 yield [form]
         else:
-            # if we try to decompoun "forbiddenword's", AND "forbiddenword" with suffix "'s" is forbidden,
+            # if we try to decompound "forbiddenword's", AND "forbiddenword" with suffix "'s" is forbidden,
             # we shouldn't even try.
             if aff.FORBIDDENWORD and any(aff.FORBIDDENWORD in candidate.flags()
                                          for candidate in
-                                         self.word_forms(word_rest, captype=captype, with_forbidden=True)):
+                                         self.affix_forms(word_rest, captype=captype, with_forbidden=True)):
                 return
 
-        if len(word_rest) < aff.COMPOUNDMIN * 2 or \
-                (aff.COMPOUNDWORDMAX and len(prev_parts) >= aff.COMPOUNDWORDMAX):
+        if len(word_rest) < aff.COMPOUNDMIN * 2 or (aff.COMPOUNDWORDMAX and len(prev_parts) >= aff.COMPOUNDWORDMAX):
             return
 
         compoundpos = CompoundPos.BEGIN if not prev_parts else CompoundPos.MIDDLE
@@ -388,11 +508,11 @@ class Lookup:
             beg = word_rest[0:pos]
             rest = word_rest[pos:]
 
-            for form in self.word_forms(beg, captype=captype, compoundpos=compoundpos,
-                                        prefix_flags=prefix_flags[compoundpos],
-                                        suffix_flags=suffix_flags[compoundpos],
-                                        forbidden_flags=forbidden_flags,
-                                        allow_nosuggest=allow_nosuggest):
+            for form in self.affix_forms(beg, captype=captype, compoundpos=compoundpos,
+                                         prefix_flags=prefix_flags[compoundpos],
+                                         suffix_flags=suffix_flags[compoundpos],
+                                         forbidden_flags=forbidden_flags,
+                                         allow_nosuggest=allow_nosuggest):
                 parts = [*prev_parts, form]
                 for others in self.compounds_by_flags(rest, parts, captype=captype,
                                                       allow_nosuggest=allow_nosuggest):
@@ -400,11 +520,11 @@ class Lookup:
 
             if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
                 # FIXME: for now, we only try duplicating the first word's letter
-                for form in self.word_forms(beg + beg[-1], captype=captype, compoundpos=compoundpos,
-                                            prefix_flags=prefix_flags[compoundpos],
-                                            suffix_flags=suffix_flags[compoundpos],
-                                            forbidden_flags=forbidden_flags,
-                                            allow_nosuggest=allow_nosuggest):
+                for form in self.affix_forms(beg + beg[-1], captype=captype, compoundpos=compoundpos,
+                                             prefix_flags=prefix_flags[compoundpos],
+                                             suffix_flags=suffix_flags[compoundpos],
+                                             forbidden_flags=forbidden_flags,
+                                             allow_nosuggest=allow_nosuggest):
                     parts = [*prev_parts, form]
                     for others in self.compounds_by_flags(rest, parts, captype=captype,
                                                           allow_nosuggest=allow_nosuggest):
@@ -414,7 +534,7 @@ class Lookup:
                            word_rest: str,
                            prev_parts: List[data.dic.Word] = [],
                            rules: Optional[List[data.aff.CompoundRule]] = None,
-                           allow_nosuggest=True) -> Iterator[List[WordForm]]:
+                           allow_nosuggest=True) -> Iterator[List[AffixForm]]:
 
         aff = self.aff
         # initial run
@@ -430,7 +550,7 @@ class Lookup:
                 parts = [*prev_parts, homonym]
                 flag_sets = [w.flags for w in parts]
                 if any(r.fullmatch(flag_sets) for r in rules):
-                    yield [WordForm(word_rest, word_rest)]
+                    yield [AffixForm(word_rest, word_rest)]
 
         if len(word_rest) < aff.COMPOUNDMIN * 2 or \
                 (aff.COMPOUNDWORDMAX and len(prev_parts) >= aff.COMPOUNDWORDMAX):
@@ -445,7 +565,7 @@ class Lookup:
                 if compoundrules:
                     by_rules = self.compounds_by_rules(word_rest[pos:], rules=compoundrules, prev_parts=parts)
                     for rest in by_rules:
-                        yield [WordForm(beg, beg), *rest]
+                        yield [AffixForm(beg, beg), *rest]
 
     def is_bad_compound(self, compound, captype):
         aff = self.aff
@@ -464,12 +584,12 @@ class Lookup:
                 if self.dic.has_flag(left, aff.COMPOUNDFORBIDFLAG):
                     return True
 
-            if any(self.word_forms(left + ' ' + right, captype=captype)):
+            if any(self.affix_forms(left + ' ' + right, captype=captype)):
                 return True
 
             if aff.CHECKCOMPOUNDREP:
                 for candidate in pmt.replchars(left + right, aff.REP):
-                    if isinstance(candidate, str) and any(self.word_forms(candidate, captype=captype)):
+                    if isinstance(candidate, str) and any(self.affix_forms(candidate, captype=captype)):
                         return True
 
             if aff.CHECKCOMPOUNDTRIPLE:

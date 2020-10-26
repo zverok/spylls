@@ -9,8 +9,6 @@ SLASH_REGEXP = re.compile(r'(?<!\\)/')
 
 
 def read_dic(source, *, context):
-    tr = str.maketrans('', '', context.ignore)
-
     def read_word(line):
         parts = SPACES_REGEXP.split(line)
         word_parts = [part for part in parts if not MORPH_REGEXP.match(part)]
@@ -37,7 +35,7 @@ def read_dic(source, *, context):
                 flags = ''
         word = word.replace('\\/', '/')
         if context.ignore:
-            word = word.translate(tr)
+            word = word.translate(context.ignore.tr)
 
         return dic.Word(stem=word, flags={*context.parse_flags(flags)}, morphology=morph)
 

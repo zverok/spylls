@@ -52,6 +52,7 @@ class Suggest:
             for phonetic in word.phonetic()
         ]
         # print(self.replacements)
+        self.use_dash = '-' in self.aff.TRY or 'a' in self.aff.TRY
 
     def __call__(self, word: str) -> Iterator[str]:
         yield from (suggestion.text for suggestion in self.suggest_debug(word))
@@ -152,7 +153,7 @@ class Suggest:
         for words in pmt.twowords(word):
             yield Suggestion(' '.join(words), 'spaceword')
 
-            if self.aff.use_dash():
+            if self.use_dash:
                 yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
 
     def good_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
@@ -215,7 +216,7 @@ class Suggest:
         if not self.aff.NOSPLITSUGS:
             # perhaps we forgot to hit space and two words ran together
             for suggestion_pair in pmt.twowords(word):
-                yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.aff.use_dash())
+                yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.use_dash)
 
     def ngram_suggestions(self, word: str, handled: Set[str]) -> Iterator[str]:
         def forms_for(word: data.dic.Word, candidate: str):

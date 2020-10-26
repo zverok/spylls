@@ -1,7 +1,7 @@
 import re
 import itertools
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
 
 from spyll.hunspell.data import aff, phonet
 
@@ -19,7 +19,7 @@ class Context:
     encoding: str = 'Windows-1252'
     flag_format: str = 'short'
     flag_synonyms: Dict[str, str] = field(default_factory=dict)
-    ignore: str = ''
+    ignore: Optional[aff.Ignore] = None
 
     def parse_flag(self, string):
         return list(self.parse_flags(string))[0]
@@ -118,8 +118,10 @@ def read_value(source, directive, *values, context):
             for num, ln in itertools.islice(source, count)
         ]
 
-    if directive in ['SET', 'FLAG', 'KEY', 'TRY', 'WORDCHARS', 'IGNORE', 'LANG']:
+    if directive in ['SET', 'FLAG', 'KEY', 'TRY', 'WORDCHARS', 'LANG']:
         return value
+    if directive == 'IGNORE':
+        return aff.Ignore(value)
     if directive in ['MAXDIFF', 'MAXNGRAMSUGS', 'MAXCPDSUGS', 'COMPOUNDMIN', 'COMPOUNDWORDMAX']:
         return int(value)
     if directive in ['NOSUGGEST', 'KEEPCASE', 'CIRCUMFIX', 'NEEDAFFIX', 'FORBIDDENWORD', 'WARN',
@@ -190,11 +192,13 @@ def make_affix(kind, flag, crossproduct, _, strip, add, *rest, context):
     # in LibreOffice ar.aff has at least one prefix (Ph) without any condition. Bug?
     cond = rest[0] if rest else ''
     add, _, flags = add.partition('/')
+    if context.ignore:
+        add = add.translate(context.ignore.tr)
     return kind_class(
         flag=flag,
         crossproduct=(crossproduct == 'Y'),
         strip=('' if strip == '0' else strip),
-        add=('' if add == '0' else add.translate(str.maketrans('', '', context.ignore))),
+        add=('' if add == '0' else add),
         condition=cond,
         flags={*context.parse_flags(flags)}
     )

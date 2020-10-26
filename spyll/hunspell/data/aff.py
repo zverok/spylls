@@ -31,6 +31,14 @@ class BreakPattern:
 
 
 @dataclass
+class Ignore:
+    chars: str
+
+    def __post_init__(self):
+        self.tr = str.maketrans('', '', self.chars)
+
+
+@dataclass
 class RepPattern:
     pattern: str
     replacement: str
@@ -64,8 +72,11 @@ class Prefix(Affix):
         self.lookup_regexp = re.compile('^' + self.add + cond)
 
     def __repr__(self):
-        return f"Prefix({self.flag}{'[x]' if self.crossproduct else ''}: "\
-               f"{self.strip}[{self.condition}] => {self.add} /{','.join(self.flags)})"
+        return (
+            f"Prefix({self.add}: {self.flag}{'×' if self.crossproduct else ''}" +
+            (f"/{','.join(self.flags)}" if self.flags else '') +
+            f", on ^{self.strip}[{self.condition}])"
+        )
 
 
 @dataclass
@@ -89,8 +100,11 @@ class Suffix(Affix):
         self.replace_regexp = re.compile(self.add + '$')
 
     def __repr__(self):
-        return f"Suffix({self.flag}{'[x]' if self.crossproduct else ''}: "\
-               f"[{self.condition}]{self.strip} => {self.add} /{','.join(self.flags)})"
+        return (
+            f"Suffix({self.add}: {self.flag}{'×' if self.crossproduct else ''}" +
+            (f"/{','.join(self.flags)}" if self.flags else '') +
+            f", on [{self.condition}]{self.strip}$)"
+        )
 
 
 @dataclass
@@ -109,7 +123,7 @@ class CompoundRule:
             # Obviously it is quite ad-hoc (other chars that have special meaning in regexp might be
             # used eventually)
             parts = [part.replace(')', '\\)') for part in re.findall(r'[^*?][*?]?', self.text)]
-        # print(parts)
+
         self.re = re.compile(''.join(parts))
         self.partial_re = re.compile(
             functools.reduce(lambda res, part: f"{part}({res})?", parts[::-1])
@@ -210,7 +224,7 @@ class Aff:
     FLAG: str = 'short'  # TODO: Enum of possible values, in fact
     LANG: Optional[str] = None
     WORDCHARS: Optional[str] = None
-    IGNORE: Optional[str] = None
+    IGNORE: Optional[Ignore] = None
 
     # Suggestions
     KEY: str = ''
@@ -303,11 +317,7 @@ class Aff:
 
         if self.CHECKSHARPS:
             self.collation = GermanCollation()
-        elif self.LANG in ['tr', 'tr_TR', 'az', 'crh']:
-            # TODO: more robust language code check!
+        elif self.LANG in ['tr', 'tr_TR', 'az', 'crh']:     # TODO: more robust language code check!
             self.collation = TurkicCollation()
         else:
             self.collation = Collation()
-
-    def use_dash(self) -> bool:
-        return '-' in self.TRY or 'a' in self.TRY
