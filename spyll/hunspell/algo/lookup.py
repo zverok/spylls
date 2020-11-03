@@ -564,16 +564,6 @@ class Lookup:
         aff = self.aff
         forbidden_flags = compact(aff.COMPOUNDFORBIDFLAG)
         permitflags = compact(aff.COMPOUNDPERMITFLAG)
-        prefix_flags = {
-            CompoundPos.BEGIN: [],
-            CompoundPos.MIDDLE: permitflags,
-            CompoundPos.END: permitflags,
-        }
-        suffix_flags = {
-            CompoundPos.BEGIN: permitflags,
-            CompoundPos.MIDDLE: permitflags,
-            CompoundPos.END: [],
-        }
 
         # If it is middle of compounding process "the rest of the word is the whole last part" is always
         # possible
@@ -590,14 +580,15 @@ class Lookup:
             return
 
         compoundpos = CompoundPos.BEGIN if not prev_parts else CompoundPos.MIDDLE
+        prefix_flags = [] if compoundpos == CompoundPos.BEGIN else permitflags
 
         for pos in range(aff.COMPOUNDMIN, len(word_rest) - aff.COMPOUNDMIN + 1):
             beg = word_rest[0:pos]
             rest = word_rest[pos:]
 
             for form in self.affix_forms(beg, captype=captype, compoundpos=compoundpos,
-                                         prefix_flags=prefix_flags[compoundpos],
-                                         suffix_flags=suffix_flags[compoundpos],
+                                         prefix_flags=prefix_flags,
+                                         suffix_flags=permitflags,
                                          forbidden_flags=forbidden_flags,
                                          allow_nosuggest=allow_nosuggest):
                 parts = [*prev_parts, form]
@@ -608,8 +599,8 @@ class Lookup:
             if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
                 # FIXME: for now, we only try duplicating the first word's letter
                 for form in self.affix_forms(beg + beg[-1], captype=captype, compoundpos=compoundpos,
-                                             prefix_flags=prefix_flags[compoundpos],
-                                             suffix_flags=suffix_flags[compoundpos],
+                                             prefix_flags=prefix_flags,
+                                             suffix_flags=permitflags,
                                              forbidden_flags=forbidden_flags,
                                              allow_nosuggest=allow_nosuggest):
                     parts = [*prev_parts, form]
@@ -621,7 +612,7 @@ class Lookup:
                            word_rest: str,
                            prev_parts: List[data.dic.Word] = [],
                            rules: Optional[List[data.aff.CompoundRule]] = None,
-                           allow_nosuggest=True) -> Iterator[List[AffixForm]]:
+                           allow_nosuggest=True) -> Iterator[List[AffixForm]]:  # pylint: disable=unused-argument
 
         aff = self.aff
         # initial run

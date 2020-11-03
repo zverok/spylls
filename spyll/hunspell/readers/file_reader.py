@@ -39,7 +39,7 @@ class FileReader(BaseReader):
     def reset_encoding(self, encoding):
         self.reset_io(self._open(self.path, encoding))
 
-    def _open(self, path, encoding):
+    def _open(self, path, encoding):  # pylint: disable=no-self-use
         # errors='surrogateescape', because at least hu_HU dictionary of LibreOffice uses invalid
         # in UTF-8 single-bytes as suffix flags
         return open(path, 'r', encoding=encoding, errors='surrogateescape')
@@ -55,5 +55,5 @@ class ZipReader(BaseReader):
         # FIXME: Like, really?..
         self.reset_io(self._open(zipfile.ZipFile(zipname).open(path), encoding))
 
-    def _open(self, zip_obj, encoding):
+    def _open(self, zip_obj, encoding):  # pylint: disable=no-self-use
         return io.TextIOWrapper(zip_obj, encoding=encoding, errors='surrogateescape')

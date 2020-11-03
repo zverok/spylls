@@ -5,7 +5,7 @@ Type = Enum('Type', 'NO INIT ALL HUHINIT HUH')
 
 
 class Collation:
-    def guess(self, word: str, *, for_corrections=False) -> Type:
+    def guess(self, word: str, *, for_corrections=False) -> Type: # pylint: disable=unused-argument,no-self-use
         if word.lower() == word:
             return Type.NO
         if word[:1].lower() + word[1:] == word.lower():
@@ -16,7 +16,7 @@ class Collation:
             return Type.HUHINIT
         return Type.HUH
 
-    def lower(self, word):
+    def lower(self, word):  # pylint: disable=no-self-use
         # can't be properly lowercased in non-Turkic collaction
         if word[0] == 'İ':
             return []
@@ -24,7 +24,7 @@ class Collation:
         # turkic "lowercase dot i" to latinic "i", just in case
         return [word.lower().replace('i̇', 'i')]
 
-    def upper(self, word):
+    def upper(self, word):   # pylint: disable=no-self-use
         return word.upper()
 
     def capitalize(self, word):
