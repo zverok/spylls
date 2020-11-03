@@ -34,18 +34,26 @@ class BaseReader:
 class FileReader(BaseReader):
     def __init__(self, path, encoding='Windows-1252'):
         self.path = path
-        super().__init__(open(path, 'r', encoding=encoding, errors='ignore'))
+        super().__init__(self._open(path, encoding))
 
     def reset_encoding(self, encoding):
-        self.reset_io(open(self.path, 'r', encoding=encoding, errors='ignore'))
+        self.reset_io(self._open(self.path, encoding))
+
+    def _open(self, path, encoding):
+        # errors='surrogateescape', because at least hu_HU dictionary of LibreOffice uses invalid
+        # in UTF-8 single-bytes as suffix flags
+        return open(path, 'r', encoding=encoding, errors='surrogateescape')
 
 
 class ZipReader(BaseReader):
     def __init__(self, zip_obj, encoding='Windows-1252'):
         self.zipfile = (zip_obj._fileobj._file.name, zip_obj.name)
-        super().__init__(io.TextIOWrapper(zip_obj, encoding=encoding, errors='ignore'))
+        super().__init__(self._open(zip_obj, encoding))
 
     def reset_encoding(self, encoding):
         zipname, path = self.zipfile
         # FIXME: Like, really?..
-        self.reset_io(io.TextIOWrapper(zipfile.ZipFile(zipname).open(path), encoding=encoding, errors='ignore'))
+        self.reset_io(self._open(zipfile.ZipFile(zipname).open(path), encoding))
+
+    def _open(self, zip_obj, encoding):
+        return io.TextIOWrapper(zip_obj, encoding=encoding, errors='surrogateescape')

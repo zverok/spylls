@@ -21,11 +21,13 @@ class Dic:
     words: List[Word]
 
     def __post_init__(self):
+        # TODO: On dictionary creation
         self.index = {
             stem: list(words)
             for stem, words in itertools.groupby(self.words, lambda w: w.stem)
         }
         self.index_l = {
+            # TODO: use collation!
             stem.lower(): list(words)
             for stem, words in itertools.groupby(self.words, lambda w: w.stem)
         }

@@ -80,7 +80,6 @@ def read_aff(source):
 
 def read_directive(source, line, *, context):
     name, *arguments = re.split(r'\s+', line)
-    # print([line, name, arguments])
 
     # base_utf has lines like McDonalds’sá/w -- at the end...
     # TODO: Check what's hunspell's logic to deal with this
@@ -153,7 +152,6 @@ def read_value(source, directive, *values, context):
             for chars, *_ in _read_array()
         ]
     if directive in ['SFX', 'PFX']:
-        # print(values)
         flag, crossproduct, count, *_ = values
         return [
             make_affix(directive, flag, crossproduct, *line, context=context)

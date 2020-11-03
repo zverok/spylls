@@ -60,16 +60,20 @@ class Affix:
 @dataclass
 class Prefix(Affix):
     def __post_init__(self):
-        self.cond_regexp = re.compile('^' + self.condition)
+        # "-" does NOT have a special meaning, while might happen as a regular word char (for ex., hu_HU)
+        condition = self.condition.replace('-', '\\-')
+        self.cond_regexp = re.compile('^' + condition)
 
-        cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
+        cond_parts = re.findall(r'(\[.+\]|[^\[])', condition)
         cond_parts = cond_parts[len(self.strip):]
 
         if cond_parts and cond_parts != ['.']:
             cond = '(?=' + ''.join(cond_parts) + ')'
         else:
             cond = ''
+
         self.lookup_regexp = re.compile('^' + self.add + cond)
+        self.replace_regexp = re.compile('^' + self.add)
 
     def __repr__(self):
         return (
@@ -82,20 +86,19 @@ class Prefix(Affix):
 @dataclass
 class Suffix(Affix):
     def __post_init__(self):
-        self.cond_regexp = re.compile(self.condition + '$')
+        # "-" does NOT have a special meaning, while might happen as a regular word char (for ex., hu_HU)
+        condition = self.condition.replace('-', '\\-')
+        self.cond_regexp = re.compile(condition + '$')
 
-        cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
+        cond_parts = re.findall(r'(\[.+\]|[^\[])', condition)
         if self.strip:
             cond_parts = cond_parts[:-len(self.strip)]
 
         if cond_parts and cond_parts != ['.']:
-            # We can't use actual Regexp lookbehind feature, as it has limited functionality
-            # (should have known string length)
-            cond = '(?P<lookbehind>' + ''.join(cond_parts) + ')'
+            cond = '(' + ''.join(cond_parts) + ')'
         else:
-            cond = '(?P<lookbehind>)'
+            cond = ''
 
-        # print(cond)
         self.lookup_regexp = re.compile(cond + self.add + '$')
         self.replace_regexp = re.compile(self.add + '$')
 
