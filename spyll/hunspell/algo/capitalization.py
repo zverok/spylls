@@ -5,7 +5,7 @@ Type = Enum('Type', 'NO INIT ALL HUHINIT HUH')
 
 
 class Collation:
-    def guess(self, word: str, *, for_corrections=False) -> Type: # pylint: disable=unused-argument,no-self-use
+    def guess(self, word: str, *, for_corrections=False) -> Type:   # pylint: disable=unused-argument,no-self-use
         if word.lower() == word:
             return Type.NO
         if word[:1].lower() + word[1:] == word.lower():

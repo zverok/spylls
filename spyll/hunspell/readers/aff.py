@@ -140,7 +140,9 @@ def read_value(source, directive, *values, context):
     if directive == 'COMPOUNDRULE':
         return [aff.CompoundRule(first) for first, *_ in _read_array()]
     if directive in ['ICONV', 'OCONV']:
-        return aff.ConvTable([(pat1, pat2) for pat1, pat2, *_rest in _read_array()])    # pylint: disable=unnecessary-comprehension
+        return aff.ConvTable([
+            (pat1, pat2) for pat1, pat2, *_rest in _read_array()    # pylint: disable=unnecessary-comprehension
+        ])
     if directive == 'REP':
         return [aff.RepPattern(pat1, pat2) for pat1, pat2, *_rest in _read_array()]
     if directive in ['MAP']:
