@@ -215,7 +215,7 @@ class ConvTable:
         return res
 
 
-class AffixesIndex(CharTrie):
+class AffixesIndex(CharTrie):  # pylint: disable=too-many-ancestors
     def lookup(self, prefix):
         return [val for _, vals in self.prefixes(prefix) for val in vals]
 
