@@ -226,7 +226,7 @@ report('korean')
 
 report('germancompounding')
 report('germancompoundingold')
-report('hu')
+report('hu', pending_comment='Hungarian is hard!')
 
 # ===============================
 section('Edge cases and bugs')

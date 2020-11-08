@@ -60,7 +60,7 @@ class AffixForm:
         return flags
 
     def all_affixes(self):
-        return compact(self.prefix2, self.prefix, self.suffix, self.suffix2)
+        return [*filter(None, [self.prefix2, self.prefix, self.suffix, self.suffix2])]
 
     def __repr__(self):
         result = f'AffixForm({self.text} = '
@@ -554,48 +554,73 @@ class Lookup:
     # Compounding details
     # -------------------
 
+    # Produces all possible compound forms such that every part is a valid affixed form, and all of
+    # those parts are allowed to be together by flags (e.g. first part either has generic flag
+    # "allowed in compound", or flag "allowed as a compound beginning", middle part has flag "allowed
+    # in compound", or "allowed as compound middle" and so on).
+    #
+    # Works recursively by first trying to find the allowed beginning of compound, and if it is
+    # found, calling itself with the rest of the word, and so on.
     def compounds_by_flags(self,
                            word_rest: str,
-                           prev_parts: List[AffixForm] = [],
                            *,
                            captype: CapType,
-                           allow_nosuggest=True) -> Iterator[List[AffixForm]]:
+                           depth: int = 0,
+                           allow_nosuggest=True) -> Iterator[CompoundForm]:
 
         aff = self.aff
-        forbidden_flags = compact(aff.COMPOUNDFORBIDFLAG)
-        permitflags = compact(aff.COMPOUNDPERMITFLAG)
+
+        # Flags that are forbidden for affixes (will be passed to affix_forms)
+        forbidden_flags = [aff.COMPOUNDFORBIDFLAG] if aff.COMPOUNDFORBIDFLAG else []
+        # Flags that are required for affixes. Are passed to affix_forms, expept for:
+        # * for the last form suffix_flags not passed (any suffix will do)
+        # * for the first form, prefix_flags not passed (any prefix will do)
+        permitflags = [aff.COMPOUNDPERMITFLAG] if aff.COMPOUNDPERMITFLAG else []
 
         # If it is middle of compounding process "the rest of the word is the whole last part" is always
-        # possible
-        if prev_parts:
+        # possible, so we should check it as a compound end
+        if depth:
+            # For all valid ways that the rest of the word might be from dictionary (stem+affixes)...
             for form in self.affix_forms(word_rest,
                                          captype=captype,
                                          compoundpos=CompoundPos.END,
                                          prefix_flags=permitflags,
                                          forbidden_flags=forbidden_flags,
                                          allow_nosuggest=allow_nosuggest):
+                # return it to the recursively calling method
                 yield [form]
 
-        if len(word_rest) < aff.COMPOUNDMIN * 2 or (aff.COMPOUNDWORDMAX and len(prev_parts) >= aff.COMPOUNDWORDMAX):
+        # Check compounding limitation (if the rest of the word is less than 2 allowed parts, or if
+        # the further compounding would produce more parts than allowed)
+        if len(word_rest) < aff.COMPOUNDMIN * 2 or (aff.COMPOUNDWORDMAX and depth >= aff.COMPOUNDWORDMAX):
             return
 
-        compoundpos = CompoundPos.BEGIN if not prev_parts else CompoundPos.MIDDLE
+        compoundpos = CompoundPos.MIDDLE if depth else CompoundPos.BEGIN
         prefix_flags = [] if compoundpos == CompoundPos.BEGIN else permitflags
 
+        # Now, check all possible split positions, considering allowed size of compound part.
+        # E.g. for COMPOUNDMIN=3, and word is "foobarbaz", the checked possible start of the current
+        # chunk are [foo, foob, fooba, foobar]
         for pos in range(aff.COMPOUNDMIN, len(word_rest) - aff.COMPOUNDMIN + 1):
+            # Split the word by this position
             beg = word_rest[0:pos]
             rest = word_rest[pos:]
 
+            # And for all possible ways it migh be a valid word...
             for form in self.affix_forms(beg, captype=captype, compoundpos=compoundpos,
                                          prefix_flags=prefix_flags,
                                          suffix_flags=permitflags,
                                          forbidden_flags=forbidden_flags,
                                          allow_nosuggest=allow_nosuggest):
-                parts = [*prev_parts, form]
-                for others in self.compounds_by_flags(rest, parts, captype=captype,
+                # Recursively try to split the rest of the word ("the whole rest is compound end" also
+                # might be the result)
+                for others in self.compounds_by_flags(rest, captype=captype, depth=depth+1,
                                                       allow_nosuggest=allow_nosuggest):
                     yield [form, *others]
 
+            # Complication! If the affix has SIMPLIFIEDTRIPLE boolean setting, we must check the
+            # possibility that "foobbar" is actually consisting of "foobb" and "bar" (some language
+            # rules in this case require the third repeating letter to be dropped).
             if aff.SIMPLIFIEDTRIPLE and beg[-1] == rest[0]:
                 # FIXME: for now, we only try duplicating the first word's letter
                 for form in self.affix_forms(beg + beg[-1], captype=captype, compoundpos=compoundpos,
@@ -603,20 +628,29 @@ class Lookup:
                                              suffix_flags=permitflags,
                                              forbidden_flags=forbidden_flags,
                                              allow_nosuggest=allow_nosuggest):
-                    parts = [*prev_parts, form]
-                    for others in self.compounds_by_flags(rest, parts, captype=captype,
+                    for others in self.compounds_by_flags(rest, captype=captype, depth=depth+1,
                                                           allow_nosuggest=allow_nosuggest):
                         yield [form.replace(text=beg), *others]
 
+    # Different way of producing compound words: by rules, looking like A*BC?CD, where A, B, C, D
+    # are flags the word might have, and *? have the same meaning as in regular expressions.
+    #
+    # In this way, we start by finding rules that partially match the word parts at the beginning,
+    # and then recursively split the rest of the word, limiting rules to those still partially matching
+    # current set of words.
+    #
+    # Most of the magic happens in CompoundRule
     def compounds_by_rules(self,
                            word_rest: str,
                            prev_parts: List[data.dic.Word] = [],
                            rules: Optional[List[data.aff.CompoundRule]] = None,
-                           allow_nosuggest=True) -> Iterator[List[AffixForm]]:  # pylint: disable=unused-argument
+                           allow_nosuggest=True) -> Iterator[CompoundForm]:  # pylint: disable=unused-argument
 
         aff = self.aff
+
         # initial run
         if rules is None:
+            # We start with all known rules
             rules = self.aff.COMPOUNDRULE
 
         # FIXME: ignores flags like FORBIDDENWORD and nosuggest
@@ -644,13 +678,17 @@ class Lookup:
                     for rest in self.compounds_by_rules(word_rest[pos:], rules=compoundrules, prev_parts=parts):
                         yield [AffixForm(beg, beg), *rest]
 
-    def is_bad_compound(self, compound, captype):
+    # After the hypothesis "this word is compound word, consisting of those parts" is produced, even
+    # if all the parts have appropriate flags (e.g. allowed to be in compound), there still could
+    # be some settings
+    def is_bad_compound(self, compound: CompoundForm, captype: CapType) -> bool:
         aff = self.aff
 
         if aff.FORCEUCASE and captype not in [CapType.ALL, CapType.INIT]:
             if self.dic.has_flag(compound[-1].text, aff.FORCEUCASE):
                 return True
 
+        # Now we check all adjacent pairs in the compound parts
         for idx, left_paradigm in enumerate(compound[:-1]):
             left = left_paradigm.text
             right_paradigm = compound[idx+1]
@@ -662,25 +700,37 @@ class Lookup:
                 if self.dic.has_flag(left, aff.COMPOUNDFORBIDFLAG):
                     return True
 
+            # If "foo bar" is present as a _singular_ dictionary entry, compound word containing
+            # "(foo)(bar)" parts is not correct.
             if any(self.affix_forms(left + ' ' + right, captype=captype)):
                 return True
 
             if aff.CHECKCOMPOUNDREP:
+                # CHECKCOMPOUNDREP setting tells:
+                # If REP-table (suggesting simple char replacements) is present, and any of the
+                # replacements produces valid affix form, the compound can't contain that.
+                #
+                # FIXME: Or is it valid only for the whole "foobar" compound?..
                 for candidate in pmt.replchars(left + right, aff.REP):
                     if isinstance(candidate, str) and any(self.affix_forms(candidate, captype=captype)):
                         return True
 
             if aff.CHECKCOMPOUNDTRIPLE:
+                # CHECKCOMPOUNDTRIPLE setting tells, that if there is triplificatioin of some letter
+                # on the bound of two parts (like "foobb" + "bar"), it is not correct compound word
                 if len(set(left[-2:] + right[:1])) == 1 or len(set(left[-1:] + right[:2])) == 1:
                     return True
 
             if aff.CHECKCOMPOUNDCASE:
+                # CHECKCOMPOUNDCASE prohibits capitalized letters on the bound of compound parts
                 right_c = right[0]
                 left_c = left[-1]
                 if (right_c == right_c.upper() or left_c == left_c.upper()) and right_c != '-' and left_c != '-':
                     return True
 
             if aff.CHECKCOMPOUNDPATTERN:
+                # compound patterns is special micro-language to mark pairs of words that can't be
+                # adjacent parts of compound (by their content or flags)
                 if any(pattern.match(left_paradigm, right_paradigm) for pattern in aff.CHECKCOMPOUNDPATTERN):
                     return True
 
@@ -690,7 +740,3 @@ class Lookup:
                     return True
 
         return False
-
-
-def compact(*args):
-    return [*filter(None, args)]

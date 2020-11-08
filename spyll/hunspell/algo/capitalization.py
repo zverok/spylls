@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Tuple, List
+from typing import Tuple, List, Iterator
 
 Type = Enum('Type', 'NO INIT ALL HUHINIT HUH')
 
@@ -16,7 +16,7 @@ class Collation:
             return Type.HUHINIT
         return Type.HUH
 
-    def lower(self, word):  # pylint: disable=no-self-use
+    def lower(self, word) -> List[str]:  # pylint: disable=no-self-use
         # can't be properly lowercased in non-Turkic collaction
         if word[0] == 'İ':
             return []
@@ -24,13 +24,13 @@ class Collation:
         # turkic "lowercase dot i" to latinic "i", just in case
         return [word.lower().replace('i̇', 'i')]
 
-    def upper(self, word):   # pylint: disable=no-self-use
+    def upper(self, word) -> str:   # pylint: disable=no-self-use
         return word.upper()
 
-    def capitalize(self, word):
+    def capitalize(self, word) -> Iterator[str]:
         return (self.upper(word[0]) + lower for lower in self.lower(word[1:]))
 
-    def lowerfirst(self, word):
+    def lowerfirst(self, word) -> Iterator[str]:
         return (letter + word[1:] for letter in self.lower(word[0]))
 
     def variants(self, word: str) -> Tuple[Type, List[str]]:
@@ -54,7 +54,7 @@ class Collation:
         captype = self.guess(word, for_corrections=True)
 
         if captype == Type.NO:
-            result = [word]
+            result = [word] # FIXME: Add capitalized form?..
         elif captype == Type.INIT:
             result = [word, *self.lower(word)]
         elif captype == Type.HUHINIT:

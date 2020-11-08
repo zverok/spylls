@@ -5,6 +5,9 @@ from spyll.hunspell.dictionary import Dictionary
 # from spyll.hunspell.algo.lookup import analyze
 from spyll.hunspell.algo.lookup import CompoundPos
 
-dic = Dictionary.from_files('tests/integrational/fixtures/germancompoundingold')
+dic = Dictionary.from_files('tests/integrational/fixtures/forceucase')
 
-print(*dic.lookuper.good_forms('Computern'))
+print(dic.dic.words[1].flags, dic.aff.FORCEUCASE)
+print(dic.dic.has_flag('bar', dic.aff.FORCEUCASE))
+print(*dic.lookuper.good_forms('foobazbar'))
+print(*dic.lookuper.good_forms('foobarbaz'))

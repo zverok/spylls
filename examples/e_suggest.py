@@ -5,7 +5,7 @@ from spyll.hunspell.dictionary import Dictionary
 from spyll.hunspell.algo import permutations as pmt
 from spyll.hunspell.algo import ngram_suggest, suggest
 
-dic = Dictionary.from_files('tests/integrational/fixtures/utf8_nonbmp')
+dic = Dictionary.from_files('tests/integrational/fixtures/forceucase')
 # dic = Dictionary.from_files('tests/integrational/fixtures/base')
 
 # print(list(pmt.permutations('rotten-day', use_dash=True)))
@@ -19,4 +19,4 @@ dic = Dictionary.from_files('tests/integrational/fixtures/utf8_nonbmp')
 
 # print([*dic.analyzer.analyze('Foobaz')])
 # print(list(dic.suggester.suggest_debug('Brasillian')))
-print(list(dic.suggester.suggest_debug('𐏑𐏒𐏒')))
+print(list(dic.suggester.suggest_debug('foobaz')))
