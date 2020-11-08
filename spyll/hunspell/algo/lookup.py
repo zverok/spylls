@@ -173,7 +173,7 @@ class Lookup:
 
         yield [text]
         for pat in self.aff.BREAK:
-            for m in re.finditer(pat.regexp, text):
+            for m in pat.regexp.finditer(text):
                 start = text[:m.start(1)]
                 rest = text[m.end(1):]
                 for breaking in self.try_break(rest, depth=depth+1):

@@ -8,10 +8,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Set, Dict, Tuple, Optional, NewType
 
-from pygtrie import CharTrie  # type: ignore
-
 from spyll.hunspell.data import phonet
 from spyll.hunspell.algo.capitalization import Collation, GermanCollation, TurkicCollation
+from spyll.hunspell.algo.trie import Trie
 
 
 Flag = NewType('Flag', str)
@@ -215,11 +214,6 @@ class ConvTable:
         return res
 
 
-class AffixesIndex(CharTrie):  # pylint: disable=too-many-ancestors
-    def lookup(self, prefix):
-        return [val for _, vals in self.prefixes(prefix) for val in vals]
-
-
 @dataclass
 class Aff:
     # General
@@ -310,13 +304,13 @@ class Aff:
         for suf in itertools.chain.from_iterable(self.SFX.values()):
             suffixes[suf.add[::-1]].append(suf)
 
-        self.suffixes_index = AffixesIndex(suffixes)
+        self.suffixes_index = Trie(suffixes)
 
         prefixes = defaultdict(list)
         for pref in itertools.chain.from_iterable(self.PFX.values()):
             prefixes[pref.add].append(pref)
 
-        self.prefixes_index = AffixesIndex(prefixes)
+        self.prefixes_index = Trie(prefixes)
 
         if self.CHECKSHARPS:
             self.collation = GermanCollation()

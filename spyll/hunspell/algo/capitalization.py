@@ -54,7 +54,7 @@ class Collation:
         captype = self.guess(word, for_corrections=True)
 
         if captype == Type.NO:
-            result = [word] # FIXME: Add capitalized form?..
+            result = [word]     # FIXME: Add capitalized form?.. Check with FORCEUCASE
         elif captype == Type.INIT:
             result = [word, *self.lower(word)]
         elif captype == Type.HUHINIT:
