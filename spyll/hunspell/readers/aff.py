@@ -9,7 +9,6 @@ from spyll.hunspell.data import aff, phonet
 # Outdated directive names
 SYNONYMS = {'PSEUDOROOT': 'NEEDAFFIX', 'COMPOUNDLAST': 'COMPOUNDEND'}
 
-DIGITS_REGEXP = re.compile(r'^\d+')
 FLAG_LONG_REGEXP = re.compile(r'..')
 FLAG_NUM_REGEXP = re.compile(r'\d+(?=,|$)')
 
@@ -28,7 +27,7 @@ class Context:
         if string is None:
             return []
 
-        if self.flag_synonyms and DIGITS_REGEXP.match(string):
+        if self.flag_synonyms and string.isdigit():
             return self.flag_synonyms[string]
 
         # TODO: what if string format doesn't match expected (odd number of chars for long, etc.)?
@@ -194,6 +193,7 @@ def make_affix(kind, flag, crossproduct, _, strip, add, *rest, context):
     add, _, flags = add.partition('/')
     if context.ignore:
         add = add.translate(context.ignore.tr)
+    # TODO: Data fields (including AM)
     return kind_class(
         flag=flag,
         crossproduct=(crossproduct == 'Y'),

@@ -4,7 +4,6 @@ import dataclasses
 from dataclasses import dataclass
 
 from spyll.hunspell import data
-from spyll.hunspell.data.aff import RepPattern
 from spyll.hunspell.algo.capitalization import Type as CapType
 from spyll.hunspell.algo import ngram_suggest, phonet, permutations as pmt
 
@@ -55,14 +54,6 @@ class Suggest:
         self.aff = aff
         self.dic = dic
         self.lookup = lookup
-        # TODO: there also could be "pretty ph:prity ph:priti->pretti", "pretty ph:prity*"
-        # TODO: if (captype==INITCAP)
-        self.replacements = [
-            # FIXME: Shouldn't work, probably...
-            RepPattern(phonetic, word.stem)
-            for word in dic.words if word.phonetic()
-            for phonetic in word.phonetic()
-        ]
 
         # Yeah, that's how hunspell defines whether words can be split by dash in this language:
         # either dash is explicitly mentioned in TRY directive, or TRY directive indicates the
@@ -254,12 +245,6 @@ class Suggest:
                 yield MultiWordSuggestion(suggestion, 'replchars', allow_dash=False)
             else:
                 yield Suggestion(suggestion, 'replchars')
-
-        for suggestion in pmt.replchars(word, self.replacements):
-            if isinstance(suggestion, list):
-                yield MultiWordSuggestion(suggestion, 'replchars/ph', allow_dash=False)
-            else:
-                yield Suggestion(suggestion, 'replchars/ph')
 
     def questionable_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         # wrong char from a related set

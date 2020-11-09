@@ -482,8 +482,8 @@ class Lookup:
 
         root_flags = form.in_dictionary.flags
         all_flags = form.flags()
-        # TODO: Should be guessed on dictionary loading
-        root_capitalization = aff.collation.guess(form.in_dictionary.stem)
+        # # TODO: Should be guessed on dictionary loading
+        # root_capitalization = aff.collation.guess(form.in_dictionary.stem)
 
         # If the stem has NOSUGGEST flag, it shouldn't be considered an existing word when called
         # from ``Suggest`` (in other cases allow_nosuggest is True). This allows, for example, to
@@ -497,7 +497,7 @@ class Lookup:
         # ...unless the affix has additional CHECKSHARPS setting, because then the flag is reused
         # to prohibit sharp-s in capitalized word. (FIXME: but for words without sharp-s works
         # as previously?.. CHECK!)
-        if captype != root_capitalization and aff.KEEPCASE in root_flags and not aff.CHECKSHARPS:
+        if captype != form.in_dictionary.captype and aff.KEEPCASE in root_flags and not aff.CHECKSHARPS:
             return False
 
         # **Check affix flags**

@@ -117,14 +117,7 @@ report('nosplitsugs')
 section('Phonetical suggestions')
 
 report('ph')
-report('ph2', pending=[
-    'rootforbiddenroot', # see opentaal_forbidden comments
-    # Exotic ph: options, never seen in real life...
-    'pritiest',
-    'fubarö',
-    'fubarőt',
-    'hepiest'
-    ])
+report('ph2', pending=['rootforbiddenroot']) # see opentaal_forbidden comments
 report('phone')
 
 # ==================

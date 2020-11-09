@@ -26,8 +26,8 @@ def phonet_suggest(word: str, *, roots, table: phonet.Table) -> Iterator[str]:
         # TODO: more exceptions
 
         nscore = ng.root_score(word, dword.stem)
-        if dword.phonetic():
-            for variant in dword.phonetic():
+        if dword.alt_spellings:
+            for variant in dword.alt_spellings:
                 nscore = max(nscore, ng.root_score(word, variant))
 
         if nscore > 2 and abs(len(word) - len(dword.stem)) <= 3:

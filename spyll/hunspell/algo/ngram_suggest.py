@@ -32,8 +32,8 @@ def ngram_suggest(word: str, *,
         # ...?onlyupcase flag
 
         score = root_score(word, dword.stem)
-        if dword.phonetic():
-            for variant in dword.phonetic():
+        if dword.alt_spellings:
+            for variant in dword.alt_spellings:
                 score = max(score, root_score(word, variant))
 
         root_scores.push(dword, score)
@@ -45,8 +45,8 @@ def ngram_suggest(word: str, *,
     # possible suggestions
     guess_scores = ScoredArray[Tuple[str, str]](MAX_GUESSES)
     for (root, _) in root_scores.result():
-        if root.phonetic():
-            for variant in root.phonetic():
+        if root.alt_spellings:
+            for variant in root.alt_spellings:
                 score = rough_affix_score(word, variant)
                 if score > threshold:
                     guess_scores.push((variant, root.stem), score)

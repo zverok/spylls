@@ -39,7 +39,7 @@ class Dictionary:
     @classmethod
     def from_files(cls, path):
         aff, context = readers.read_aff(FileReader(path + '.aff'))
-        dic = readers.read_dic(FileReader(path + '.dic', encoding=context.encoding), context=context)
+        dic = readers.read_dic(FileReader(path + '.dic', encoding=context.encoding), aff=aff, context=context)
 
         return cls(aff, dic)
 
@@ -51,7 +51,7 @@ class Dictionary:
         aff_path = [name for name in file.namelist() if name.endswith('.aff')][0]
         dic_path = [name for name in file.namelist() if name.endswith('.dic')][0]
         aff, context = readers.read_aff(ZipReader(file.open(aff_path)))
-        dic = readers.read_dic(ZipReader(file.open(dic_path), encoding=context.encoding), context=context)
+        dic = readers.read_dic(ZipReader(file.open(dic_path), encoding=context.encoding), aff=aff, context=context)
 
         return cls(aff, dic)
 
