@@ -10,19 +10,19 @@ SLASH_REGEXP = re.compile(r'(?<!\\)/')
 
 def read_dic(source, *, context):
     def read_word(line):
-        parts = SPACES_REGEXP.split(line)
-        word_parts = [part for part in parts if not MORPH_REGEXP.match(part)]
+        word_parts = []
+        morphology = defaultdict(list)
 
-        def morphology(parts):
-            # Todo: AM
-            for part in parts:
+        for i, part in enumerate(SPACES_REGEXP.split(line)):
+            if ':' in part and i != 0:
                 tag, _, content = part.partition(':')
+                # TODO: in ph2.dic, there is "ph:" construct, what does it means?..
                 if content:
-                    yield tag, content
-
-        morph = defaultdict(list)
-        for tag, content in morphology(parts):
-            morph[tag].append(content)
+                    morphology[tag].append(content)
+            elif part.isdigit():
+                pass    # TODO: AM
+            else:
+                word_parts.append(part)
 
         word = ' '.join(word_parts)
         if word.startswith('/'):
@@ -33,11 +33,12 @@ def read_dic(source, *, context):
                 word, flags = word_with_flags
             else:
                 flags = ''
-        word = word.replace('\\/', '/')
+        if r'\/' in word:
+            word = word.replace(r'\/', '/')
         if context.ignore:
             word = word.translate(context.ignore.tr)
 
-        return dic.Word(stem=word, flags={*context.parse_flags(flags)}, morphology=morph)
+        return dic.Word(stem=word, flags={*context.parse_flags(flags)}, morphology=morphology)
 
     words = [
         read_word(line)

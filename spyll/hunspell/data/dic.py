@@ -42,3 +42,11 @@ class Dic:
         if for_all:
             return homonyms and all(flag in homonym.flags for homonym in homonyms)
         return homonyms and any(flag in homonym.flags for homonym in homonyms)
+
+    # def push_word(stem, flags, data, alt_spellings):
+    #     captype = collation.guess(word)
+    #     word = Word(stem=stem, flags=flags, data=data, captype=captype)
+    #     self.index[stem].append(word)
+    #     lower = collation.lower(stem) if captype != CapType.NO else stem
+    #     self.lowercase_index[stem].append(word)
+    #     self.reptable.expand(alt_spellings)
