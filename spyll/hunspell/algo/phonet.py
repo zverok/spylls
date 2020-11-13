@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Iterator
+from typing import Iterator, List, Tuple
 from operator import itemgetter
+import heapq
 
 from spyll.hunspell.data import phonet
 
 import spyll.hunspell.algo.string_metrics as sm
-from spyll.hunspell.algo.util import ScoredArray
 import spyll.hunspell.algo.ngram_suggest as ng
 
 MAX_ROOTS = 100
@@ -16,7 +16,7 @@ def phonet_suggest(word: str, *, roots, table: phonet.Table) -> Iterator[str]:
     word = word.lower()
     word_ph = metaphone(table, word)
 
-    scores = ScoredArray[str](MAX_ROOTS)
+    scores: List[Tuple[float, str]] = []
 
     # NB: This cycle is repeated from ngram_suggest when both are used.
     # But it is MUCH easier to understand and test this way.
@@ -32,12 +32,14 @@ def phonet_suggest(word: str, *, roots, table: phonet.Table) -> Iterator[str]:
 
         if nscore > 2 and abs(len(word) - len(dword.stem)) <= 3:
             score = 2 * sm.ngram(3, word_ph, metaphone(table, dword.stem), longer_worse=True)
-            scores.push(dword.stem, score)
+            if len(scores) > MAX_ROOTS:
+                heapq.heappushpop(scores, (score, dword.stem))
+            else:
+                heapq.heappush(scores, (score, dword.stem))
 
-    guesses = sorted(scores.result(), key=itemgetter(1), reverse=True)
+    guesses = heapq.nlargest(MAX_ROOTS, scores)
 
-    # TODO: Use aff.MAXPHONSUGS setting
-    guesses2 = [(dword, score + detailed_score(word, dword.lower())) for (dword, score) in guesses]
+    guesses2 = [(dword, score + detailed_score(word, dword.lower())) for (score, dword) in guesses]
     guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
     for (sug, _) in guesses2:
         yield sug

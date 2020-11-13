@@ -62,12 +62,17 @@ class Suggest:
         # even if it is the perfectly normal way to spell.
         self.use_dash = '-' in self.aff.TRY or 'a' in self.aff.TRY
 
+        # TODO: also NONGRAMSUGGEST and ONLYUPCASE
+        bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
+
+        self.words_for_ngram = [word for word in self.dic.words if not bad_flags.intersection(word.flags)]
+
     # Outer "public" interface: just takes all the Suggestion instances and takes text from them.
     def __call__(self, word: str) -> Iterator[str]:
-        yield from (suggestion.text for suggestion in self.suggest_debug(word))
+        yield from (suggestion.text for suggestion in self.suggest_internal(word))
 
     # Main suggestion search loop.
-    def suggest_debug(self, word: str) -> Iterator[Suggestion]:
+    def suggest_internal(self, word: str) -> Iterator[Suggestion]:
         # Whether some suggestion (permutation of the word) is an existing and allowed word,
         # just delegates to Lookup
         def is_good_suggestion(word, capitalization=False, allow_break=True):
@@ -108,7 +113,7 @@ class Suggest:
         def handle_found(suggestion, *, check_inclusion=False):
             text = suggestion.text
             # If any of the homonyms has KEEPCASE flag, we shouldn't coerce it from the base form.
-            # But CHECKSHARPS flag presence changes the meening of KEEPCASE...
+            # But CHECKSHARPS flag presence changes the meaning of KEEPCASE...
             if (self.aff.KEEPCASE and not self.aff.CHECKSHARPS) and self.dic.has_flag(text, self.aff.KEEPCASE):
                 # Don't try to change text's case
                 pass
@@ -129,6 +134,7 @@ class Suggest:
             # If we already seen this suggestion, nothing to do
             if text in handled:
                 return
+
             # Sometimes we want to skip suggestions even if they are same as PARTS of already
             # seen ones: for examle, ngram-based suggestions might produce very similar forms, like
             # "impermanent" and "permanent" -- both of them are correct, but if the first is
@@ -195,7 +201,7 @@ class Suggest:
             for suggestion in filter_suggestions(self.questionable_permutations(variant)):
                 yield from handle_found(suggestion)
 
-        if very_good or good or self.aff.MAXNGRAMSUGS == 0:
+        if very_good or good:
             return
 
         # If there was no "good" or "very good" permutations that were valid words, we might try
@@ -232,11 +238,19 @@ class Suggest:
                 # usage in Lookup)
                 yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
 
+    # Good permutations (that produces words not very different from the initial one)
     def good_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         # suggestions for an uppercase word (html -> HTML)
         yield Suggestion(self.aff.collation.upper(word), 'uppercase')
 
-        # typical fault of spelling, might return several words if REP table has "REP <something> _",
+        # REP table in affix file specifies "typical misspellings", and we try to replace them.
+        # Note that the content of REP table taken not only from aff file, but also from "ph:" tag
+        # in dictionary (lines looking like ``hello ph:helo`` put word "hello" in dictionary, and
+        # "helo -> hello" in REP-table), see read_dic.
+        #
+        # It might return several words if REP table has "REP <something> <some>_<thing>" (_ is code
+        # for space).
+        #
         # ...in this case we should suggest both "<word1> <word2>" as one dictionary entry, and
         # "<word1>" "<word1>" as a sequence -- but clarifying this sequence might NOT be joined by "-"
         for suggestion in pmt.replchars(word, self.aff.REP):
@@ -246,100 +260,68 @@ class Suggest:
             else:
                 yield Suggestion(suggestion, 'replchars')
 
+    # Permutations that are producing suggestions further from the original word.
+    # Order is important: As the whole ``Suggest`` produces generator, client code may consume it
+    # one-by-one, so the first suggested means more likely.
     def questionable_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
-        # wrong char from a related set
+        # MAP in aff file specifies related chars (for example, "ïi"), and mapchars produces all
+        # changes of the word with related chars replaced. For example, "naive" produces "naïve".
         for suggestion in pmt.mapchars(word, self.aff.MAP):
             yield Suggestion(suggestion, 'mapchars')
 
-        # swap the order of chars by mistake
+        # Try to swap adjacent characters (ktiten -> kitten), produces all possible forms with ONE
+        # swap; but for 4- and 5-letter words tries also two swaps "ahev -> have"
         for suggestion in pmt.swapchar(word):
             yield Suggestion(suggestion, 'swapchar')
 
-        # swap the order of non adjacent chars by mistake
+        # Try longer swaps (up to 4 chars distance)
         for suggestion in pmt.longswapchar(word):
             yield Suggestion(suggestion, 'longswapchar')
 
-        # hit the wrong key in place of a good char (case and keyboard)
+        # Try to replace chars by those close on keyboard ("wueue" -> "queue"), KEY in aff file specifies
+        # keyboard layout.
         for suggestion in pmt.badcharkey(word, self.aff.KEY):
             yield Suggestion(suggestion, 'badcharkey')
 
-        # add a char that should not be there
+        # Try remove character (produces all forms with one char removed: "clat" => "lat", "cat", "clt", "cla")
         for suggestion in pmt.extrachar(word):
             yield Suggestion(suggestion, 'extrachar')
 
-        # forgot a char
+        # Try insert character (from set of all possible language chars specified in aff), produces
+        # all forms with any of the TRY chars inserted in all possible positions
         for suggestion in pmt.forgotchar(word, self.aff.TRY):
             yield Suggestion(suggestion, 'forgotchar')
 
-        # move a char
+        # Try to move a character forward and backwars:
+        #  "rnai" => "nari", "nair", "rain" (forward: r moved 2 and 3 chars, n moved 2 chars)
+        #         => "rina", "irna", "arni" (backward: i moved 2 and 3 chars, a moved 2 chars)
+        # (no 1-char movements necessary, they are covered by swapchar above)
         for suggestion in pmt.movechar(word):
             yield Suggestion(suggestion, 'movechar')
 
-        # just hit the wrong key in place of a good char
+        # Try replace each character with any of other language characters
         for suggestion in pmt.badchar(word, self.aff.TRY):
             yield Suggestion(suggestion, 'badchar')
 
-        # double two characters
+        # Try fix two-character doubling: "chickcken" -> "chicken" (one-character doubling is
+        # already covered by extrachar)
         for suggestion in pmt.doubletwochars(word):
             yield Suggestion(suggestion, 'doubletwochars')
 
         if not self.aff.NOSPLITSUGS:
-            # perhaps we forgot to hit space and two words ran together
+            # Try split word by space in all possible positions
+            # NOSPLITSUGS option in aff prohibits it, it is important, say, for Scandinavian languages
             for suggestion_pair in pmt.twowords(word):
                 yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.use_dash)
 
     def ngram_suggestions(self, word: str, handled: Set[str]) -> Iterator[str]:
-        def forms_for(word: data.dic.Word, candidate: str):
-            # word without prefixes/suffixes is also present...
-            # TODO: unless it is forbidden :)
-            res = [word.stem]
-
-            suffixes = [
-                suffix
-                for flag in word.flags
-                for suffix in self.aff.SFX.get(flag, [])
-                if suffix.cond_regexp.search(word.stem) and candidate.endswith(suffix.add)
-            ]
-            prefixes = [
-                prefix
-                for flag in word.flags
-                for prefix in self.aff.PFX.get(flag, [])
-                if prefix.cond_regexp.search(word.stem) and candidate.startswith(prefix.add)
-            ]
-
-            cross = [
-                (prefix, suffix)
-                for prefix in prefixes
-                for suffix in suffixes
-                if suffix.crossproduct and prefix.crossproduct
-            ]
-
-            for suf in suffixes:
-                # FIXME: this things should be more atomic
-                root = word.stem[0:-len(suf.strip)] if suf.strip else word.stem
-                res.append(root + suf.add)
-
-            for pref, suf in cross:
-                root = word.stem[len(pref.strip):-len(suf.strip)] if suf.strip else word.stem[len(pref.strip):]
-                res.append(pref.add + root + suf.add)
-
-            for pref in prefixes:
-                root = word.stem[len(pref.strip):]
-                res.append(pref.add + root)
-
-            return res
-
-        # TODO: also NONGRAMSUGGEST and ONLYUPCASE
-        # TODO: move to constructor
-        bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
-
-        # FIXME: maybe better to calc it once and for good?..
-        roots = (word for word in self.dic.words if not bad_flags.intersection(word.flags))
+        if self.aff.MAXNGRAMSUGS == 0:
+            return
 
         yield from ngram_suggest.ngram_suggest(
                     word.lower(),
-                    roots=roots,
-                    forms_producer=forms_for,
+                    roots=self.words_for_ngram,
+                    aff=self.aff,
                     known={*(word.lower() for word in handled)},
                     maxdiff=self.aff.MAXDIFF,
                     onlymaxdiff=self.aff.ONLYMAXDIFF)
@@ -348,8 +330,4 @@ class Suggest:
         if not self.aff.PHONE:
             return
 
-        # TODO: All of it should go to the constructor
-        bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
-        roots = (word for word in self.dic.words if not bad_flags.intersection(word.flags))
-
-        yield from phonet.phonet_suggest(word, roots=roots, table=self.aff.PHONE)
+        yield from phonet.phonet_suggest(word, roots=self.words_for_ngram, table=self.aff.PHONE)

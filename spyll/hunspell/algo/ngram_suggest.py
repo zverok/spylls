@@ -1,9 +1,9 @@
 from typing import Iterator, Tuple, List, Set
 from operator import itemgetter
+import heapq
 
 from spyll.hunspell import data
 import spyll.hunspell.algo.string_metrics as sm
-from spyll.hunspell.algo.util import ScoredArray
 
 
 MAX_ROOTS = 100
@@ -16,13 +16,12 @@ MAXCOMPOUNDSUGS = 3
 
 
 def ngram_suggest(word: str, *,
-                  roots, forms_producer, known: Set[str], maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
+                  roots, aff, known: Set[str], maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
     # TODO: lowering depends on BMP of word, true by default
-    # low = True
 
     # exhaustively search through all root words
     # keeping track of the MAX_ROOTS most similar root words
-    root_scores = ScoredArray[data.dic.Word](MAX_ROOTS)
+    root_scores: List[Tuple[float, str, data.dic.Word]] = []
 
     for dword in roots:
         if abs(len(dword.stem) - len(word)) > 4:
@@ -36,29 +35,32 @@ def ngram_suggest(word: str, *,
             for variant in dword.alt_spellings:
                 score = max(score, root_score(word, variant))
 
-        root_scores.push(dword, score)
+        if len(root_scores) > MAX_ROOTS:
+            heapq.heappushpop(root_scores, (score, dword.stem, dword))
+        else:
+            heapq.heappush(root_scores, (score, dword.stem, dword))
 
     threshold = detect_threshold(word)
 
     # now expand affixes on each of these root words and
     # and use length adjusted ngram scores to select
     # possible suggestions
-    guess_scores = ScoredArray[Tuple[str, str]](MAX_GUESSES)
-    for (root, _) in root_scores.result():
+    guess_scores: List[Tuple[float, str, str]] = []
+    for (_, _, root) in heapq.nlargest(MAX_ROOTS, root_scores):
         if root.alt_spellings:
             for variant in root.alt_spellings:
                 score = rough_affix_score(word, variant)
                 if score > threshold:
-                    guess_scores.push((variant, root.stem), score)
+                    heapq.heappush(guess_scores, (score, variant, root.stem))
 
-        for form in forms_producer(root, word):
+        for form in forms_for(aff, root, word):
             score = rough_affix_score(word, form.lower())
             if score > threshold:
-                guess_scores.push((form, form), score)
+                heapq.heappush(guess_scores, (score, form, form))
 
     # now we are done generating guesses
     # sort in order of decreasing score
-    guesses = sorted(guess_scores.result(), key=itemgetter(1), reverse=True)
+    guesses = heapq.nlargest(MAX_GUESSES, guess_scores)
 
     fact = (10.0 - maxdiff) / 5.0 if maxdiff >= 0 else 1.0
 
@@ -66,7 +68,7 @@ def ngram_suggest(word: str, *,
     # the longest common subsequent algorithm and resort
     guesses2 = [
         (real, detailed_affix_score(word, compared.lower(), fact, base=score))
-        for ((compared, real), score) in guesses
+        for (score, compared, real) in guesses
     ]
 
     guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
@@ -79,7 +81,6 @@ def filter_guesses(guesses: List[Tuple[str, float]], *, known: Set[str], onlymax
     found = 0
 
     for (value, score) in guesses:
-        # print(value, score, found, known, any(value in known_word for known_word in known))
         if same and score <= 1000:
             continue
 
@@ -156,3 +157,43 @@ def detailed_affix_score(word1: str, word2: str, fact: float, *, base: float) ->
         re +
         (-1000 if re < (len(word1) + len(word2)) * fact else 0)
     )
+
+
+def forms_for(aff: data.Aff, word: data.dic.Word, candidate: str):
+    # word without prefixes/suffixes is also present
+    res = [word.stem]
+
+    suffixes = [
+        suffix
+        for flag in word.flags
+        for suffix in aff.SFX.get(flag, [])
+        if suffix.cond_regexp.search(word.stem) and candidate.endswith(suffix.add)
+    ]
+    prefixes = [
+        prefix
+        for flag in word.flags
+        for prefix in aff.PFX.get(flag, [])
+        if prefix.cond_regexp.search(word.stem) and candidate.startswith(prefix.add)
+    ]
+
+    cross = [
+        (prefix, suffix)
+        for prefix in prefixes
+        for suffix in suffixes
+        if suffix.crossproduct and prefix.crossproduct
+    ]
+
+    for suf in suffixes:
+        # FIXME: this things should be more atomic
+        root = word.stem[0:-len(suf.strip)] if suf.strip else word.stem
+        res.append(root + suf.add)
+
+    for pref, suf in cross:
+        root = word.stem[len(pref.strip):-len(suf.strip)] if suf.strip else word.stem[len(pref.strip):]
+        res.append(pref.add + root + suf.add)
+
+    for pref in prefixes:
+        root = word.stem[len(pref.strip):]
+        res.append(pref.add + root)
+
+    return res

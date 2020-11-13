@@ -25,7 +25,7 @@ def replchars(word: str, reptable: List[aff.RepPattern]) -> Iterator[Union[str, 
 
 # suggestions for when chose the wrong char out of a related set
 #
-# uses aff.map -- list of sets of potentially similar chars
+# uses aff.MAP -- list of sets of potentially similar chars
 def mapchars(word: str, maptable: List[Set[str]]) -> Iterator[str]:
     if len(word) < 2 or not maptable:
         return
@@ -60,7 +60,7 @@ def swapchar(word: str) -> Iterator[str]:
 
     # try double swaps for short words
     # ahev -> have, owudl -> would
-    if 4 <= len(word) <= 5:
+    if len(word) in [4,  5]:
         yield word[1] + word[0] + (word[2] if len(word) == 5 else '') + word[-1] + word[-2]
         if len(word) == 5:
             yield word[0] + word[2] + word[1] + word[-1] + word[-2]
@@ -103,7 +103,7 @@ def extrachar(word: str) -> Iterator[str]:
 
 
 # error is missing a letter it needs
-# uses aff.try -- if it is absent, doesn't try anything!
+# uses aff.TRY -- if it is absent, doesn't try anything!
 def forgotchar(word, trystring):
     if not trystring:
         return
