@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple, List, Set
+from typing import Iterator, Tuple, List, Set, Dict
 from operator import itemgetter
 import heapq
 
@@ -16,7 +16,9 @@ MAXCOMPOUNDSUGS = 3
 
 
 def ngram_suggest(word: str, *,
-                  roots, aff, known: Set[str], maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
+                  roots: List[data.dic.Word],
+                  prefixes: Dict[str, List[data.aff.Prefix]], suffixes: Dict[str, List[data.aff.Suffix]],
+                  known: Set[str], maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
     # TODO: lowering depends on BMP of word, true by default
 
     # exhaustively search through all root words
@@ -53,7 +55,7 @@ def ngram_suggest(word: str, *,
                 if score > threshold:
                     heapq.heappush(guess_scores, (score, variant, root.stem))
 
-        for form in forms_for(aff, root, word):
+        for form in forms_for(root, word, prefixes, suffixes):
             score = rough_affix_score(word, form.lower())
             if score > threshold:
                 heapq.heappush(guess_scores, (score, form, form))
@@ -159,20 +161,20 @@ def detailed_affix_score(word1: str, word2: str, fact: float, *, base: float) ->
     )
 
 
-def forms_for(aff: data.Aff, word: data.dic.Word, candidate: str):
+def forms_for(word: data.dic.Word, candidate: str, all_prefixes, all_suffixes):
     # word without prefixes/suffixes is also present
     res = [word.stem]
 
     suffixes = [
         suffix
         for flag in word.flags
-        for suffix in aff.SFX.get(flag, [])
+        for suffix in all_suffixes.get(flag, [])
         if suffix.cond_regexp.search(word.stem) and candidate.endswith(suffix.add)
     ]
     prefixes = [
         prefix
         for flag in word.flags
-        for prefix in aff.PFX.get(flag, [])
+        for prefix in all_prefixes.get(flag, [])
         if prefix.cond_regexp.search(word.stem) and candidate.startswith(prefix.add)
     ]
 
