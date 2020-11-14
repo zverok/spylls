@@ -11,31 +11,42 @@ import spyll.hunspell.algo.ngram_suggest as ng
 
 MAX_ROOTS = 100
 
-
+# Phonetical suggestion algorithm provides suggestions based on phonetial (prononication) similarity.
+# It requires aff to defone PHONE table -- which, we should add, is _extremely_ rare in known dictionaries.
 def phonet_suggest(word: str, *, dictionary_words: List[data.dic.Word], table: phonet.Table) -> Iterator[str]:
     word = word.lower()
     word_ph = metaphone(table, word)
 
     scores: List[Tuple[float, str]] = []
 
-    # NB: This cycle is repeated from ngram_suggest when both are used.
-    # But it is MUCH easier to understand and test this way.
+    # First, select words from dictionary whose stems alike the misspelling we are trying to suggest.
+    #
+    # This cycle is exactly the same as the first cycle in ngram_suggest. In fact, in original Hunspell
+    # both ngram and phonetical suggestion are done in one pass inside ngram_suggest, which is
+    # more effective (one iteration through whole dictionary instead of two) but much harder to
+    # understand and debug.
+    #
+    # Considering extreme rarity of metaphone-enabled dictionaries, and "educational" goal of
+    # spyll, we split it out.
     for dword in dictionary_words:
-        if abs(len(dword.stem) - len(word)) > 4:
+        if abs(len(dword.stem) - len(word)) > 3:
             continue
-        # TODO: more exceptions
 
         nscore = ng.root_score(word, dword.stem)
+
         if dword.alt_spellings:
             for variant in dword.alt_spellings:
                 nscore = max(nscore, ng.root_score(word, variant))
 
-        if nscore > 2 and abs(len(word) - len(dword.stem)) <= 3:
-            score = 2 * sm.ngram(3, word_ph, metaphone(table, dword.stem), longer_worse=True)
-            if len(scores) > MAX_ROOTS:
-                heapq.heappushpop(scores, (score, dword.stem))
-            else:
-                heapq.heappush(scores, (score, dword.stem))
+        if nscore <= 2:
+            continue
+
+        score = 2 * sm.ngram(3, word_ph, metaphone(table, dword.stem), longer_worse=True)
+
+        if len(scores) > MAX_ROOTS:
+            heapq.heappushpop(scores, (score, dword.stem))
+        else:
+            heapq.heappush(scores, (score, dword.stem))
 
     guesses = heapq.nlargest(MAX_ROOTS, scores)
 
@@ -54,10 +65,6 @@ def detailed_score(word1: str, word2: str) -> float:
 
 
 def metaphone(table, word):
-    # for each position in word:
-    # find rules that match (^ -- only once, $ -- fullmatch)
-    # "-" -- make them lookahead
-
     pos = 0
     word = word.upper()
     res = ''
