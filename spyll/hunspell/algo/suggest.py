@@ -320,7 +320,7 @@ class Suggest:
 
         yield from ngram_suggest.ngram_suggest(
                     word.lower(),
-                    roots=self.words_for_ngram,
+                    dictionary_words=self.words_for_ngram,
                     prefixes=self.aff.PFX, suffixes=self.aff.SFX,
                     known={*(word.lower() for word in handled)},
                     maxdiff=self.aff.MAXDIFF,

@@ -1,9 +1,9 @@
-from enum import Enum
-from typing import List, Optional, Tuple, cast
-
-LCS = Enum('LCS', 'UP LEFT UPLEFT')
+from typing import Tuple
 
 
+# Number of occurences of the exactly same characters in exactly same position.
+# Returns also boolean flag if the only difference in characters of two strings is exactly one
+# swap ("paris" => "piras") -- both values are used in the same place of Hunspell ngram algorithm.
 def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
     num = 0
     diffpos = []
@@ -16,14 +16,15 @@ def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
 
     if len(diffpos) == 2:   # two string differ only by exactly two chars swaped
         p1, p2 = diffpos    # pylint: disable=unbalanced-tuple-unpacking
-        swap = len(s1) == len(s2) and s1[p1] == s2[p2] and s1[p2] == s2[p1]
+        is_swap = len(s1) == len(s2) and s1[p1] == s2[p2] and s1[p2] == s2[p1]
     else:
-        swap = False
+        is_swap = False
 
-    return (num, swap)
+    return (num, is_swap)
 
 
-def leftcommonsubstring(s1: str, s2: str) -> float:
+# Size of the common start of two strings. "foo", "bar" => 0, "built", "build" => 4, "cat", "cats" => 3
+def leftcommonsubstring(s1: str, s2: str) -> int:
     for (i, (c1, c2)) in enumerate(zip(s1, s2)):
         if c1 != c2:
             return i
@@ -31,8 +32,18 @@ def leftcommonsubstring(s1: str, s2: str) -> float:
     return min(len(s1), len(s2))
 
 
-def ngram(n: int, s1: str, s2: str, *,
-          weighted=False, any_mismatch=False, longer_worse=False) -> float:
+# Calculates how many of n-grams of s1 are contained in s2 (the more the number, the more words
+# are similar).
+#
+# Settings:
+# ``weighted``: substract from result for ngrams _not_ contained
+# ``longer_worse``: add a penalty when second string is longer
+# ``any_mismatch``: add a penalty for any string lengtht difference
+#
+# FIXME: Actually, the last to settings do NOT participate in ngram counting by themselves, they
+# are just adjusting the final score, but that's how it was structured in Hunspell.
+def ngram(max_ngram_size: int, s1: str, s2: str, *,
+          weighted=False, any_mismatch=False, longer_worse=False) -> int:
 
     l2 = len(s2)
     if l2 == 0:
@@ -40,72 +51,52 @@ def ngram(n: int, s1: str, s2: str, *,
     l1 = len(s1)
 
     nscore = 0
-    for j in range(1, n + 1):
+    # For all sizes of ngram up to desired...
+    for ngram_size in range(1, max_ngram_size + 1):
         ns = 0
-        for i in range(l1 - j + 1):
-            if s1[i:i+j] in s2:
+        # Check every position in the first string
+        for pos in range(l1 - ngram_size + 1):
+            # ...and if the ngram of current size in this position is present in ANY place in second string
+            if s1[pos:pos+ngram_size] in s2:
+                # increase score
                 ns += 1
             elif weighted:
+                # For "weighted" ngrams, decrease score if ngram is not found,
                 ns -= 1
-                if i in (0, l1 - j):
-                    ns -= 1  # side weight
+                if pos == 0 or pos + ngram_size == l1:
+                    # ...and decrease once more if it was the beginning or end of first string
+                    ns -= 1
         nscore += ns
         if ns < 2 and not weighted:
             break
 
-    ns = 0
+    # longer_worse setting adds a penalty if the second string is longer than first
     if longer_worse:
-        ns = (l2 - l1) - 2
-    if any_mismatch:
-        ns = abs(l2 - l1) - 2
+        penalty = (l2 - l1) - 2
+    # any_mismatch adds a penalty for _any_ string length difference
+    elif any_mismatch:
+        penalty = abs(l2 - l1) - 2
+    else:
+        penalty = 0
 
-    return nscore - ns if ns > 0 else nscore
+    return nscore - penalty if penalty > 0 else nscore
 
 
+# Classic "LCS (longest common subsequence) length" algorithm.
+# This implementation is stolen shamelessly from https://gist.github.com/cgt/c0c47c100efda1d11854
 def lcslen(s1: str, s2: str) -> int:
-    result = lcs(s1, s2)
-    if not result:
-        return 0
-
-    i = len(s1)
-    j = n = len(s2)
-
-    res = 0
-    while (i != 0) and (j != 0):
-        if result[i * (n + 1) + j] == LCS.UPLEFT:
-            res += 1
-            i -= 1
-            j -= 1
-        elif result[i * (n + 1) + j] == LCS.UP:
-            i -= 1
-        else:
-            j -= 1
-
-    return res
-
-
-def lcs(s1: str, s2: str) -> List[Optional[LCS]]:
     m = len(s1)
     n = len(s2)
 
-    c: List[Optional[int]] = [None] * ((m + 1) * (n + 1))
-    b: List[Optional[LCS]] = [None] * ((m + 1) * (n + 1))
+    c = [[0 for j in range(n+1)] for i in range(m+1)]
 
-    for i in range(m+1):
-        c[i * (n + 1)] = 0
-    for j in range(n+1):
-        c[j] = 0
-
-    for i in range(1, m+1):
-        for j in range(1, n+1):
-            if s1[i - 1] == s2[j - 1]:
-                c[i * (n + 1) + j] = cast(int, c[(i - 1) * (n + 1) + j - 1]) + 1
-                b[i * (n + 1) + j] = LCS.UPLEFT
-            elif cast(int, c[(i - 1) * (n + 1) + j]) >= cast(int, c[i * (n + 1) + j - 1]):
-                c[i * (n + 1) + j] = c[(i - 1) * (n + 1) + j]
-                b[i * (n + 1) + j] = LCS.UP
+    for i in range(0, m):
+        for j in range(0, n):
+            if s1[i] == s2[j]:
+                c[i][j] = c[i-1][j-1] + 1
+            elif c[i-1][j] >= c[i][j-1]:
+                c[i][j] = c[i-1][j]
             else:
-                c[i * (n + 1) + j] = c[i * (n + 1) + j - 1]
-                b[i * (n + 1) + j] = LCS.LEFT
+                c[i][j] = c[i][j-1]
 
-    return b
+    return c[m-1][n-1]
