@@ -32,6 +32,7 @@ def phonet_suggest(word: str, *, dictionary_words: List[data.dic.Word], table: p
         if abs(len(dword.stem) - len(word)) > 3:
             continue
 
+        # First, we calculate "regular" similarity score, just like in ngram_suggest
         nscore = ng.root_score(word, dword.stem)
 
         if dword.alt_spellings:
@@ -41,6 +42,7 @@ def phonet_suggest(word: str, *, dictionary_words: List[data.dic.Word], table: p
         if nscore <= 2:
             continue
 
+        # ...and if it shows words are somewhat close, we calculate metaphone score
         score = 2 * sm.ngram(3, word_ph, metaphone(table, dword.stem), longer_worse=True)
 
         if len(scores) > MAX_ROOTS:
@@ -50,6 +52,8 @@ def phonet_suggest(word: str, *, dictionary_words: List[data.dic.Word], table: p
 
     guesses = heapq.nlargest(MAX_ROOTS, scores)
 
+    # Finally, we sort suggestions by simplistic string similarity metric (of the misspelling and
+    # dictionary word's stem)
     guesses2 = [(score + detailed_score(word, dword.lower()), dword) for (score, dword) in guesses]
     # (NB: actually, we might not need ``key`` here, but it is
     # added for sorting stability; doesn't changes the objective quality of suggestions, but passes
