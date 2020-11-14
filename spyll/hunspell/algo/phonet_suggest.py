@@ -12,7 +12,7 @@ import spyll.hunspell.algo.ngram_suggest as ng
 MAX_ROOTS = 100
 
 
-def phonet_suggest(word: str, *, roots, table: phonet.Table) -> Iterator[str]:
+def phonet_suggest(word: str, *, dictionary_words: List[data.dic.Word], table: phonet.Table) -> Iterator[str]:
     word = word.lower()
     word_ph = metaphone(table, word)
 
@@ -20,7 +20,7 @@ def phonet_suggest(word: str, *, roots, table: phonet.Table) -> Iterator[str]:
 
     # NB: This cycle is repeated from ngram_suggest when both are used.
     # But it is MUCH easier to understand and test this way.
-    for dword in roots:
+    for dword in dictionary_words:
         if abs(len(dword.stem) - len(word)) > 4:
             continue
         # TODO: more exceptions
@@ -39,9 +39,13 @@ def phonet_suggest(word: str, *, roots, table: phonet.Table) -> Iterator[str]:
 
     guesses = heapq.nlargest(MAX_ROOTS, scores)
 
-    guesses2 = [(dword, score + detailed_score(word, dword.lower())) for (score, dword) in guesses]
-    guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
-    for (sug, _) in guesses2:
+    guesses2 = [(score + detailed_score(word, dword.lower()), dword) for (score, dword) in guesses]
+    # (NB: actually, we might not need ``key`` here, but it is
+    # added for sorting stability; doesn't changes the objective quality of suggestions, but passes
+    # hunspell test ``phone.sug``!)
+    guesses2 = sorted(guesses2, key=itemgetter(0), reverse=True)
+
+    for (_, sug) in guesses2:
         yield sug
 
 

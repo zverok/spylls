@@ -79,12 +79,15 @@ def ngram_suggest(word: str, *,
 
     # Now, calculate more detailed scores for all good suggestions
     guesses2 = [
-        (real, detailed_affix_score(word, compared.lower(), fact, base=score))
+        (detailed_affix_score(word, compared.lower(), fact, base=score), real)
         for (score, compared, real) in guesses
     ]
 
     # ...and sort them based on that score.
-    guesses2 = sorted(guesses2, key=itemgetter(1), reverse=True)
+    # (NB: actually, we might not need ``key`` here, but it is
+    # added for sorting stability; doesn't changes the objective quality of suggestions, but passes
+    # hunspell test ``phone.sug``!)
+    guesses2 = sorted(guesses2, key=itemgetter(0), reverse=True)
 
     # We can return suggestions now (but filter them to not overflow with)
     yield from filter_guesses(guesses2, known=known, onlymaxdiff=onlymaxdiff)
@@ -233,7 +236,7 @@ def filter_guesses(guesses: List[Tuple[str, float]], *, known: Set[str], onlymax
     seen = False
     found = 0
 
-    for (value, score) in guesses:
+    for (score, value) in guesses:
         if seen and score <= 1000:
             return
 

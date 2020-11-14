@@ -4,4 +4,5 @@ tmp
 **/__pycache__
 dictionaries
 dist
+experiment
 .mypy_cache/

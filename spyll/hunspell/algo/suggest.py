@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from spyll.hunspell import data
 from spyll.hunspell.algo.capitalization import Type as CapType
-from spyll.hunspell.algo import ngram_suggest, phonet, permutations as pmt
+from spyll.hunspell.algo import ngram_suggest, phonet_suggest, permutations as pmt
 
 MAXPHONSUGS = 2
 
@@ -330,4 +330,4 @@ class Suggest:
         if not self.aff.PHONE:
             return
 
-        yield from phonet.phonet_suggest(word, roots=self.words_for_ngram, table=self.aff.PHONE)
+        yield from phonet_suggest.phonet_suggest(word, dictionary_words=self.words_for_ngram, table=self.aff.PHONE)
