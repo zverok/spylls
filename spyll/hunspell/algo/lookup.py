@@ -1,3 +1,18 @@
+"""
+The main "is this word correct" algorithm implementation.
+
+.. autoclass:: Lookup
+    :members:
+
+.. autoclass:: AffixForm
+    :members:
+
+.. autodata:: CompoundForm
+.. autodata:: WordForm
+.. autodata:: CompoundPos
+    :annotation:
+"""
+
 import re
 
 from enum import Enum
@@ -14,22 +29,24 @@ import spyll.hunspell.algo.permutations as pmt
 NUMBER_REGEXP = re.compile(r'^\d+(\.\d+)?$')
 
 
-# AffixForm is a hypothesis of how some word might be split into stem, suffixes and prefixes.
-# It always has full text and stem, and may have up to two suffixes, and up to two prefixes.
-# (Affix form without any affix is also valid.)
-#
-# The following is always true (if we consider absent affixes just empty string):
-#
-# prefix + prefix2 + stem + suffix2 + suffix = text
-#
-# prefix2/suffix2 are "secondary", so if the word has only one suffix, it is stored in ``suffix`` and
-# ``suffix2`` is ``None``.
-#
-# If the word form's stem is found is dictionary ``in_dictionary`` attribute is present (though it
-# does not implies that dictionary word is compatible with suffixes and prefixes).
-#
 @dataclass
 class AffixForm:
+    """
+    AffixForm is a hypothesis of how some word might be split into stem, suffixes and prefixes.
+    It always has full text and stem, and may have up to two suffixes, and up to two prefixes.
+    (Affix form without any affix is also valid.)
+
+    The following is always true (if we consider absent affixes just empty string)::
+
+        prefix + prefix2 + stem + suffix2 + suffix = text
+
+    ``prefix2``/``suffix2`` are "secondary", so if the word has only one suffix, it is stored in
+    ``suffix`` and ``suffix2`` is ``None``.
+
+    If the word form's stem is found is dictionary ``in_dictionary`` attribute is present (though it
+    does not implies that dictionary word is compatible with suffixes and prefixes).
+    """
+
     text: str
 
     stem: str
@@ -77,44 +94,63 @@ class AffixForm:
         return result
 
 
-# CompoundForm is a hypothesis of how some word could be split into several AffixForms (word parts
-# with their own stems, and possible affixes).
-# Typically, only first part of compound is allowed to have prefix, and only last part is allowed
-# to have suffix, but there are languages where middle parts can have affixes too, which is
-# specified by special flags.
+#: CompoundForm is a hypothesis of how some word could be split into several AffixForms (word parts
+#: with their own stems, and possible affixes).
+#: Typically, only first part of compound is allowed to have prefix, and only last part is allowed
+#: to have suffix, but there are languages where middle parts can have affixes too, which is
+#: specified by special flags.
 CompoundForm = List[AffixForm]
 
 
-# Used when checking "whether this word could be part of the compound... specifically its begin/middl/end"
+#: Used when checking "whether this word could be part of the compound... specifically its begin/middl/end"
 CompoundPos = Enum('CompoundPos', 'BEGIN MIDDLE END')
 
 
-# Every word form (hypothesis about "this string may correspond to known affixes/dictionary this way")
-# is either affix form, or compound one.
+#: Every word form (hypothesis about "this string may correspond to known affixes/dictionary this way")
+#: is either affix form, or compound one.
 WordForm = Union[AffixForm, CompoundForm]
 
 
 class Lookup:
+    """
+    ``Lookup`` object is created on :class:`Dictionary <spyll.hunspell.Dictionary>` reading. Typically,
+    you would not use it directly, but you might want for experiments::
+
+        dictionary = Dictionary.from_files('dictionaries/en_US')
+        lookup = dictionary.lookuper
+
+        print(lookup('spyll'))  # False
+        print(lookup('spells')) # True
+
+        for form in lookup.good_forms('spells'):
+            print(form)
+        # AffixForm(spells = spells) -- option 1: "spells" is the whole word, present in dictionary
+        # AffixForm(spells = spell + Suffix(s: S×, on [[^sxzhy]]$)) -- option 2: word "spell" + suffix "s"
+    """
+
     def __init__(self, aff: data.aff.Aff, dic: data.dic.Dic):
         self.aff = aff
         self.dic = dic
 
-    # The outermost word correctness check.
-    #
-    # Basically, prepares word for check (converting/removing chars), and then checks whether
-    # the word is properly spelled. If it is not, also tries to break word by break-points (like
-    # dashes), and check each part separately.
-    #
-    # Boolean flags are used when the Lookup is called from Suggest, meaning:
-    #
-    # * ``capitalization`` -- if ``False``, check ONLY exactly this capitalization
-    # * ``allow_nosuggest`` -- if ``False``, don't consider correct words with NOSUGGEST flag
-    # * ``allow_break`` -- if ``False``, don't try to break word by dashes and check separately
-    #
     def __call__(self, word: str, *,
                  capitalization=True,
                  allow_nosuggest=True,
                  allow_break=True) -> bool:
+        """
+        The outermost word correctness check.
+
+        Basically, prepares word for check (converting/removing chars), and then checks whether
+        the word is properly spelled. If it is not, also tries to break word by break-points (like
+        dashes), and check each part separately.
+
+        Boolean flags are used when the Lookup is called from Suggest_.
+
+        :param str word: Word to check
+
+        :param bool capitalization: if ``False``, check ONLY exactly this capitalization
+        :param bool allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
+        :param bool allow_break: if ``False``, don't try to break word by dashes and check separately
+        """
 
         # The word is considered correct, if it can be deconstructed into a "good form" (the form
         # that is possible to produce from current dictionary: either it is stem with some affixes,
@@ -129,7 +165,7 @@ class Lookup:
 
         # Convert word before lookup with ICONV table: usually, it is normalization of apostrophes,
         # UTF chars with diacritics (which might have several different forms), and such.
-        # See ``aff.ConvTable`` for the full algorithm (it is more complex than just replace one
+        # See data.aff.ConvTable_ for the full algorithm (it is more complex than just replace one
         # substring with another).
         if self.aff.ICONV:
             word = self.aff.ICONV(word)
@@ -148,18 +184,13 @@ class Lookup:
         if is_correct(word):
             return True
 
-        # ``allow_break=False`` might've been passed from ``Suggest`` and mean we shouldn't try to
+        # ``allow_break=False`` might've been passed from Suggest_ and mean we shouldn't try to
         # break word.
         if not allow_break:
             return False
 
         # ``try_break`` recursively produces all possible lists of word breaking by break patterns
-        # (like dashes). For example, if we are checking the word "pre-processed-meat", we'll
-        # have ["pre", "processed-meat"], ["pre", "processed", "meat"] and ["pre-processed", "meat"].
-        # This is necessary (instead of just breaking the word by all breakpoints, and checking
-        # ["pre", "processed", "meat"]), because the dictionary might contain word "pre-processed"
-        # as a separate entity, so ["pre-processed", "meat"] would be considered correct, and the
-        # other two would not, if there is no separate entry on "pre".
+        # (like dashes).
         for parts in self.try_break(word):
             # If all parts in this variant of the breaking is correct, the whole word considered correct.
             if all(is_correct(part) for part in parts if part):
@@ -168,6 +199,15 @@ class Lookup:
         return False
 
     def try_break(self, text, depth=0):
+        """
+        Recursively produce all possible lists of word breaking by break patterns
+        (like dashes). For example, if we are checking the word "pre-processed-meat", we'll
+        have ["pre", "processed-meat"], ["pre", "processed", "meat"] and ["pre-processed", "meat"].
+        This is necessary (instead of just breaking the word by all breakpoints, and checking
+        ["pre", "processed", "meat"]), because the dictionary might contain word "pre-processed"
+        as a separate entity, so ["pre-processed", "meat"] would be considered correct, and the
+        other two would not, if there is no separate entry on "pre".
+        """
         if depth > 10:
             return
 
@@ -179,39 +219,35 @@ class Lookup:
                 for breaking in self.try_break(rest, depth=depth+1):
                     yield [start, *breaking]
 
-    # The main producer of correct word forms (e.g. ways the proposed string might correspond to our
-    # dictionary/affixes). If there is at least one, the word is correctly spelled. There could be
-    # many correct forms for one spelling (e.g. word "building" might be a noun "building", or infinitive
-    # "build + ing").
-    #
-    # The method returns generator (forms are produced lazy), so it doesn't have performance
-    # overhead when just needs to check "any correct form exists".
-    #
-    # Might be also used for investigative/debugging purpose this way:
-    #
-    # dic = Dictionary.from_files('dictionaries/en_US')
-    # print(*dic.lookuper.good_forms('spells'))
-    # # => AffixForm(spells = spells) -- option 1: "spells" is the whole word, present in dictionary
-    # # => AffixForm(spells = spell + Suffix(s: S×, on [[^sxzhy]]$)) -- option 2: word "spell" + suffix "s"
     def good_forms(self, word: str, *,
                    capitalization=True,
                    allow_nosuggest=True) -> Iterator[WordForm]:
+        """
+        The main producer of correct word forms (e.g. ways the proposed string might correspond to our
+        dictionary/affixes). If there is at least one, the word is correctly spelled. There could be
+        many correct forms for one spelling (e.g. word "building" might be a noun "building", or infinitive
+        "build + ing").
+
+        The method returns generator (forms are produced lazy), so it doesn't have performance
+        overhead when just needs to check "any correct form exists".
+        """
 
         # "capitalization" might be ``False`` if it is passed from ``Suggest``, meaning "check only
         # this exact case"
         if capitalization:
-            # Collaction calculates
+            # Collaction calculates:
+            #
             # * word's capitalization (none -- all letters are small, init -- first
             # letter is capitalized, all -- all leters are capital, HUH -- some letters are small,
             # some capitalized, first is small; HUHINIT -- same, but the first is capital)
             # * how it might've looked in the dictionary, if we assume the current form is correct
             #
-            # For example, if we pass "Cat", the captype would be INIT, and variants ["Cat", "cat"],
-            # the latter would be found in dictionary. If we pass "Paris", captype is INIT, variants
-            # are ["Paris", "paris"], and the _first_ one is found in the dictionary; that's why
+            # For example, if we pass "Cat", the ``captype`` would be ``INIT``, and variants ``["Cat", "cat"]``,
+            # the latter would be found in dictionary. If we pass "Paris", ``captype`` is ``INIT``, variants
+            # are ``["Paris", "paris"]``, and the *first* one is found in the dictionary; that's why
             # we need to check all variants.
             #
-            # See ``capitalization.Collation`` for capitalization quirks.
+            # See capitalization.Collation_ for capitalization quirks.
             captype, variants = self.aff.collation.variants(word)
         else:
             captype = self.aff.collation.guess(word)
@@ -224,15 +260,6 @@ class Lookup:
             # ...and then all possible compound forms
             yield from self.compound_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
 
-    # Produces correct affix forms of the given words, e.g. all ways in which it can be split into
-    # stem+affixes, such that the stem would be present in the dictionary, and stem and all affixes
-    # would be compatible with each other.
-    #
-    # ``prefix_flags``, ``suffix_flags``, ``forbidden_flags`` and ``compoundpos`` are passed when
-    # the method is called from ``compound_xxx`` family of methods.
-    #
-    # ``with_forbidden`` passed when producing forms _including those specifically marked as forbidden_,
-    # to stop compounding immediately if the forbidden one exists.
     def affix_forms(self,
                     word: str,
                     captype: CapType,
@@ -242,6 +269,17 @@ class Lookup:
                     forbidden_flags: List[Flag] = [],
                     compoundpos: Optional[CompoundPos] = None,
                     with_forbidden=False) -> Iterator[AffixForm]:
+        """
+        Produces correct affix forms of the given words, e.g. all ways in which it can be split into
+        stem+affixes, such that the stem would be present in the dictionary, and stem and all affixes
+        would be compatible with each other.
+
+        ``prefix_flags``, ``suffix_flags``, ``forbidden_flags`` and ``compoundpos`` are passed when
+        the method is called from ``compound_xxx`` family of methods.
+
+        ``with_forbidden`` passed when producing forms *including those specifically marked as forbidden*,
+        to stop compounding immediately if the forbidden one exists.
+        """
 
         # Just a shortcut to call (quite complicated) form validity method with all relevant params.
         def is_good_form(form, **kwarg):
@@ -263,7 +301,7 @@ class Lookup:
             homonyms = self.dic.homonyms(form.stem)
 
             # If one of the many homonyms has FORBIDDENWORD flag (and others do not),
-            # then the word with this stem _can't_ be part of the compound word, and can't have
+            # then the word with this stem *can't* be part of the compound word, and can't have
             # affixes, but still is allowed to exist without them.
             if (not with_forbidden and self.aff.FORBIDDENWORD and
                     (compoundpos or form.has_affixes()) and
@@ -306,10 +344,13 @@ class Lookup:
                     if is_good_form(candidate):
                         yield candidate
 
-    # Produces all correct compound forms.
-    # Delegates all real work to two different compounding algorithms, and then just check if their
-    # results pass various correctness checks.
     def compound_forms(self, word: str, captype: CapType, allow_nosuggest=True) -> Iterator[CompoundForm]:
+        """
+        Produces all correct compound forms.
+        Delegates all real work to two different compounding algorithms, and then just check if their
+        results pass various correctness checks.
+        """
+
         # if we try to decompound "forbiddenword's", AND "forbiddenword" with suffix "'s" is forbidden,
         # we shouldn't even try.
         if self.aff.FORBIDDENWORD and any(self.aff.FORBIDDENWORD in candidate.flags()
@@ -342,19 +383,21 @@ class Lookup:
     # Affixes-related algorithms
     # --------------------------
 
-    # Produces all possible affix forms: e.g. for all known suffixes & prefixes, if it looks like
-    # they are in this word, produce forms (prefix + stem + suffix).
-    #
-    # flags are used when called from compounding, in this case ``prefix_flags`` and ``suffix_flags``
-    # are listing the flags that affixes should definitely have (e.g. for word in the middle of compound,
-    # it can only have prefix explicitly marked with COMPOUNDPERMITFLAG), and ``forbidden_flags`` are
-    # listing flags that they are forbidden to have (COMPOUNDFORBIDFLAG)
     def produce_affix_forms(self,
                             word: str,
                             prefix_flags: List[Flag],
                             suffix_flags: List[Flag],
                             forbidden_flags: List[Flag],
                             compoundpos: Optional[CompoundPos] = None) -> Iterator[AffixForm]:
+        """
+        Produces all possible affix forms: e.g. for all known suffixes & prefixes, if it looks like
+        they are in this word, produce forms ``(prefix + stem + suffix)``.
+
+        flags are used when called from compounding, in this case ``prefix_flags`` and ``suffix_flags``
+        are listing the flags that affixes should definitely have (e.g. for word in the middle of compound,
+        it can only have prefix explicitly marked with ``COMPOUNDPERMITFLAG``), and ``forbidden_flags`` are
+        listing flags that they are forbidden to have (``COMPOUNDFORBIDFLAG``)
+        """
 
         # "Whole word" is always existing option. Note that it might later be rejected in is_good_form
         # if this stem has flag NEEDS_AFFIXES.
@@ -386,20 +429,22 @@ class Lookup:
                                                    crossproduct=True)
                     )
 
-    # For given word, produces AffixForm with suffix(es) split of the stem.
-    #
-    # ``forbidden_flags`` and ``required_flags`` needed on compounding, and list flags that suffix
-    # should, or should not have.
-    # ``crossproduct`` is used when trying to chop the suffix of already deprefixed form, in this
-    # case the suffix should have "cross-production allowed" mark.
-    # ``nested`` is used when the function is called recursively: currently, hunspell (and spyll)
-    # allow chopping up to two suffixes (in the future it might become an integer ``depth`` parameter
-    # for more than two suffixes analysis).
     def desuffix(self, word: str,
                  required_flags: List[Flag],
                  forbidden_flags: List[Flag],
                  nested: bool = False,
                  crossproduct: bool = False) -> Iterator[AffixForm]:
+        """
+        For given word, produces AffixForm with suffix(es) split of the stem.
+
+        ``forbidden_flags`` and ``required_flags`` needed on compounding, and list flags that suffix
+        should, or should not have.
+        ``crossproduct`` is used when trying to chop the suffix of already deprefixed form, in this
+        case the suffix should have "cross-production allowed" mark.
+        ``nested`` is used when the function is called recursively: currently, hunspell (and spyll)
+        allow chopping up to two suffixes (in the future it might become an integer ``depth`` parameter
+        for more than two suffixes analysis).
+        """
 
         def good_suffix(suffix):
             return (
@@ -408,7 +453,7 @@ class Lookup:
                 all(f not in suffix.flags for f in forbidden_flags)
             )
 
-        # We selecting suffixes that have flags and settings, and their regexp pattern match
+        # We are selecting suffixes that have flags and settings, and their regexp pattern match
         # the provided word.
         possible_suffixes = (
             suffix
@@ -419,7 +464,7 @@ class Lookup:
         # With all of those suffixes, we are producing AffixForms of the word passed
         for suffix in possible_suffixes:
             # stem is produced by removing the suffix, and, optionally, adding the part of the
-            # stem (named strip). For example, suffix might be declared as (strip=y, add=ier),
+            # stem (named ``strip``). For example, suffix might be declared as ``(strip=y, add=ier)``,
             # then to restore the original stem from word "prettier" we must remove "ier" and add back "y"
             stem = suffix.replace_regexp.sub(suffix.strip, word)
 
@@ -434,13 +479,15 @@ class Lookup:
                                            crossproduct=crossproduct):
                     yield form2.replace(suffix2=suffix, text=word)
 
-    # Everything is the same as for desuffix.
-    # The method doesn't need crossproduct: bool setting because in produce_affix_forms we first
-    # analyse prefixes, and then if they allow cross-production, call desuffix with crossproduct=True
     def deprefix(self, word: str,
                  required_flags: List[Flag],
                  forbidden_flags: List[Flag],
                  nested: bool = False) -> Iterator[AffixForm]:
+        """
+        Everything is the same as for :meth:`desuffix`.
+        The method doesn't need ``crossproduct: bool`` setting because in :meth:`produce_affix_forms` we first
+        analyse prefixes, and then if they allow cross-production, call desuffix with ``crossproduct=True``
+        """
 
         def good_prefix(prefix):
             return all(f in prefix.flags for f in required_flags) and \
@@ -457,10 +504,12 @@ class Lookup:
 
             yield AffixForm(word, stem, prefix=prefix)
 
-            # TODO: Only if compoundprefixes are allowed in *.aff
+            # Second prefix is tried *only* when there is the setting ``COMPLEXPREFIXES`` in
+            # aff-file, which is quite rare.
+            #
             # Hunspell doesn't have a test for this (and no wrong lookups should be produced by
-            # additional attempt to deprefix), but this might be a slowdown
-            if not nested:
+            # additional attempt to deprefix), but search for second prefix might be a slowdown
+            if not nested and self.aff.COMPLEXPREFIXES:
                 for form2 in self.deprefix(stem,
                                            required_flags=[prefix.flag, *required_flags],
                                            forbidden_flags=forbidden_flags,
@@ -472,6 +521,9 @@ class Lookup:
                      compoundpos: Optional[CompoundPos],
                      captype: CapType,
                      allow_nosuggest=True) -> bool:
+        """
+        Filter affix form
+        """
 
         # Just to make the code a bit simpler, it asks aff. for tons of different stuff
         aff = self.aff
@@ -554,25 +606,28 @@ class Lookup:
     # Compounding details
     # -------------------
 
-    # Produces all possible compound forms such that every part is a valid affixed form, and all of
-    # those parts are allowed to be together by flags (e.g. first part either has generic flag
-    # "allowed in compound", or flag "allowed as a compound beginning", middle part has flag "allowed
-    # in compound", or "allowed as compound middle" and so on).
-    #
-    # Works recursively by first trying to find the allowed beginning of compound, and if it is
-    # found, calling itself with the rest of the word, and so on.
     def compounds_by_flags(self,
                            word_rest: str,
                            *,
                            captype: CapType,
                            depth: int = 0,
                            allow_nosuggest=True) -> Iterator[CompoundForm]:
+        """
+        Produces all possible compound forms such that every part is a valid affixed form, and all of
+        those parts are allowed to be together by flags (e.g. first part either has generic flag
+        "allowed in compound", or flag "allowed as a compound beginning", middle part has flag "allowed
+        in compound", or "allowed as compound middle" and so on).
+
+        Works recursively by first trying to find the allowed beginning of compound, and if it is
+        found, calling itself with the rest of the word, and so on.
+        """
 
         aff = self.aff
 
         # Flags that are forbidden for affixes (will be passed to affix_forms)
         forbidden_flags = [aff.COMPOUNDFORBIDFLAG] if aff.COMPOUNDFORBIDFLAG else []
         # Flags that are required for affixes. Are passed to affix_forms, expept for:
+        #
         # * for the last form suffix_flags not passed (any suffix will do)
         # * for the first form, prefix_flags not passed (any prefix will do)
         permitflags = [aff.COMPOUNDPERMITFLAG] if aff.COMPOUNDPERMITFLAG else []
@@ -632,8 +687,8 @@ class Lookup:
                                                           allow_nosuggest=allow_nosuggest):
                         yield [form.replace(text=beg), *others]
 
-    # Different way of producing compound words: by rules, looking like A*BC?CD, where A, B, C, D
-    # are flags the word might have, and *? have the same meaning as in regular expressions.
+    # Different way of producing compound words: by rules, looking like ``A*BC?CD``, where A, B, C, D
+    # are flags the word might have, and ``*?`` have the same meaning as in regular expressions.
     #
     # In this way, we start by finding rules that partially match the word parts at the beginning,
     # and then recursively split the rest of the word, limiting rules to those still partially matching

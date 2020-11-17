@@ -1,3 +1,33 @@
+"""
+The module represents data from Hunspell's ``*.aff`` file.
+
+Main Aff content
+----------------
+
+.. autodata:: Flag
+
+.. autoclass:: Aff
+
+Affixes
+-------
+
+.. autoclass:: Prefix
+.. autoclass:: Suffix
+
+Helper classes
+--------------
+
+This classes are wrapping several types of somewhat pattern-alike objects that can be ``*.aff``-file,
+"compiling" them into something applyable much like Python's ``re`` module compiles regexps.
+
+.. autoclass:: BreakPattern
+.. autoclass:: Ignore
+.. autoclass:: RepPattern
+.. autoclass:: ConvTable
+.. autoclass:: CompoundPattern
+.. autoclass:: CompoundRule
+"""
+
 import re
 import functools
 import itertools
@@ -14,10 +44,16 @@ from spyll.hunspell.algo.trie import Trie
 
 
 Flag = NewType('Flag', str)
-
+"""
+Flag is a short (1 or 2 chars typically) string to mark stems and affixes. See :attr:`Aff.FLAG`
+for concept explantion.
+"""
 
 @dataclass
 class BreakPattern:
+    """
+    Contents of the ``BREAK`` directive, pattern for splitting the word, compiled to regexp.
+    """
     pattern: str
 
     def __post_init__(self):
@@ -31,6 +67,10 @@ class BreakPattern:
 
 @dataclass
 class Ignore:
+    """
+    Contents of the ``IGNORE`` directive, chars to ignore on lookup/suggest, compiled with
+    ``str.maketrans``.
+    """
     chars: str
 
     def __post_init__(self):
@@ -39,6 +79,10 @@ class Ignore:
 
 @dataclass
 class RepPattern:
+    """
+    Contents of the ``REP`` directive, pair of ``(frequent typo, its replacement)``. Typo pattern
+    compiled to regexp.
+    """
     pattern: str
     replacement: str
 
@@ -216,44 +260,215 @@ class ConvTable:
 
 @dataclass
 class Aff:
-    # General
-    SET: str = 'Windows-1252'
-    FLAG: str = 'short'  # TODO: Enum of possible values, in fact
-    LANG: Optional[str] = None
-    WORDCHARS: Optional[str] = None
-    IGNORE: Optional[Ignore] = None
+    """
+    Base meaning of all options are documented in Hunspell's man page, for example here:
+    https://www.systutorials.com/docs/linux/man/4-hunspell/
 
-    # Suggestions
+    **General**
+
+    .. autoattribute:: SET
+    .. autoattribute:: FLAG
+    .. autoattribute:: LANG
+    .. autoattribute:: WORDCHARS
+    .. autoattribute:: IGNORE
+    .. autoattribute:: CHECKSHARPS
+    .. autoattribute:: FORBIDDENWORD
+
+    **Suggestions**
+
+    .. autoattribute:: KEY
+    .. autoattribute:: TRY
+    .. autoattribute:: NOSUGGEST
+    .. autoattribute:: KEEPCASE
+    .. autoattribute:: REP
+    .. autoattribute:: MAP
+    .. autoattribute:: NOSPLITSUGS
+    .. autoattribute:: PHONE
+    .. autoattribute:: MAXCPDSUGS
+
+    *N-gram suggestions*
+
+    .. autoattribute:: MAXDIFF
+    .. autoattribute:: ONLYMAXDIFF
+    .. autoattribute:: MAXNGRAMSUGS
+
+    **Stemming**
+
+    .. autoattribute:: PFX
+    .. autoattribute:: SFX
+    .. autoattribute:: NEEDAFFIX
+    .. autoattribute:: CIRCUMFIX
+    .. autoattribute:: COMPLEXPREFIXES
+    .. autoattribute:: FULLSTRIP
+
+    **Compounding**
+
+    .. autoattribute:: BREAK
+    .. autoattribute:: COMPOUNDRULE
+    .. autoattribute:: COMPOUNDMIN
+    .. autoattribute:: COMPOUNDWORDMAX
+    .. autoattribute:: COMPOUNDFLAG
+    .. autoattribute:: COMPOUNDBEGIN
+    .. autoattribute:: COMPOUNDMIDDLE
+    .. autoattribute:: COMPOUNDEND
+    .. autoattribute:: ONLYINCOMPOUND
+    .. autoattribute:: COMPOUNDPERMITFLAG
+    .. autoattribute:: COMPOUNDFORBIDFLAG
+    .. autoattribute:: FORCEUCASE
+    .. autoattribute:: CHECKCOMPOUNDCASE
+    .. autoattribute:: CHECKCOMPOUNDDUP
+    .. autoattribute:: CHECKCOMPOUNDREP
+    .. autoattribute:: CHECKCOMPOUNDTRIPLE
+    .. autoattribute:: CHECKCOMPOUNDPATTERN
+    .. autoattribute:: SIMPLIFIEDTRIPLE
+    .. autoattribute:: COMPOUNDSYLLABLE
+    .. autoattribute:: COMPOUNDMORESUFFIXES
+    .. autoattribute:: SYLLABLENUM
+    .. autoattribute:: COMPOUNDROOT
+
+    **Pre/post-processing**
+
+    .. autoattribute:: ICONV
+    .. autoattribute:: OCONV
+
+    **Aliasing**
+
+    .. autoattribute:: AF
+    .. autoattribute:: AM
+
+    **Other**
+
+    .. autoattribute:: WARN
+
+    **Ignored**
+
+    .. autoattribute:: SUBSTANDARD
+    """
+
+
+    #: .aff and .dic encoding. Stored in readers.aff.Context and used for reopening aff file, and
+    #: for opening dic file
+    SET: str = 'Windows-1252'
+    #: ``*.aff`` file declares one of the possible flag formats:
+    #:
+    #: * `short` (default) -- each flag is one ASCII character
+    #: * `long` -- each flag is two ASCII characters
+    #: * `numeric` -- each flag is number, set of flags separates them with ``,``
+    #: * `UTF-8` -- each flag is one UTF-8 character
+    #:
+    #: Flag format defines how flag sets attached to stems and affixes are parsed. For example,
+    #: ``*.dic`` file entry ``cat/ABCD`` can be considered having flags ``{"A", "B", "C", "D"}``
+    #: (default flag format, "short"), or ``{"AB", "CD"}`` (flag format "long")
+    FLAG: str = 'short'  # TODO: Enum of possible values, in fact
+    #: ISO language code. The only codes that change behavior is codes of Turkic languages, which
+    #: have different I/i capitalization logic.
+    #: Abstracted into Collation in Aff.__post_init__
+    LANG: Optional[str] = None
+    #: List of chars that can be in word. Not used in Spyll at all; in Hunspell is used for tokenization
+    #: of text into words.
+    WORDCHARS: Optional[str] = None
+    #: List of chars to ignore in input words (for ex., vowels in Hebrew or Arabic)
+    #: Used in Lookup.__call__ for preparing input word, and in read_dic/read_aff.
+    IGNORE: Optional[Ignore] = None
+    #: For German only: avoid uppercase ß, and only use SS
+    CHECKSHARPS: bool = False
+    #: Flag that marks word as forbidden. Used multiple times in both Lookup and Suggest
+    FORBIDDENWORD: Optional[Flag] = None
+
+    # **Suggestions**
+
+    #: String that specifies sets of adjacent characters on keyboard (so suggest could understand
+    #: that "kitteb" is most probable misspelling of "kitten"). Format is "abc|def|xyz"
+    #:
+    #: *Usage:*  :meth:`suggest.Suggest.good_permutations` to pass to :meth:`permutations.keychars`.
     KEY: str = ''
+    #: List of all
+    #:
+    #: *Usage:* :meth:`suggest.Suggest.good_permutations` to pass to :meth:`permutations.badchar` and
+    #: :meth:`permutations.forgotchar`. Note that, obscurely enough, Suggest checks this option to
+    #: decide whether dash should be used when suggesting two words (e.g. for misspelled "foobar",
+    #: when it is decided that it is two words erroneously joined, suggest either returns only
+    #: "foo bar", or also "foo-bar"). Whether dash is suggested, decided by presence of ``"-"`` in TRY,
+    #: or by presence of Latin ``"a"`` (= "the language use Latin script, all of them allow dashes
+    #: between words")... That's how it is in Hunspell!
     TRY: str = ''
+    #: Flag to mark word/affix as "shouldn't be suggested".
+    #:
+    #: *Usage:* Suggest.__init__ (to make list of dictionary words for ngram-check), and in
+    #: Lookup.is_good_form (if the lookup is called from suggest, with allow_nosuggest=False)
     NOSUGGEST: Optional[Flag] = None
+    #: Marks
+    #:
+    #: *Usage:* :meth:`Suggest.suggest_internal`, :meth:`Lookup.is_good_form`
     KEEPCASE: Optional[Flag] = None
-    MAXCPDSUGS: int = 0
+    #: Table of replacements for typical typos (like "shun"->"tion")
+    #:
+    #: *Usage:* :meth:`suggest.Suggest.good_permutations` to pass to :meth:`permutations.replchars`.
+    #: Note that the table populated from aff's ``REP`` directive, *and* from dic's file ``ph:``
+    #: tags (see :meth:`readers.dic.read_dic`).
     REP: List[RepPattern] = field(default_factory=list)
+    #: Sets of "similar" chars to try in suggestion (like "aáã" -- if they all exist in the language,
+    #: replacing one in another would be a frequent typo).
+    #:
+    #: *Usage:* :meth:`suggest.Suggest.questionable_permutations` to pass to :meth:`permutations.mapchars`.
     MAP: List[Set[str]] = field(default_factory=list)
+    #: Never try to suggest "this word should be split in two". LibreOffice sv_SE dictionary says
+    #: "it is a must for Swedish". (Interestingly enough, Hunspell's tests doesn't check this flag at
+    #: all).
+    #:
+    #: *Usage:* :meth:`suggest.Suggest.questionable_permutations`
+    NOSPLITSUGS: bool = False
+    #: Table for metaphone transformations.
+    #:
+    #: *Usage:* :mod:`phonet_suggest`
+    PHONE: Optional[phonet.Table] = None
+    #: Limits number of compound suggetions.
+    #: Currently, not used in Spyll. See Suggest class comments about Hunspell/Spyll difference in
+    #: handling separate "compound cycle".
+    MAXCPDSUGS: int = 0
+
+    # *NGram suggestions:
     MAXDIFF: int = -1
     ONLYMAXDIFF: bool = False
     MAXNGRAMSUGS: int = 4
-    NOSPLITSUGS: bool = False
-    PHONE: Optional[phonet.Table] = None
 
-    # Stemming
-    AF: Dict[int, Set[Flag]] = field(default_factory=dict)
+    # **Stemming**
+
+    #: Dictionary of ``flag => prefixes with this flag``
+    #: *Usage:* in suggest.Suggest.ngram_suggest to pass to ngram_suggest (and there to construct
+    #: all possible forms). In :meth:`Aff.__post_init__` there is also prefixes_index Trie constructed from
+    #: PFX data, which then used in :meth:`Lookup.deprefix <spyll.hunspell.algo.lookup.Lookup.deprefix>`
     PFX: Dict[str, List[Prefix]] = field(default_factory=dict)
+    #: Same as above, for suffixes
+    #: *Usage:* suggest.Suggest.ngram_suggest, and lookup.Lookup.desuffix (derivative Trie)
     SFX: Dict[str, List[Suffix]] = field(default_factory=dict)
-    CIRCUMFIX: Optional[Flag] = None
+    #: Flag saying "this stem can't be used without affixes". Can be also assigned to suffix/prefix,
+    #: meaning "there should be other affixes besides this one".
+    #: *Usage:* lookup.Lookup.is_good_form
     NEEDAFFIX: Optional[Flag] = None
-    PSEUDOROOT: Optional[Flag] = None
-    FORBIDDENWORD: Optional[Flag] = None
-    BREAK: List[BreakPattern] = \
-        field(default_factory=lambda: [BreakPattern('-'), BreakPattern('^-'), BreakPattern('-$')])
+    #: Suffixes signed with CIRCUMFIX flag may be on a word when this word also has a prefix with
+    #: CIRCUMFIX flag and vice versa.
+    #: *Usage:* lookup.Lookup.is_good_form
+    CIRCUMFIX: Optional[Flag] = None
+    #: If two prefixes stripping is allowed (only one prefix by default). Random fun fact:
+    #: of all currently available LibreOffice and Firefox dictionaries, only Firefox's Zulu has this
+    #: flag
+    #:
+    #: *Usage:* lookup.Lookup.deprefix
     COMPLEXPREFIXES: bool = False
     FULLSTRIP: bool = False
-    WARN: Optional[Flag] = None
 
-    CHECKSHARPS: bool = False
+    # **Compounding**
 
-    # Compounding
+    #: List of patterns to break word
+    #:
+    #: *Usage:* :meth:`Lookup.try_break`
+    BREAK: List[BreakPattern] = \
+        field(default_factory=lambda: [BreakPattern('-'), BreakPattern('^-'), BreakPattern('-$')])
+
+    #: List of rules
+    #:
+    #: *Usage:* :meth:`Lookup.compounds_by_rules`
     COMPOUNDRULE: List[CompoundRule] = field(default_factory=list)
 
     COMPOUNDMIN: int = 3
@@ -276,25 +491,42 @@ class Aff:
     CHECKCOMPOUNDDUP: bool = False
     CHECKCOMPOUNDREP: bool = False
     CHECKCOMPOUNDTRIPLE: bool = False
+    #: List of patterns
+    #:
+    #: *Usage:* :meth:`Lookup.is_bad_compound`
     CHECKCOMPOUNDPATTERN: List[CompoundPattern] = field(default_factory=list)
 
     SIMPLIFIEDTRIPLE: bool = False
 
     COMPOUNDSYLLABLE: Optional[Tuple[int, str]] = None
 
-    # Undocumented in most of publicly-available renderings, but documented in hunspell's source
+    #: Undocumented in most of publicly-available renderings, but documented in hunspell's source
     COMPOUNDMORESUFFIXES: bool = False
 
     # Hu-only, COMPLICATED
     SYLLABLENUM: Optional[Flag] = None
     COMPOUNDROOT: Optional[Flag] = None
 
-    # IO:
+    # **Pre/post-processing**
+
     ICONV: Optional[ConvTable] = None
     OCONV: Optional[ConvTable] = None
 
-    # Morphology
+    # **Aliasing**
+
+    #: Numbered list of flag set aliases
+    #:
+    #: *Usage:* Put in :class:`readers.aff.Context` to decode flags on reading ``*.aff`` and ``*.dic``
+    AF: Dict[int, Set[Flag]] = field(default_factory=dict)
+    #: Numbered list of word data ("morphological info") aliases
+    #:
+    #: *Usage:* :meth:`readers.aff.read_dic`
     AM: Dict[int, Set[str]] = field(default_factory=dict)
+
+    # **Other**
+
+    WARN: Optional[Flag] = None
+    # TODO: FORBIDWARN
 
     # Ignored
     SUBSTANDARD: Optional[Flag] = None

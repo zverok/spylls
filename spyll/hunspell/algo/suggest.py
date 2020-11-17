@@ -1,3 +1,14 @@
+"""
+.. autoclass:: Suggest
+    :members:
+
+.. autoclass:: Suggestion
+    :members:
+.. autoclass:: MultiWordSuggestion
+    :members:
+
+"""
+
 from typing import Iterator, List, Set, Union
 
 import dataclasses
@@ -10,21 +21,23 @@ from spyll.hunspell.algo import ngram_suggest, phonet_suggest, permutations as p
 MAXPHONSUGS = 2
 
 
-# Suggestions is what Suggest produces internally to store enough information about some suggestion
-# to make sure it is a good one.
-#
 @dataclass
 class Suggestion:
-    # Actual suggestion text
+    """
+    Suggestions is what Suggest produces internally to store enough information about some suggestion
+    to make sure it is a good one.
+    """
+
+    #: Actual suggestion text
     text: str
-    # Code specifying how suggestion was produced, useful for debugging, typically same as the method
-    # of the permutation which led to this suggestion
+    #: Code specifying how suggestion was produced, useful for debugging, typically same as the method
+    #: of the permutation which led to this suggestion
     source: str
 
-    # If False, then checking suggestion validity should be without trying to break it on dashes
-    # (or similar chars, depending on the language). This is used, for example, to check "very good"
-    # suggestions: "foobar" (misspeling) => "foo-bar" considered "very good" ONLY if the dictionary
-    # contains "foo-bar" itself, not "foo" and "bar".
+    #: If False, then checking suggestion validity should be without trying to break it on dashes
+    #: (or similar chars, depending on the language). This is used, for example, to check "very good"
+    #: suggestions: "foobar" (misspeling) => "foo-bar" considered "very good" ONLY if the dictionary
+    #: contains "foo-bar" itself, not "foo" and "bar".
     allow_break: bool = True
 
     def __repr__(self):
@@ -34,9 +47,11 @@ class Suggestion:
         return dataclasses.replace(self, **changes)
 
 
-# Represents suggestion to split words into several.
 @dataclass
 class MultiWordSuggestion:
+    """
+    Represents suggestion to split words into several.
+    """
     words: List[str]
     source: str
 
@@ -50,6 +65,9 @@ class MultiWordSuggestion:
 
 
 class Suggest:
+    """
+    TODO
+    """
     def __init__(self, aff: data.Aff, dic: data.Dic, lookup):
         self.aff = aff
         self.dic = dic
@@ -67,12 +85,17 @@ class Suggest:
 
         self.words_for_ngram = [word for word in self.dic.words if not bad_flags.intersection(word.flags)]
 
-    # Outer "public" interface: just takes all the Suggestion instances and takes text from them.
     def __call__(self, word: str) -> Iterator[str]:
+        """
+        Outer "public" interface: just takes all the Suggestion instances and takes text from them.
+        """
         yield from (suggestion.text for suggestion in self.suggest_internal(word))
 
-    # Main suggestion search loop.
     def suggest_internal(self, word: str) -> Iterator[Suggestion]:
+        """
+        Main suggestion search loop.
+        """
+
         # Whether some suggestion (permutation of the word) is an existing and allowed word,
         # just delegates to Lookup
         def is_good_suggestion(word, capitalization=False, allow_break=True):
@@ -226,10 +249,13 @@ class Suggest:
             if phonet_seen >= MAXPHONSUGS:
                 break
 
-    # "Very good" suggestions: suggest to split word ("alot" => "a lot"), but for now only yield
-    # them as a _singular_ word suggestion: if the dictionary has _exact_ entry "a lot", it would
-    # be considered correct.
     def very_good_permutations(self, word: str) -> Iterator[Suggestion]:
+        """
+        "Very good" suggestions: suggest to split word ("alot" => "a lot"), but for now only yield
+        them as a _singular_ word suggestion: if the dictionary has _exact_ entry "a lot", it would
+        be considered correct.
+        """
+
         for words in pmt.twowords(word):
             yield Suggestion(' '.join(words), 'spaceword')
 
@@ -238,8 +264,11 @@ class Suggest:
                 # usage in Lookup)
                 yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
 
-    # Good permutations (that produces words not very different from the initial one)
     def good_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
+        """
+        Good permutations (that produces words not very different from the initial one)
+        """
+
         # suggestions for an uppercase word (html -> HTML)
         yield Suggestion(self.aff.collation.upper(word), 'uppercase')
 
@@ -260,10 +289,13 @@ class Suggest:
             else:
                 yield Suggestion(suggestion, 'replchars')
 
-    # Permutations that are producing suggestions further from the original word.
-    # Order is important: As the whole ``Suggest`` produces generator, client code may consume it
-    # one-by-one, so the first suggested means more likely.
     def questionable_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
+        """
+        Permutations that are producing suggestions further from the original word.
+        Order is important: As the whole ``Suggest`` produces generator, client code may consume it
+        one-by-one, so the first suggested means more likely.
+        """
+
         # MAP in aff file specifies related chars (for example, "ïi"), and mapchars produces all
         # changes of the word with related chars replaced. For example, "naive" produces "naïve".
         for suggestion in pmt.mapchars(word, self.aff.MAP):
@@ -315,6 +347,9 @@ class Suggest:
                 yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.use_dash)
 
     def ngram_suggestions(self, word: str, handled: Set[str]) -> Iterator[str]:
+        """
+        See :mod:`ngram_suggest`
+        """
         if self.aff.MAXNGRAMSUGS == 0:
             return
 
@@ -327,6 +362,9 @@ class Suggest:
                     onlymaxdiff=self.aff.ONLYMAXDIFF)
 
     def phonet_suggestions(self, word: str) -> Iterator[str]:
+        """
+        See :mod:`phonet_suggest`
+        """
         if not self.aff.PHONE:
             return
 

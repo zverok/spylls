@@ -6,3 +6,4 @@ dictionaries
 dist
 experiment
 .mypy_cache/
+docs/_build
