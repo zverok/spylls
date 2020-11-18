@@ -3,7 +3,7 @@ import itertools
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple, Any
 
-from spyll.hunspell.data import aff, phonet
+from spyll.hunspell.data import aff
 
 from spyll.hunspell.readers.file_reader import BaseReader
 
@@ -91,7 +91,7 @@ def read_aff(source: BaseReader) -> Tuple[aff.Aff, Context]:
             data['SET'] = 'UTF-8'
             source.reset_encoding('UTF-8')
 
-    return (aff.Aff(**data), context) # type: ignore
+    return (aff.Aff(**data), context)   # type: ignore
 
 
 def read_directive(source, line, *, context):
@@ -193,7 +193,7 @@ def read_value(source, directive, *values, context):
     if directive == 'COMPOUNDSYLLABLE':
         return (int(values[0]), values[1])
     if directive == 'PHONE':
-        return phonet.Table([
+        return aff.PhonetTable([
             (search, '' if replacement == '_' else replacement)
             for search, replacement, *_ in _read_array()
         ])

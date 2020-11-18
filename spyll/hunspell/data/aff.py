@@ -26,6 +26,7 @@ This classes are wrapping several types of somewhat pattern-alike objects that c
 .. autoclass:: ConvTable
 .. autoclass:: CompoundPattern
 .. autoclass:: CompoundRule
+.. autoclass:: PhonetTable
 """
 
 import re
@@ -38,7 +39,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Set, Dict, Tuple, Optional, NewType
 
-from spyll.hunspell.data import phonet
 from spyll.hunspell.algo.capitalization import Collation, GermanCollation, TurkicCollation
 from spyll.hunspell.algo.trie import Trie
 
@@ -260,6 +260,66 @@ class ConvTable:
 
 
 @dataclass
+class PhonetTable:
+    """
+    Represents table of metaphone transformations
+    """
+    table: List[Tuple[str, str]]
+
+    RULE_PATTERN = re.compile(
+        r'(?P<letters>\w+)(\((?P<optional>\w+)\))?(?P<lookahead>[-]+)?(?P<flags>[\^$<]*)(?P<priority>\d)?'
+    )
+
+    @dataclass
+    class Rule:
+        search: re.Pattern
+        replacement: str
+
+        start: bool = False
+        end: bool = False
+
+        priority: int = 5
+
+        followup: bool = True
+
+        def match(self, word, pos):
+            if self.start and pos > 0:
+                return False
+            if self.end:
+                return self.search.fullmatch(word, pos)
+            return self.search.match(word, pos)
+
+    def __post_init__(self):
+        self.rules = defaultdict(list)
+
+        for search, replacement in self.table:
+            self.rules[search[0]].append(self.parse_rule(search, replacement))
+
+    def parse_rule(self, search: str, replacement: str) -> Rule:
+        m = self.RULE_PATTERN.fullmatch(search)
+
+        if not m:
+            raise ValueError(f'Not a proper rule: {search!r}')
+
+        text = [*m.group('letters')]
+        if m.group('optional'):
+            text.append('[' + m.group('optional') + ']')
+        if m.group('lookahead'):
+            la = len(m.group('lookahead'))
+            regex = ''.join(text[:-la]) + '(?=' + ''.join(text[-la:]) + ')'
+        else:
+            regex = ''.join(text)
+
+        return PhonetTable.Rule(
+            search=re.compile(regex),
+            replacement=replacement,
+            start=('^' in m.group('flags')),
+            end=('$' in m.group('flags')),
+            followup=(m.group('lookahead') is not None)
+        )
+
+
+@dataclass
 class Aff:
     """
     Base meaning of all options are documented in Hunspell's man page, for example here:
@@ -421,7 +481,7 @@ class Aff:
     #: Table for metaphone transformations.
     #:
     #: *Usage:* :mod:`phonet_suggest`
-    PHONE: Optional[phonet.Table] = None
+    PHONE: Optional[PhonetTable] = None
     #: Limits number of compound suggetions.
     #: Currently, not used in Spyll. See Suggest class comments about Hunspell/Spyll difference in
     #: handling separate "compound cycle".

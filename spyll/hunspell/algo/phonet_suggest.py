@@ -4,7 +4,7 @@ from typing import Iterator, List, Tuple
 from operator import itemgetter
 import heapq
 
-from spyll.hunspell.data import phonet, dic
+from spyll.hunspell.data import aff, dic
 
 import spyll.hunspell.algo.string_metrics as sm
 import spyll.hunspell.algo.ngram_suggest as ng
@@ -12,7 +12,7 @@ import spyll.hunspell.algo.ngram_suggest as ng
 MAX_ROOTS = 100
 
 
-def phonet_suggest(word: str, *, dictionary_words: List[dic.Word], table: phonet.Table) -> Iterator[str]:
+def phonet_suggest(word: str, *, dictionary_words: List[dic.Word], table: aff.PhonetTable) -> Iterator[str]:
     """
     Phonetical suggestion algorithm provides suggestions based on phonetial (prononication) similarity.
     It requires ``*.aff``-file to define :attr:`PHONE <spyll.hunspell.data.aff.Aff.PHONE>` table --
@@ -73,7 +73,7 @@ def detailed_score(word1: str, word2: str) -> float:
     return 2 * sm.lcslen(word1, word2) - abs(len(word1) - len(word2)) + sm.leftcommonsubstring(word1, word2)
 
 
-def metaphone(table: phonet.Table, word: str) -> str:
+def metaphone(table: aff.PhonetTable, word: str) -> str:
     """
     Metaphone calculation
     """
