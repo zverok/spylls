@@ -37,7 +37,7 @@ Usage as a library
   # spy ll
   # spy-ll
 
-See `Dictionary class docs <TODO>`_ for more details.
+See :class:`Dictionary <spyll.hunspell.dictionary.Dictionary>` class docs for more details.
 
 
 Design goals
@@ -117,3 +117,4 @@ Project Info
    :caption: Contents:
 
    hunspell
+   hunspell/dictionary

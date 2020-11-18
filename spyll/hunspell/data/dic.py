@@ -17,13 +17,13 @@ list, and also provides some indexes and utilities for convenience.
 
 ``Dic`` is read by :meth:`read_dic <readers.dic.read_dic>`.
 
-The dictionary itself
----------------------
+``Dic``: list of entries
+------------------------
 
 .. autoclass:: Dic
 
-Dictionary item
----------------
+``Word``: dictionary entry
+--------------------------
 
 .. autoclass:: Word
 """
@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from typing import List, Set, Dict
 
 from spyll.hunspell.algo.capitalization import Type as CapType
+from spyll.hunspell.data.aff import Flag
 
 
 @dataclass
@@ -120,7 +121,7 @@ class Dic:
         self.index = defaultdict(list)
         self.lowercase_index = defaultdict(list)
 
-    def homonyms(self, stem: str, *, ignorecase: bool=False) -> List[Word]:
+    def homonyms(self, stem: str, *, ignorecase: bool = False) -> List[Word]:
         """
         Returns all :class:`Word` instances with the same stem.
 
@@ -135,16 +136,18 @@ class Dic:
             return self.lowercase_index.get(stem, [])
         return self.index.get(stem, [])
 
-    def has_flag(self, word: str, flag, *, for_all=False) -> bool:
+    def has_flag(self, stem: str, flag: Flag, *, for_all: bool = False) -> bool:
         """
         If any/all of the homonyms have specified flag. It is frequently necessary in lookup algo to
         check something like "...but if there is ANY dictionary entry with this stem and 'forbidden'
         flag...", or "...but if ALL dictionary entries with this stem marked as 'forbidden'..."
         """
-        homonyms = self.homonyms(word)
+        homonyms = self.homonyms(stem)
+        if not homonyms:
+            return False
         if for_all:
-            return homonyms and all(flag in homonym.flags for homonym in homonyms)
-        return homonyms and any(flag in homonym.flags for homonym in homonyms)
+            return all(flag in homonym.flags for homonym in homonyms)
+        return any(flag in homonym.flags for homonym in homonyms)
 
     def append(self, word: Word, *, lower: List[str]):
         """

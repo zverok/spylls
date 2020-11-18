@@ -45,35 +45,40 @@ On **suggest**, Hunspell does roughly this:
 Code walkthrough
 ----------------
 
-.. toctree::
-   :maxdepth: 0
-
-   data_dic
-   data_aff
-   algo_lookup
-   algo_suggest
-
-
 Data storage
 ^^^^^^^^^^^^
 
-* :doc:`hunspell.data.dic`
-* ``data.aff`` lists and documents all "aff" (settings/affixes)-file possible options, and defines simple pattern-alike wrappers for some of them
+``data.dic`` explains word list (dictionary itself) format; ``data.aff`` lists and documents all "aff" (settings/affixes)-file possible options, and defines simple pattern-alike wrappers for some of them.
+
+.. toctree::
+   :maxdepth: 0
+
+   hunspell/data_dic
+   hunspell/data_aff
+
 
 Reading
 ^^^^^^^
+.. toctree::
+   :maxdepth: 0
 
-* ``readers.dic``
-* ``readers.aff``
+   hunspell/readers_dic
+   hunspell/readers_aff
 
 Lookup
 ^^^^^^
 
-automodule algo.lookup
+.. toctree::
+   :maxdepth: 0
+
+   hunspell/algo_lookup
 
 Suggest
 ^^^^^^^
 
-algo.suggest
-algo.ngram_suggest
-algo.phonet_suggest
+.. toctree::
+   :maxdepth: 0
+
+   hunspell/algo_suggest
+   hunspell/algo_nsuggest
+   hunspell/algo_phonet_suggest

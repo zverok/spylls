@@ -8,6 +8,9 @@ class BaseReader:
 
         self.reset_io(obj)
 
+    def reset_encoding(self, encoding):
+        raise NotImplementedError
+
     def __iter__(self):
         return self
 

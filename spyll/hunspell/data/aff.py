@@ -49,6 +49,7 @@ Flag is a short (1 or 2 chars typically) string to mark stems and affixes. See :
 for concept explantion.
 """
 
+
 @dataclass
 class BreakPattern:
     """
@@ -345,7 +346,6 @@ class Aff:
     .. autoattribute:: SUBSTANDARD
     """
 
-
     #: .aff and .dic encoding. Stored in readers.aff.Context and used for reopening aff file, and
     #: for opening dic file
     SET: str = 'Windows-1252'
@@ -517,11 +517,11 @@ class Aff:
     #: Numbered list of flag set aliases
     #:
     #: *Usage:* Put in :class:`readers.aff.Context` to decode flags on reading ``*.aff`` and ``*.dic``
-    AF: Dict[int, Set[Flag]] = field(default_factory=dict)
+    AF: Dict[str, Set[Flag]] = field(default_factory=dict)
     #: Numbered list of word data ("morphological info") aliases
     #:
     #: *Usage:* :meth:`readers.aff.read_dic`
-    AM: Dict[int, Set[str]] = field(default_factory=dict)
+    AM: Dict[str, Set[str]] = field(default_factory=dict)
 
     # **Other**
 

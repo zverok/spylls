@@ -1,6 +1,7 @@
 """
 .. autoclass:: Suggest
     :members:
+    :special-members:
 
 .. autoclass:: Suggestion
     :members:
@@ -52,9 +53,14 @@ class MultiWordSuggestion:
     """
     Represents suggestion to split words into several.
     """
+
+    #: List of words
     words: List[str]
+    #: Same as :attr:`Suggestion.source`
     source: str
 
+    #: Whether those words are allowed to be joined by dash. We should disallow it if the multi-word
+    #: suggestion was produced by ``REP`` table, see :meth:`Suggest.good_permutations` for details.
     allow_dash: bool = True
 
     def stringify(self, separator=' '):

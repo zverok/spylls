@@ -3,6 +3,7 @@ The main "is this word correct" algorithm implementation.
 
 .. autoclass:: Lookup
     :members:
+    :special-members:
 
 .. autoclass:: AffixForm
     :members:
@@ -133,9 +134,9 @@ class Lookup:
         self.dic = dic
 
     def __call__(self, word: str, *,
-                 capitalization=True,
-                 allow_nosuggest=True,
-                 allow_break=True) -> bool:
+                 capitalization: bool = True,
+                 allow_nosuggest: bool = True,
+                 allow_break: bool = True) -> bool:
         """
         The outermost word correctness check.
 
@@ -143,13 +144,14 @@ class Lookup:
         the word is properly spelled. If it is not, also tries to break word by break-points (like
         dashes), and check each part separately.
 
-        Boolean flags are used when the Lookup is called from Suggest_.
+        Boolean flags are used when the Lookup is called from :class:`Suggest <spyll.hunspell.algo.suggest.Suggest>`.
 
-        :param str word: Word to check
+        Args:
+            word: Word to check
 
-        :param bool capitalization: if ``False``, check ONLY exactly this capitalization
-        :param bool allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
-        :param bool allow_break: if ``False``, don't try to break word by dashes and check separately
+            capitalization: if ``False``, check ONLY exactly this capitalization
+            allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
+            allow_break: if ``False``, don't try to break word by dashes and check separately
         """
 
         # The word is considered correct, if it can be deconstructed into a "good form" (the form
@@ -220,8 +222,8 @@ class Lookup:
                     yield [start, *breaking]
 
     def good_forms(self, word: str, *,
-                   capitalization=True,
-                   allow_nosuggest=True) -> Iterator[WordForm]:
+                   capitalization: bool = True,
+                   allow_nosuggest: bool = True) -> Iterator[WordForm]:
         """
         The main producer of correct word forms (e.g. ways the proposed string might correspond to our
         dictionary/affixes). If there is at least one, the word is correctly spelled. There could be
@@ -344,7 +346,7 @@ class Lookup:
                     if is_good_form(candidate):
                         yield candidate
 
-    def compound_forms(self, word: str, captype: CapType, allow_nosuggest=True) -> Iterator[CompoundForm]:
+    def compound_forms(self, word: str, captype: CapType, allow_nosuggest: bool = True) -> Iterator[CompoundForm]:
         """
         Produces all correct compound forms.
         Delegates all real work to two different compounding algorithms, and then just check if their
@@ -520,7 +522,7 @@ class Lookup:
                      form: AffixForm,
                      compoundpos: Optional[CompoundPos],
                      captype: CapType,
-                     allow_nosuggest=True) -> bool:
+                     allow_nosuggest: bool = True) -> bool:
         """
         Filter affix form
         """
@@ -611,7 +613,7 @@ class Lookup:
                            *,
                            captype: CapType,
                            depth: int = 0,
-                           allow_nosuggest=True) -> Iterator[CompoundForm]:
+                           allow_nosuggest: bool = True) -> Iterator[CompoundForm]:
         """
         Produces all possible compound forms such that every part is a valid affixed form, and all of
         those parts are allowed to be together by flags (e.g. first part either has generic flag
@@ -699,7 +701,7 @@ class Lookup:
                            word_rest: str,
                            prev_parts: List[data.dic.Word] = [],
                            rules: Optional[List[data.aff.CompoundRule]] = None,
-                           allow_nosuggest=True) -> Iterator[CompoundForm]:  # pylint: disable=unused-argument
+                           allow_nosuggest: bool = True) -> Iterator[CompoundForm]:  # pylint: disable=unused-argument
 
         aff = self.aff
 

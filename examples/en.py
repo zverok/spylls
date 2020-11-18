@@ -3,7 +3,7 @@ import time
 from spyll.hunspell.dictionary import Dictionary
 
 t = time.time()
-d = Dictionary('dictionaries/en_US')
+d = Dictionary.from_files('dictionaries/en_US')
 print(f'Loading: {time.time() - t}')
 
 t = time.time()
@@ -35,3 +35,9 @@ print(list(d.suggest('hwihc')))
 print(list(d.suggest('Hwihc')))
 
 print(list(d.suggest('11thhour')))
+
+for form in d.lookuper.good_forms('building'):
+    print(form)
+
+for suggestion in d.suggester.suggest_internal('spyll'):
+    print(suggestion)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import glob
 import zipfile
 
@@ -9,8 +11,79 @@ from spyll.hunspell.algo import lookup, suggest
 
 
 class Dictionary:
-    aff: data.Aff
-    dic: data.Dic
+    """
+    The main and only interface to ``spyll.hunspell`` as a library.
+
+    Usage::
+
+        from spyll.hunspell import Dictionary
+
+        # from folder where en_US.aff and en_US.dic are present
+        dictionary = Dictionary.from_files('/path/to/dictionary/en_US')
+        # or, from Firefox/LibreOffice dictionary extension
+        dictionary = Dictionary.from_archive('/path/to/dictionary/en_US.odt')
+        # or, from system folders (on Linux)
+        dictionary = Dictionary.from_system('en_US')
+
+        print(dictionary.lookup('spyll'))
+        # False
+        for suggestion in dictionary.suggest('spyll'):
+            print(sugestion)
+        # spell
+        # spill
+        # spy ll
+        # spy-ll
+
+    Internal algorithm implementations :attr:`lookuper` and :attr:`suggester` are exposed in order
+    to allow experimenting with the implementation::
+
+        for form in dictionary.lookuper.good_forms('building'):
+            print(form)
+
+        # AffixForm(building = building)
+        # AffixForm(building = build + Suffix(ing: G×, on [[^e]]$))
+
+        for suggestion in dictionary.suggester.suggest_internal('spyll'):
+            print(suggestion)
+
+        # Suggestion[badchar](spell)
+        # Suggestion[badchar](spill)
+        # Suggestion[twowords](spy ll)
+        # Suggestion[twowords](spy-ll)
+
+    **Dictionary creation**
+
+    .. automethod:: from_files
+    .. automethod:: from_zip
+    .. automethod:: from_system
+
+    **Dictionary usage**
+
+    .. automethod:: lookup
+    .. automethod:: suggest
+
+    **Data objects**
+
+    .. autoattribute:: aff
+    .. autoattribute:: dic
+
+    **Algorithms**
+
+    .. autoattribute:: lookuper
+    .. autoattribute:: suggester
+    """
+
+    # Fully-qualifying for the sake of sphinx
+
+    #: Contents of ``*.aff``
+    aff: data.aff.Aff
+    #: Contents of ``*.dic``
+    dic: data.dic.Dic
+
+    #: Instance of ``Lookup``, can be used for experimenting, see :mod:`algo.lookup <spyll.hunspell.algo.lookup>`.
+    lookuper: lookup.Lookup
+    #: Instance of ``Suggest``, can be used for experimenting, see :mod:`algo.suggest <spyll.hunspell.algo.suggest>`.
+    suggester: suggest.Suggest
 
     # TODO: Firefox dictionaries path
     # TODO: Windows pathes
@@ -37,7 +110,14 @@ class Dictionary:
     ]
 
     @classmethod
-    def from_files(cls, path):
+    def from_files(cls, path: str) -> Dictionary:
+        """
+        Read dictionary from pair of files ``/some/path/some_name.aff`` and ``/some/path/some_name.dic``.
+
+        Args:
+            path: Should be just ``/some/path/some_name``.
+        """
+
         aff, context = readers.read_aff(FileReader(path + '.aff'))
         dic = readers.read_dic(FileReader(path + '.dic', encoding=context.encoding), aff=aff, context=context)
 
@@ -45,7 +125,16 @@ class Dictionary:
 
     # .xpi, .odt
     @classmethod
-    def from_zip(cls, path):
+    def from_zip(cls, path: str) -> Dictionary:
+        """
+        Read dictionary from zip-archive containing ``*.aff`` and ``*.dic`` path. Note that Open/Libre
+        Office dictionary extensions (``*.odt``) and Firefox/Thunderbird dictionary extensions (``*.xpi``)
+        are in fact such archives, so ``Dictionary`` can be read from them without unpacking.
+
+        Args:
+            path: Path to zip-file/extension.
+        """
+
         file = zipfile.ZipFile(path)
         # TODO: fail if there are several
         aff_path = [name for name in file.namelist() if name.endswith('.aff')][0]
@@ -56,7 +145,15 @@ class Dictionary:
         return cls(aff, dic)
 
     @classmethod
-    def from_system(cls, name):
+    def from_system(cls, name: str) -> Dictionary:
+        """
+        Tries to find ``<name>.aff`` and ``<name>.dic`` on system paths known to store Hunspell dictionaries.
+        Probably works only on Linux.
+
+        Args:
+            path: Language/dictionary name, like ``en_US``
+        """
+
         for folder in cls.PATHES:
             pathes = glob.glob(f'{folder}/{name}.aff')
             if pathes:
@@ -71,8 +168,23 @@ class Dictionary:
         self.lookuper = lookup.Lookup(self.aff, self.dic)
         self.suggester = suggest.Suggest(self.aff, self.dic, self.lookuper)
 
-    def lookup(self, word: str, **kwarg) -> bool:
-        return self.lookuper(word, **kwarg)
+    def lookup(self, word: str) -> bool:
+        """
+        Checks if the word is correct.
+
+        Args:
+            word: Word to check
+        """
+
+        return self.lookuper(word)
 
     def suggest(self, word: str) -> Iterator[str]:
+        """
+        Suggests corrections for the misspelled word (in order of probability/similarity, best
+        suggestions first), returns lazy generator of suggestions.
+
+        Args:
+            word: Misspelled word
+        """
+
         yield from self.suggester(word)

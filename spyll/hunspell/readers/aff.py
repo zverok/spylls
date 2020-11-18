@@ -1,9 +1,11 @@
 import re
 import itertools
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, Any
 
 from spyll.hunspell.data import aff, phonet
+
+from spyll.hunspell.readers.file_reader import BaseReader
 
 
 # Outdated directive names
@@ -15,6 +17,11 @@ FLAG_NUM_REGEXP = re.compile(r'\d+(?=,|$)')
 
 @dataclass
 class Context:
+    """
+    Class containing reading-time context necessary for reading both ``*.aff`` and ``*.dic`` file:
+    encoding, flag format, chars to ignore.
+    """
+
     encoding: str = 'Windows-1252'
     flag_format: str = 'short'
     flag_synonyms: Dict[str, str] = field(default_factory=dict)
@@ -43,8 +50,18 @@ class Context:
         raise ValueError(f"Unknown flag format {self.flag_format}")
 
 
-def read_aff(source):
-    data = {'SFX': {}, 'PFX': {}, 'FLAG': 'short'}
+def read_aff(source: BaseReader) -> Tuple[aff.Aff, Context]:
+    """
+    Reads ``*.aff`` file and creates an :class:`Aff <spyll.hunspell.data.aff.Aff>`.
+
+    Args:
+         source: "Reader" (thin wrapper around opened file or zipfile, targeting line-by-line reading)
+
+    Returns:
+        Aff itself and a Context which then will be reused in :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`
+    """
+
+    data: Dict[str, Any] = {'SFX': {}, 'PFX': {}, 'FLAG': 'short'}
     context = Context()
 
     for (_, line) in source:
@@ -74,7 +91,7 @@ def read_aff(source):
             data['SET'] = 'UTF-8'
             source.reset_encoding('UTF-8')
 
-    return (aff.Aff(**data), context)
+    return (aff.Aff(**data), context) # type: ignore
 
 
 def read_directive(source, line, *, context):

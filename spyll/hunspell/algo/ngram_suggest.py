@@ -14,7 +14,11 @@ def ngram_suggest(word: str, *,
                   dictionary_words: List[data.dic.Word],
                   prefixes: Dict[str, List[data.aff.Prefix]],
                   suffixes: Dict[str, List[data.aff.Suffix]],
-                  known: Set[str], maxdiff: int, onlymaxdiff=False) -> Iterator[str]:
+                  known: Set[str], maxdiff: int, onlymaxdiff: bool = False) -> Iterator[str]:
+    """
+    Try to suggest all possible variants for misspelling based on ngram-similarity.
+    """
+
     # TODO: lowering depends on BMP of word, true by default
 
     root_scores: List[Tuple[float, str, data.dic.Word]] = []
@@ -96,35 +100,45 @@ def ngram_suggest(word: str, *,
 # ------------------
 
 
-# 1. Simple score for first dictionary words chosing: 3-gram score + longest start substring
 def root_score(word1: str, word2: str) -> float:
+    """
+    Scoring, stage 1: Simple score for first dictionary words chosing**: 3-gram score + longest start
+    substring.
+    """
+
     return (
         sm.ngram(3, word1, word2.lower(), longer_worse=True) +
         sm.leftcommonsubstring(word1, word2.lower())
     )
 
 
-# 2. First (rough and quick) score of affixed forms: n-gram score with n=length of the misspelled word
-# + longest start substring
 def rough_affix_score(word1: str, word2: str) -> float:
+    """
+    Scoring, stage 2: First (rough and quick) score of affixed forms**: n-gram score with n=length of
+    the misspelled word + longest start substring
+    """
+
     return (
         sm.ngram(len(word1), word1, word2, any_mismatch=True) +
         sm.leftcommonsubstring(word1, word2)
     )
 
 
-# 3. Hardcore final score for affixed forms!
-#
-# It actually produces 3 "classes" of suggestions:
-#
-# * > 1000: if the words are actually same with different casing (shouldn't happen when called from
-#   suggest, it should've already handled that!)
-# * < -100: if the word difference is too much (what is "too much" defined by ``diff_factor``), only
-#   one of those questionable suggestions would be returned
-# * -100...1000: just a normal suggestion score, defining its sorting position
-#
-# See also ``filter_results`` below which uses those "bags" to drop some results.
 def detailed_affix_score(word1: str, word2: str, diff_factor: float, *, base: float) -> float:
+    """
+    Scoring, stage 3: Hardcore final score for affixed forms!
+
+    It actually produces 3 "classes" of scores:
+
+    * > 1000: if the words are actually same with different casing (shouldn't happen when called from
+      suggest, it should've already handled that!)
+    * < -100: if the word difference is too much (what is "too much" defined by ``diff_factor``), only
+      one of those questionable suggestions would be returned
+    * -100...1000: just a normal suggestion score, defining its sorting position
+
+    See also :meth:`filter_guesses` below which uses those "bags" to drop some results.
+    """
+
     lcs = sm.lcslen(word1, word2)
 
     # same characters with different casing -- "very good" suggestion class
@@ -166,11 +180,14 @@ def detailed_affix_score(word1: str, word2: str, diff_factor: float, *, base: fl
     return result
 
 
-# Find minimum threshold for a passable suggestion
-#
-# Mangle original word three differnt ways (by replacing each 4th character with "*", starting from
-# 1st, 2nd or 3rd), and score them to generate a minimum acceptable score.
 def detect_threshold(word: str) -> float:
+    """
+    Find minimum threshold for a passable suggestion
+
+    Mangle original word three differnt ways (by replacing each 4th character with "*", starting from
+    1st, 2nd or 3rd), and score them to generate a minimum acceptable score.
+    """
+
     thresh = 0.0
 
     for start_pos in range(1, 4):
@@ -186,11 +203,16 @@ def detect_threshold(word: str) -> float:
     return thresh // 3 - 1
 
 
-# Produce forms with all possible affixes and prefixes from the dictionary word, but only those
-# the ``candidate`` can have. Note that there is no comprehensive flag checks (like "this prefix
-# is prohibited with suffix with this flag"). Probably main suggest's code should check it
-# (e.g. use filter_suggestion for ngram-based suggestions, too).
 def forms_for(word: data.dic.Word, candidate: str, all_prefixes, all_suffixes):
+    """
+    Produce forms with all possible affixes and prefixes from the dictionary word, but only those
+    the ``candidate`` can have. Note that there is no comprehensive flag checks (like "this prefix
+    is prohibited with suffix with this flag"). Probably main suggest's code should check it
+    (e.g. use ``filter_suggestions`` (in
+    :meth:`suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>`)
+    for ngram-based suggestions, too).
+    """
+
     # word without prefixes/suffixes is also present
     res = [word.stem]
 
@@ -230,9 +252,12 @@ def forms_for(word: data.dic.Word, candidate: str, all_prefixes, all_suffixes):
     return res
 
 
-# Filter guesses by score, to decide which ones we'll yield to the client, considering the "suggestion
-# bags" -- "very good", "normal", "questionable" (see detailed_affix_score for bags definition).
-def filter_guesses(guesses: List[Tuple[str, float]], *, known: Set[str], onlymaxdiff=True) -> Iterator[str]:
+def filter_guesses(guesses: List[Tuple[float, str]], *, known: Set[str], onlymaxdiff=True) -> Iterator[str]:
+    """
+    Filter guesses by score, to decide which ones we'll yield to the client, considering the "suggestion
+    bags" -- "very good", "normal", "questionable" (see :meth:`detailed_affix_score` for bags definition).
+    """
+
     seen = False
     found = 0
 
