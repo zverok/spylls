@@ -1,10 +1,13 @@
 from typing import Tuple
 
 
-# Number of occurences of the exactly same characters in exactly same position.
-# Returns also boolean flag if the only difference in characters of two strings is exactly one
-# swap ("paris" => "piras") -- both values are used in the same place of Hunspell ngram algorithm.
 def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
+    """
+    Number of occurences of the exactly same characters in exactly same position.
+    Returns also boolean flag if the only difference in characters of two strings is exactly one
+    swap ("paris" => "piras") -- both values are used in the same place of Hunspell ngram algorithm.
+    """
+
     num = 0
     diffpos = []
 
@@ -23,8 +26,8 @@ def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
     return (num, is_swap)
 
 
-# Size of the common start of two strings. "foo", "bar" => 0, "built", "build" => 4, "cat", "cats" => 3
 def leftcommonsubstring(s1: str, s2: str) -> int:
+    """Size of the common start of two strings. "foo", "bar" => 0, "built", "build" => 4, "cat", "cats" => 3"""
     for (i, (c1, c2)) in enumerate(zip(s1, s2)):
         if c1 != c2:
             return i
@@ -32,18 +35,24 @@ def leftcommonsubstring(s1: str, s2: str) -> int:
     return min(len(s1), len(s2))
 
 
-# Calculates how many of n-grams of s1 are contained in s2 (the more the number, the more words
-# are similar).
-#
-# Settings:
-# ``weighted``: substract from result for ngrams _not_ contained
-# ``longer_worse``: add a penalty when second string is longer
-# ``any_mismatch``: add a penalty for any string lengtht difference
-#
-# FIXME: Actually, the last to settings do NOT participate in ngram counting by themselves, they
-# are just adjusting the final score, but that's how it was structured in Hunspell.
 def ngram(max_ngram_size: int, s1: str, s2: str, *,
           weighted=False, any_mismatch=False, longer_worse=False) -> int:
+
+    """
+    Calculates how many of n-grams of s1 are contained in s2 (the more the number, the more words
+    are similar).
+
+    Args:
+      max_ngram_size: n in ngram
+      s1: string to compare
+      s2: string to compare
+      weighted: substract from result for ngrams *not* contained
+      longer_worse: add a penalty when second string is longer
+      any_mismatch: add a penalty for any string lengtht difference
+
+    FIXME: Actually, the last two settings do NOT participate in ngram counting by themselves, they
+    are just adjusting the final score, but that's how it was structured in Hunspell.
+    """
 
     l2 = len(s2)
     if l2 == 0:
@@ -82,9 +91,12 @@ def ngram(max_ngram_size: int, s1: str, s2: str, *,
     return nscore - penalty if penalty > 0 else nscore
 
 
-# Classic "LCS (longest common subsequence) length" algorithm.
-# This implementation is stolen shamelessly from https://gist.github.com/cgt/c0c47c100efda1d11854
 def lcslen(s1: str, s2: str) -> int:
+    """
+    Classic "LCS (longest common subsequence) length" algorithm.
+    This implementation is stolen shamelessly from https://gist.github.com/cgt/c0c47c100efda1d11854
+    """
+
     m = len(s1)
     n = len(s2)
 

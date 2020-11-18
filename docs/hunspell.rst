@@ -82,3 +82,13 @@ Suggest
    hunspell/algo_suggest
    hunspell/algo_nsuggest
    hunspell/algo_phonet_suggest
+
+Helpers/Utils
+^^^^^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 0
+
+   hunspell/algo_capitalization
+   hunspell/algo_string_utils
+   hunspell/algo_trie

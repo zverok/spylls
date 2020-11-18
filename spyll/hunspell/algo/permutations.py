@@ -6,11 +6,14 @@ from spyll.hunspell.data import aff
 MAX_CHAR_DISTANCE = 4
 
 
-# suggestions for a typical fault of spelling, that
-# differs with more than 1 letter from the right form.
-#
-# uses .aff's file REP table
 def replchars(word: str, reptable: List[aff.RepPattern]) -> Iterator[Union[str, List[str]]]:
+    """
+    suggestions for a typical fault of spelling, that
+    differs with more than 1 letter from the right form.
+
+    uses :attr:`aff.REP <spyll.hunspell.data.aff.Aff.REP>` table
+    """
+
     if len(word) < 2 or not reptable:
         return
 
@@ -23,10 +26,13 @@ def replchars(word: str, reptable: List[aff.RepPattern]) -> Iterator[Union[str, 
                 yield suggestion.split(' ', 2)
 
 
-# suggestions for when chose the wrong char out of a related set
-#
-# uses aff.MAP -- list of sets of potentially similar chars
 def mapchars(word: str, maptable: List[Set[str]]) -> Iterator[str]:
+    """
+    Suggestions for when chose the wrong char out of a related set
+
+    Uses :attr:`aff.MAP <spyll.hunspell.data.aff.Aff.MAP>` -- list of sets of potentially similar chars
+    """
+
     if len(word) < 2 or not maptable:
         return
 
@@ -50,8 +56,9 @@ def mapchars(word: str, maptable: List[Set[str]]) -> Iterator[str]:
         yield variant
 
 
-# error is adjacent letter were swapped
 def swapchar(word: str) -> Iterator[str]:
+    """error is adjacent letter were swapped"""
+
     if len(word) < 2:
         return
 
@@ -66,15 +73,17 @@ def swapchar(word: str) -> Iterator[str]:
             yield word[0] + word[2] + word[1] + word[-1] + word[-2]
 
 
-# error is not adjacent letter were swapped
 def longswapchar(word: str) -> Iterator[str]:
+    """error is not adjacent letter were swapped"""
+
     for first in range(0, len(word) - 2):
         for second in range(first + 2, min(first + MAX_CHAR_DISTANCE, len(word))):
             yield word[:first] + word[second] + word[first+1:second] + word[first] + word[second+1:]
 
 
-# error is wrong char in place of correct one (case and keyboard related version)
 def badcharkey(word: str, layout: str) -> Iterator[str]:
+    """error is wrong char in place of correct one (case and keyboard related version)"""
+
     for i, c in enumerate(word):
         before = word[:i]
         after = word[i+1:]
@@ -93,8 +102,8 @@ def badcharkey(word: str, layout: str) -> Iterator[str]:
             pos = layout.find(c, pos+1)
 
 
-# error is word has an extra letter it does not need
 def extrachar(word: str) -> Iterator[str]:
+    """error is word has an extra letter it does not need"""
     if len(word) < 2:
         return
 
@@ -102,9 +111,13 @@ def extrachar(word: str) -> Iterator[str]:
         yield word[:i] + word[i+1:]
 
 
-# error is missing a letter it needs
-# uses aff.TRY -- if it is absent, doesn't try anything!
-def forgotchar(word, trystring):
+def forgotchar(word: str, trystring: str) -> Iterator[str]:
+    """
+    error is missing a letter it needs
+
+    uses :attr:`aff.TRY <spyll.hunspell.data.aff.Aff.TRY>` -- if it is absent, doesn't try anything!
+    """
+
     if not trystring:
         return
 
@@ -113,8 +126,11 @@ def forgotchar(word, trystring):
             yield word[:i] + c + word[i:]
 
 
-# error is a letter was moved
 def movechar(word: str) -> Iterator[str]:
+    """
+    error is a letter was moved
+    """
+
     if len(word) < 2:
         return
 
@@ -127,8 +143,13 @@ def movechar(word: str) -> Iterator[str]:
             yield word[:topos] + word[frompos] + word[topos:frompos] + word[frompos+1:]
 
 
-# error is wrong char in place of correct one
 def badchar(word: str, trystring: str) -> Iterator[str]:
+    """
+    error is wrong char in place of correct one
+
+    uses :attr:`aff.TRY <spyll.hunspell.data.aff.Aff.TRY>` -- if it is absent, doesn't try anything!
+    """
+
     if not trystring:
         return
 
@@ -139,11 +160,13 @@ def badchar(word: str, trystring: str) -> Iterator[str]:
             yield word[:i] + c + word[i+1:]
 
 
-# perhaps we doubled two characters
-# (for example vacation -> vacacation)
-# The recognized pattern with regex back-references:
-# "(.)(.)\1\2\1" or "..(.)(.)\1\2"
 def doubletwochars(word: str) -> Iterator[str]:
+    r"""
+    perhaps we doubled two characters
+    (for example vacation -> vacacation)
+    The recognized pattern with regex back-references: ``"(.)(.)\1\2\1"`` or ``"..(.)(.)\1\2"``
+    """
+
     if len(word) < 5:
         return
 
@@ -154,10 +177,10 @@ def doubletwochars(word: str) -> Iterator[str]:
             yield word[:i-1] + word[i+1:]
 
 
-# error is should have been two words
-# return value is true, if there is a dictionary word pair,
-# or there was already a good suggestion before calling
-# this function.
 def twowords(word: str) -> Iterator[List[str]]:
+    """
+    error is should have been two words
+    """
+
     for i in range(1, len(word)):
         yield [word[:i], word[i:]]
