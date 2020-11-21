@@ -117,16 +117,18 @@ class Lookup:
     ``Lookup`` object is created on :class:`Dictionary <spyll.hunspell.Dictionary>` reading. Typically,
     you would not use it directly, but you might want for experiments::
 
-        dictionary = Dictionary.from_files('dictionaries/en_US')
-        lookup = dictionary.lookuper
+        >>> dictionary = Dictionary.from_files('dictionaries/en_US')
+        >>> lookup = dictionary.lookuper
 
-        print(lookup('spyll'))  # False
-        print(lookup('spells')) # True
+        >>> lookup('spyll')
+        False
+        >>> lookup('spells')
+        True
 
-        for form in lookup.good_forms('spells'):
-            print(form)
-        # AffixForm(spells = spells) -- option 1: "spells" is the whole word, present in dictionary
-        # AffixForm(spells = spell + Suffix(s: S×, on [[^sxzhy]]$)) -- option 2: word "spell" + suffix "s"
+        >>> for form in lookup.good_forms('spells'):
+                print(form)
+        AffixForm(spells = spells)
+        AffixForm(spells = spell + Suffix(s: S×, on [[^sxzhy]]$))
     """
 
     def __init__(self, aff: data.aff.Aff, dic: data.dic.Dic):
@@ -249,10 +251,10 @@ class Lookup:
             # are ``["Paris", "paris"]``, and the *first* one is found in the dictionary; that's why
             # we need to check all variants.
             #
-            # See capitalization.Collation_ for capitalization quirks.
-            captype, variants = self.aff.collation.variants(word)
+            # See :class:`Casing <spyll.hunspell.algo.capitalization.Casing>` for capitalization quirks.
+            captype, variants = self.aff.casing.variants(word)
         else:
-            captype = self.aff.collation.guess(word)
+            captype = self.aff.casing.guess(word)
             variants = [word]
 
         # Now, for each of capitalization variants possible
@@ -338,9 +340,9 @@ class Lookup:
             # dic.homonyms(..., ignorecase=True) checks the word against _lowercased_ stems, so we
             # need to check only for it.
             #
-            # FIXME: If Collation.variants would return pairs ("word", captype) for all variants,
+            # FIXME: If Casing.variants would return pairs ("word", captype) for all variants,
             # we wouldn't need to re-guess here:
-            if self.aff.collation.guess(word) == CapType.NO:
+            if self.aff.casing.guess(word) == CapType.NO:
                 for homonym in self.dic.homonyms(form.stem, ignorecase=True):
                     candidate = form.replace(in_dictionary=homonym)
                     if is_good_form(candidate):
@@ -537,7 +539,7 @@ class Lookup:
         root_flags = form.in_dictionary.flags
         all_flags = form.flags()
         # # TODO: Should be guessed on dictionary loading
-        # root_capitalization = aff.collation.guess(form.in_dictionary.stem)
+        # root_capitalization = aff.casing.guess(form.in_dictionary.stem)
 
         # If the stem has NOSUGGEST flag, it shouldn't be considered an existing word when called
         # from ``Suggest`` (in other cases allow_nosuggest is True). This allows, for example, to
@@ -548,11 +550,15 @@ class Lookup:
 
         # If word is marked with KEEPCASE, it is considered correct ONLY when spelled exactly that
         # way.
-        # ...unless the affix has additional CHECKSHARPS setting, because then the flag is reused
-        # to prohibit sharp-s in capitalized word. (FIXME: but for words without sharp-s works
-        # as previously?.. CHECK!)
-        if captype != form.in_dictionary.captype and aff.KEEPCASE in root_flags and not aff.CHECKSHARPS:
-            return False
+        if captype != form.in_dictionary.captype and aff.KEEPCASE in root_flags:
+            # but if this is German (with CHECKSHARPS flag), and word has "sharp s", the meaning
+            # of KEEPCASE flag is different: "disallow ẞ -- uppercased ß -- and force word in
+            # uppercase form always have SS"
+            if not (aff.CHECKSHARPS and 'ß' in form.in_dictionary.stem):
+                return False
+
+            if aff.CHECKSHARPS and 'ß' in form.in_dictionary.stem and 'ß' in form.stem and captype == CapType.ALL:
+                return False
 
         # **Check affix flags**
 
@@ -764,7 +770,7 @@ class Lookup:
 
             if aff.CHECKCOMPOUNDREP:
                 # CHECKCOMPOUNDREP setting tells:
-                # If REP-table (suggesting simple char replacements) is present, and any of the
+                # If REP-table (suggesting frequent misspelling replacements) is present, and any of the
                 # replacements produces valid affix form, the compound can't contain that.
                 #
                 # FIXME: Or is it valid only for the whole "foobar" compound?..

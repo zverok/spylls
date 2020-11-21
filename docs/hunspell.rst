@@ -1,15 +1,15 @@
-How Hunspell works
-==================
+Hunspell
+========
 
-General information
+How Hunspell works
 -------------------
 
 Hunspell spellchecker (like any other spellchecker, in fact) has two main functions: check if word is correct (**lookup**), and, for misspelled word, provide a hypothesis of what it might be corrected to (**suggest**).
 
 **Lookup** may seem simple: just take a list of known words and check if the input is included in this list. But this list-based approach ignores some important concerns:
 
-* For highly-flexive languages, one word can have **many forms**. In English, the verb "create" have only those forms: "creates", "creating", and "created"; but in Ukrainian, the same verb "створювати" has dozens, depending on tense, gender of the speaker, and other factors. One still could store a flat list of all possible forms, but it can easily contain millions of entries, requiring severe optimizations of storage and lookup. Alternatively, the spellchecker can store word bases and possible affixes separately, tagging them with metainformation about which words can have which affixes—and that's what Hunspell does;
-* Many languages (like German) have **word compounding**: valid words can be glued together to create new words, by special rules, and all of those new words would be valid. In this languages, the dictionary just can't list all possible valid words, and the spellchecker needs to break word in parts and analyse them separately;
+* For highly-flexive languages, one word can have *many forms*. In English, the verb "create" have only those forms: "creates", "creating", and "created"; but in Ukrainian, the same verb "створювати" has dozens, depending on tense, gender of the speaker, and other factors. One still could store a flat list of all possible forms, but it can easily contain millions of entries, requiring severe optimizations of storage and lookup. Alternatively, the spellchecker can store word bases and possible affixes separately, tagging them with metainformation about which words can have which affixes—and that's what Hunspell does;
+* Many languages (like German) have *word compounding*: valid words can be glued together to create new words, by special rules, and all of those new words would be valid. In this languages, the dictionary just can't list all possible valid words, and the spellchecker needs to break word in parts and analyse them separately;
 * Other complications, like word casing (both "kitten" and "Kitten" are valid, but lowercase "london" is not)
 * Interconnectedness of all concerns above ("this suffix is allowed in the end of the compound words only, but not if the word is capitalized")
 
@@ -22,10 +22,10 @@ Either approach is complicated by the facts described in lookup: it is ineffecti
 
 Hunspell does both, on the different stages of its suggestion algorithm, and does some optimization so that process wouldn't take forever.
 
-Hunspell data formats and algorithms
-------------------------------------
+Data formats and algorithms
+---------------------------
 
-Every Hunspell dictionary consists of two files:
+Every Hunspell dictionary consists of two text files:
 
 * ``<languagename>.dic``, containing words + some metainformation ("flags" and "data tags");
 * ``<languagename>.aff``, defining flag meanings ("word with this flag can have this suffix", "...can be at the end of compound words", "...should never be suggested" etc.), and lot of other spellchecking settings, like "what characters allowed in words", "what types of suggestions are allowed", etc.
@@ -48,7 +48,7 @@ Code walkthrough
 Data storage
 ^^^^^^^^^^^^
 
-``data.dic`` explains word list (dictionary itself) format; ``data.aff`` lists and documents all "aff" (settings/affixes)-file possible options, and defines simple pattern-alike wrappers for some of them.
+``data.dic`` explains word list (dictionary itself) format; ``data.aff`` lists and documents all ``*.aff`` (settings/affixes)-file possible options, and defines simple pattern-alike wrappers for some of them.
 
 .. toctree::
    :maxdepth: 0
@@ -77,11 +77,9 @@ Suggest
 ^^^^^^^
 
 .. toctree::
-   :maxdepth: 0
+   :maxdepth: 2
 
    hunspell/algo_suggest
-   hunspell/algo_nsuggest
-   hunspell/algo_phonet_suggest
 
 Helpers/Utils
 ^^^^^^^^^^^^^
@@ -92,3 +90,4 @@ Helpers/Utils
    hunspell/algo_capitalization
    hunspell/algo_string_utils
    hunspell/algo_trie
+   hunspell/file_readers

@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 
-class Leaf:     # pylint: disable=too-few-public-methods
+class Leaf:     # pylint: disable=too-few-public-methods,missing-class-docstring
     def __init__(self):
         self.payloads = []
         self.children = defaultdict(Leaf)

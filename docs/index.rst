@@ -1,18 +1,24 @@
 Spyll: Hunspell ported to Python
 ================================
 
-**Spyll** is an effort of porting prominent spellcheckers into clear, well-structured, well-documented Python. It is inteded to be useful both as a library and as a "reference implementation". Currently, only `Hunspell <https://github.com/hunspell/hunspell>`_ is ported.
+**Spyll** is an effort of porting prominent spellcheckers into clear, well-structured, well-documented Python. It is inteded to be useful both as a library and as some kind of "reference (or investigatory, if you will) implementation". Currently, only `Hunspell <https://github.com/hunspell/hunspell>`_ is ported.
 
 Reasons
 -------
 
-Spellchecking is a notoriously hard task that looks easy. It consists of a) checking, whether the word is in the dictionary and b) if it is not, suggesting what the correct form might be.
+Spellchecking is a notoriously hard task that looks easy. The MVP everybody starts from is "just look if the word in the known list, and if it is not, calculate Levenstein distance to know what's the most similar one and suggest it", but things get complicated very quickly once you start working with real texts, and languages other than English.
 
-Even (a) is "easy" (look through the list of known correct words) only for some languages, like English. For others, having rich word forms (say, Slavic ones) or word compounding (like German), requires either millions of word forms prepared, or non-trivial word analysis logic.
+There are some modern approaches to spell and grammar checking, which are base on machine learning, can recognize context and do a lot of other interesting stuff. But "classic", dictionary-based spellcheckers are still most widespread solution, with **hunspell** being the most widespread of all. It is embedded into Chrome, Firefox, OpenOffice, Adobe's products, Linux and MacOS distributions; there are Hunspell-compatible dictionaries for most of human languages.
 
-The second task (suggestion) is even trickier. TODO
+At the same time, hunspell is long-living, complicated, almost undocumented piece of software, and it was our feeling that the significant part of human knowledge is somehow "locked" in a form of large C++ project. That's how **spyll** was born: as an attempt to "unlock" it, via well-structured and well-documented implementation in high-level language.
 
-While there are some modern approaches to spell and grammar checking, which are base on machine learning, can recognize context and do a lot of other interesting stuff, "classic", dictionary-based spellcheckers are still most widespread solution, with **hunspell** being the most widespread of all. It is embedded into Chrome, Firefox, OpenOffice, Adobe's products, Linux and MacOS distributions... At the same time, hunspell is long-living, complicated, almost undocumented piece of software, which
+Design choices
+--------------
+
+* **Spyll** is implemented in Python, as a most widespread high-level language of 2020s (besides EcmaScript, but I just can't do it... for personal reasons);
+* The code is as "vanilla Python" as possible, so it should be reasonable readable for developer in any modern language; the most Python-specific feature used is method returning generators (instead of arrays);
+* Code is structured in a (reasonably) low amount of classes with (reasonably) large methods, exposing the imperative nature of hunspell algorithms; probably "very OO" or "very functional" approach could've made code more appealing for some, but I tried to communicate the algorithms themselves (for possible reimplementations in other languages and architectures), not my own views on how to code;
+* ...At the same time, it doesn't try to reproduce Hunspell's structure of classes, method names and calls, but rather express "what it does" in the most simple/straightforward ways
 
 Usage as a library
 ------------------
@@ -39,19 +45,19 @@ Usage as a library
 
 See :class:`Dictionary <spyll.hunspell.dictionary.Dictionary>` class docs for more details.
 
+.. toctree::
+   :maxdepth: 2
 
-Design goals
-------------
+   hunspell/dictionary
+
 
 Reading the code
 ----------------
 
-Modules inside ``spyll/hunspell`` folder (except for small public interface of the ``Dictionary``) are written in a style akin to literate programming (explanations interweaved with code in supposedly readable manner). They could be read right in the GitHub (or your preferred code editor), but we suggest a rendering on `the dedicated site <https://spyll.github.io/hunspell/code>`_.
+.. toctree::
+   :maxdepth: 2
 
-* It is suggested that you start from hunspell concepts explanations
-* data.aff and data.dic modules declare data structures (data.aff also provides **very** thorough explanation of each and every directive, and points where in code they are used)
-* algo.lookup defines the lookup algorithm (with compound word breaking extracted into algo.compounding)
-* algo.suggest defines the suggestion algorithm, of which ngram-based suggestions are detailed in algo.ngram_suggest, and phonetics-based suggestion in algo.phonet
+   hunspell
 
 
 Completeness
@@ -83,13 +89,20 @@ I believe that significantly better performance is hard/impossibe to achieve *in
 Q&A
 ---
 
-Why ``spyll.hunspell``?
+Why all the code is namespaced under ``spyll.hunspell`` (and not just ``spyll``)?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Delusion of grandeur
+Due to author's delusion of grandeur! I plan/hope/dream it will once include not only Hunspell's "explanatory ports", but for some other spellcheckers, too
 
-What about Norvig's?
+Why all the complexity if Peter Norvig's `spellchecker <https://norvig.com/spell-correct.html>`_ is just 36 lines of Python?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TBD
 
 Where do I get the dictionaries?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TBD
 
 Other ports
 -----------
@@ -100,21 +113,11 @@ Here only "pure" ports of Hunspell to other languages are listed, not wrappers a
 * JS: `nspell <https://github.com/wooorm/nspell>`_ (only some directives)
 * C++: `nuspell <https://github.com/nuspell/nuspell>`_ (weirdly, pretends to be independent project with no relations to anything, while at the same time seeming to support the same format of aff/dic, and striving to conform to hunspell's test suite)
 
-Other approaches to spellchecking
----------------------------------
+Some other approaches to spellchecking
+--------------------------------------
 
-* aspell
-* morphologik
-* voikko
-* SymSpell
-
-
-Project Info
-============
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   hunspell
-   hunspell/dictionary
+* `aspell <https://github.com/GNUAspell/aspell>`_, while being in some sense a "grandparent" of Hunspell, is said to `sometimes provide better suggestions <https://battlepenguin.com/tech/aspell-and-hunspell-a-tale-of-two-spell-checkers/>`_;
+* `morphologik <https://github.com/morfologik/morfologik-stemming>`_: stemmer/POS-tagger/spellchecker used by `LanguageTool <https://languagetool.org/>`_; it uses very interesting technique of encoding dictionaries with FSA, making dictionary lookup much more effective than Hunspell's;
+* `voikko <https://voikko.puimula.org/>`_, developed for Finnish, which Hunspell can't handle too well due to its complicated affixes;
+* `SymSpell <https://github.com/wolfgarbe/SymSpell>`_: very fast algorithm (relying on availability of full list of all language's words)
+* `JamSpell <https://github.com/bakwc/JamSpell>`_: machine learning-based one

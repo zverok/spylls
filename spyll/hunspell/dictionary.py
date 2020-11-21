@@ -37,12 +37,14 @@ class Dictionary:
     Internal algorithm implementations :attr:`lookuper` and :attr:`suggester` are exposed in order
     to allow experimenting with the implementation::
 
+        # Produce all ways this word might be analysed by current dictionary
         for form in dictionary.lookuper.good_forms('building'):
             print(form)
 
         # AffixForm(building = building)
         # AffixForm(building = build + Suffix(ing: G×, on [[^e]]$))
 
+        # Internal suggest method, showing information about suggestion method
         for suggestion in dictionary.suggester.suggest_internal('spyll'):
             print(suggestion)
 
@@ -72,8 +74,6 @@ class Dictionary:
     .. autoattribute:: lookuper
     .. autoattribute:: suggester
     """
-
-    # Fully-qualifying for the sake of sphinx
 
     #: Contents of ``*.aff``
     aff: data.aff.Aff

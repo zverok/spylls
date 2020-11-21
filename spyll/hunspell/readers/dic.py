@@ -66,8 +66,8 @@ def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
         if context.ignore:
             word = word.translate(context.ignore.tr)
 
-        captype = aff.collation.guess(word)
-        lower = aff.collation.lower(word) if captype != CapType.NO else word
+        captype = aff.casing.guess(word)
+        lower = aff.casing.lower(word) if captype != CapType.NO else word
         alt_spellings = []
 
         if 'ph' in data:

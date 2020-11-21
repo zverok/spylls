@@ -1,4 +1,4 @@
-# test ß - SS special capitalizing
+# test ÃŸ - SS special capitalizing
 CHECKSHARPS
-WORDCHARS ß.
+WORDCHARS ÃŸ.
 KEEPCASE k

@@ -27,6 +27,8 @@ class Suggestion:
     """
     Suggestions is what Suggest produces internally to store enough information about some suggestion
     to make sure it is a good one.
+
+    TODO: One vs two cycles
     """
 
     #: Actual suggestion text
@@ -151,7 +153,7 @@ class Suggest:
                 # the capitalization of the misspelled word. E.g., if misspelled was "Kiten", suggestion
                 # is "kitten" (how it is in the dictionary), and coercion (what we really want
                 # to return to user) is "Kitten"
-                text = self.aff.collation.coerce(text, captype)
+                text = self.aff.casing.coerce(text, captype)
                 # ...but if this particular capitalized form is forbidden, return back to original text
                 if text != suggestion.text and is_forbidden(text):
                     text = suggestion.text
@@ -186,7 +188,7 @@ class Suggest:
         # "msdonalds" (full lowercase) "msDonalds" (first letter lowercased), or maybe "Msdonalds"
         # (only first letter capitalized). Note that "MSDONALDS" (it should've been all caps) is not
         # produced as a possible good form, but checked separately in good_permutations
-        captype, variants = self.aff.collation.corrections(word)
+        captype, variants = self.aff.casing.corrections(word)
 
         good = False
         very_good = False
@@ -195,7 +197,7 @@ class Suggest:
         # on compounding, then we check capitalized form of the word. If it is correct, that's the
         # only suggestion we ever need.
         if self.aff.FORCEUCASE and captype == CapType.NO:
-            for capitalized in self.aff.collation.capitalize(word):
+            for capitalized in self.aff.casing.capitalize(word):
                 if is_good_suggestion(capitalized):
                     yield from handle_found(Suggestion(capitalized.capitalize(), 'forceucase'))
                     return  # No more need to check anything
@@ -276,7 +278,7 @@ class Suggest:
         """
 
         # suggestions for an uppercase word (html -> HTML)
-        yield Suggestion(self.aff.collation.upper(word), 'uppercase')
+        yield Suggestion(self.aff.casing.upper(word), 'uppercase')
 
         # REP table in affix file specifies "typical misspellings", and we try to replace them.
         # Note that the content of REP table taken not only from aff file, but also from "ph:" tag

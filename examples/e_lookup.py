@@ -5,7 +5,7 @@ from spyll.hunspell.dictionary import Dictionary
 # from spyll.hunspell.algo.lookup import analyze
 from spyll.hunspell.algo.lookup import CompoundPos
 
-dic = Dictionary.from_files('tests/integrational/fixtures/iconv')
+dic = Dictionary.from_files('tests/integrational/fixtures/checksharps')
 
 # print(dic.dic.words[1].flags, dic.aff.FORCEUCASE)
 # print(dic.dic.has_flag('bar', dic.aff.FORCEUCASE))
@@ -15,4 +15,4 @@ dic = Dictionary.from_files('tests/integrational/fixtures/iconv')
 # for k, vals in dic.aff.suffixes_index.index.items():
 #     print(f"{k}: {vals}")
 
-print(dic.lookup('Ş'))
+print(dic.lookup('MÜẞIG'))

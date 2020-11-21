@@ -128,7 +128,7 @@ def detailed_affix_score(word1: str, word2: str, diff_factor: float, *, base: fl
     """
     Scoring, stage 3: Hardcore final score for affixed forms!
 
-    It actually produces 3 "classes" of scores:
+    It actually produces score of one of 3 groups:
 
     * > 1000: if the words are actually same with different casing (shouldn't happen when called from
       suggest, it should've already handled that!)
@@ -136,7 +136,7 @@ def detailed_affix_score(word1: str, word2: str, diff_factor: float, *, base: fl
       one of those questionable suggestions would be returned
     * -100...1000: just a normal suggestion score, defining its sorting position
 
-    See also :meth:`filter_guesses` below which uses those "bags" to drop some results.
+    See also :meth:`filter_guesses` below which uses this separation into "groups" to drop some results.
     """
 
     lcs = sm.lcslen(word1, word2)

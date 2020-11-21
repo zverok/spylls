@@ -1,8 +1,31 @@
+"""
+.. autoclass:: BaseReader
+    :members:
+
+.. autoclass:: FileReader
+.. autoclass:: ZipReader
+"""
+
 import io
 import zipfile
 
 
 class BaseReader:
+    """
+    Common base for :class:`FileReader` and :class:`ZipReader`. In fact, it is a very thin wrapper
+    around ``IO``-alike object, to read it line by line and:
+
+    * strip lines transparently
+    * ignore BOM (byte-order mark) at the beginning
+    * yield line with its number (1-based)
+    * support encoding change on the fly::
+
+        for line in reader:
+            # do something
+            reader.reset_encoding('UTF-8')
+            # ..continue to read from the same line
+
+    """
     def __init__(self, obj):
         self.line_no = 0
 
@@ -35,6 +58,10 @@ class BaseReader:
 
 
 class FileReader(BaseReader):
+    """
+    Reader implementation for simple filesystem file.
+    """
+
     def __init__(self, path, encoding='Windows-1252'):
         self.path = path
         super().__init__(self._open(path, encoding))
@@ -49,6 +76,10 @@ class FileReader(BaseReader):
 
 
 class ZipReader(BaseReader):
+    """
+    Reader implementation for file inside zip archive.
+    """
+
     def __init__(self, zip_obj, encoding='Windows-1252'):
         self.zipfile = (zip_obj._fileobj._file.name, zip_obj.name)
         super().__init__(self._open(zip_obj, encoding))
