@@ -1,9 +1,14 @@
 """
-The main "is this word correct" algorithm implementation.
+The main "is this word correct?" algorithm implementation.
+
+On a bird-eye view level, word correctness check is implemented as an attempt to analyze word form
+(maybe it has this suffix? maybe it has this prefix? maybe it consists of several words? maybe they
+have suffixes and prefixes?), and the word considered correct if at least one such form found, that
+it has valid suffixes/prefixes from Aff and valid stem from Dic, and they all compatible with each other.
+
+To follow algorithm details, start reading from :meth:`Lookup.__call__`
 
 .. autoclass:: Lookup
-    :members:
-    :special-members:
 
 .. autoclass:: AffixForm
     :members:
@@ -129,6 +134,32 @@ class Lookup:
                 print(form)
         AffixForm(spells = spells)
         AffixForm(spells = spell + Suffix(s: S×, on [[^sxzhy]]$))
+
+    See :meth:`__call__` as the main entry point for algorithm explanation.
+
+    **Main methods**
+
+    .. automethod:: __call__
+    .. automethod:: good_forms
+
+    **Affixes**
+
+    .. automethod:: affix_forms
+    .. automethod:: produce_affix_forms
+    .. automethod:: is_good_form
+    .. automethod:: desuffix
+    .. automethod:: deprefix
+
+    **Compounds**
+
+    .. automethod:: compound_forms
+    .. automethod:: compounds_by_flags
+    .. automethod:: compounds_by_rules
+    .. automethod:: is_bad_compound
+
+    **Utility**
+
+    .. automethod:: break_word
     """
 
     def __init__(self, aff: data.aff.Aff, dic: data.dic.Dic):
@@ -143,8 +174,9 @@ class Lookup:
         The outermost word correctness check.
 
         Basically, prepares word for check (converting/removing chars), and then checks whether
-        the word is properly spelled. If it is not, also tries to break word by break-points (like
-        dashes), and check each part separately.
+        the any good word form can be produced with :meth:`good_forms`.
+        If there is none, also tries to break word by break-points (like dashes) with :meth:`break_word`,
+        and check each part separately.
 
         Boolean flags are used when the Lookup is called from :class:`Suggest <spyll.hunspell.algo.suggest.Suggest>`.
 
@@ -195,14 +227,14 @@ class Lookup:
 
         # ``try_break`` recursively produces all possible lists of word breaking by break patterns
         # (like dashes).
-        for parts in self.try_break(word):
+        for parts in self.break_word(word):
             # If all parts in this variant of the breaking is correct, the whole word considered correct.
             if all(is_correct(part) for part in parts if part):
                 return True
 
         return False
 
-    def try_break(self, text, depth=0):
+    def break_word(self, text, depth=0):
         """
         Recursively produce all possible lists of word breaking by break patterns
         (like dashes). For example, if we are checking the word "pre-processed-meat", we'll
@@ -220,7 +252,7 @@ class Lookup:
             for m in pat.regexp.finditer(text):
                 start = text[:m.start(1)]
                 rest = text[m.end(1):]
-                for breaking in self.try_break(rest, depth=depth+1):
+                for breaking in self.break_word(rest, depth=depth+1):
                     yield [start, *breaking]
 
     def good_forms(self, word: str, *,
@@ -229,17 +261,26 @@ class Lookup:
         """
         The main producer of correct word forms (e.g. ways the proposed string might correspond to our
         dictionary/affixes). If there is at least one, the word is correctly spelled. There could be
-        many correct forms for one spelling (e.g. word "building" might be a noun "building", or infinitive
-        "build + ing").
+        many correct forms for one spelling:
+
+            >>> lookuper.good_forms('building')
+            AffixForm(building = building)                              # noun
+            AffixForm(building = build + Suffix(ing: G×, on [[^e]]$))   # verb infinitive
 
         The method returns generator (forms are produced lazy), so it doesn't have performance
         overhead when just needs to check "any correct form exists".
+
+        Internally:
+
+        * decides all word's possible casings ("KITTEN" -> "kitten", "Kitten", "KITTEN")
+        * for each of them, tries to find good affixed forms with :meth:`affix_forms`
+        * ...and then good compound forms with :meth:`compound_forms`
         """
 
         # "capitalization" might be ``False`` if it is passed from ``Suggest``, meaning "check only
         # this exact case"
         if capitalization:
-            # Collaction calculates:
+            # Casing calculates:
             #
             # * word's capitalization (none -- all letters are small, init -- first
             # letter is capitalized, all -- all leters are capital, HUH -- some letters are small,
@@ -278,11 +319,28 @@ class Lookup:
         stem+affixes, such that the stem would be present in the dictionary, and stem and all affixes
         would be compatible with each other.
 
-        ``prefix_flags``, ``suffix_flags``, ``forbidden_flags`` and ``compoundpos`` are passed when
-        the method is called from ``compound_xxx`` family of methods.
+            >>> [*lookuper.affix_forms('reboots')]
+            [AffixForm(reboots = Prefix(re: A×, on ^[.]) + boot + Suffix(s: S×, on [[^sxzhy]]$))]
 
-        ``with_forbidden`` passed when producing forms *including those specifically marked as forbidden*,
-        to stop compounding immediately if the forbidden one exists.
+        Internally, produces all possible (not necessary correct) forms with :meth:`produce_affix_forms`
+        and then filters them with :meth:`is_good_form` (this is very simplified explanation, there
+        are a lot of edge cases, see code).
+
+        Args:
+            word: the word to produce forms for
+            allow_nosuggest: ``False`` is passed from Suggest
+            prefix_flags: passed when the method is called from ``compound_xxx`` family of methods, to
+                          specify flags the prefix (if exists) **should** have
+            suffix_flags: passed when the method is called from ``compound_xxx`` family of methods, to
+                          specify flags the suffix (if exists) **should** have
+            forbiddne_flags: passed when the method is called from ``compound_xxx`` family of methods, to
+                             specify flags the prefix and suffix (if exist) **should not** have
+            compoundpos: passed when the method is called from ``compound_xxx`` family of methods
+                         (and then checked in :meth:`is_good_form` to see if this form can be at specified
+                         place in compound word)
+            with_forbidden: passed when producing forms *including those specifically marked as forbidden*,
+                            to stop compounding immediately if the forbidden one exists.
+
         """
 
         # Just a shortcut to call (quite complicated) form validity method with all relevant params.
@@ -351,8 +409,9 @@ class Lookup:
     def compound_forms(self, word: str, captype: CapType, allow_nosuggest: bool = True) -> Iterator[CompoundForm]:
         """
         Produces all correct compound forms.
-        Delegates all real work to two different compounding algorithms, and then just check if their
-        results pass various correctness checks.
+        Delegates all real work to two different compounding algorithms: :meth:`compounds_by_flags`
+        and :meth:`compounds_by_rules`, and then just check if their results pass various correctness
+        checks in :meth:`is_bad_compound`.
         """
 
         # if we try to decompound "forbiddenword's", AND "forbiddenword" with suffix "'s" is forbidden,
@@ -397,10 +456,20 @@ class Lookup:
         Produces all possible affix forms: e.g. for all known suffixes & prefixes, if it looks like
         they are in this word, produce forms ``(prefix + stem + suffix)``.
 
-        flags are used when called from compounding, in this case ``prefix_flags`` and ``suffix_flags``
-        are listing the flags that affixes should definitely have (e.g. for word in the middle of compound,
-        it can only have prefix explicitly marked with ``COMPOUNDPERMITFLAG``), and ``forbidden_flags`` are
-        listing flags that they are forbidden to have (``COMPOUNDFORBIDFLAG``)
+        Internally, calls :meth:`deprefix` and :meth:`desuffix` to chop off suffixes and prefixes.
+
+        Args:
+            word: Word to produce forms from
+            compoundpos: If the affix form is analysed to be part of compound, specifies where in compound
+                         it will be (whether it can have suffixes/prefixes depends on that)
+            prefixflags: If the affix form is analysed to be part of compound, AND its position is
+                         such that prefixes aren't allowed by default (middle or ending), this list
+                         can specify flags of prefixes that ARE allowed
+            suffixflags: If the affix form is analysed to be part of compound, AND its position is
+                         such that suffixes aren't allowed by default (beginning or middle), this list
+                         can specify flags of suffixes that ARE allowed
+            forbidden_flags: If the affix form is analysed to be part of compound, specifies set of
+                             flags of suffixex/prefixes that are NOT allowed
         """
 
         # "Whole word" is always existing option. Note that it might later be rejected in is_good_form
@@ -439,15 +508,17 @@ class Lookup:
                  nested: bool = False,
                  crossproduct: bool = False) -> Iterator[AffixForm]:
         """
-        For given word, produces AffixForm with suffix(es) split of the stem.
+        For given word, produces :class:`AffixForm` with suffix(es) split of the stem.
 
-        ``forbidden_flags`` and ``required_flags`` needed on compounding, and list flags that suffix
-        should, or should not have.
-        ``crossproduct`` is used when trying to chop the suffix of already deprefixed form, in this
-        case the suffix should have "cross-production allowed" mark.
-        ``nested`` is used when the function is called recursively: currently, hunspell (and spyll)
-        allow chopping up to two suffixes (in the future it might become an integer ``depth`` parameter
-        for more than two suffixes analysis).
+        Args:
+            word: word to chop suffixes of
+            crossproduct: used when trying to chop the suffix of already deprefixed form, in this
+                          case the suffix should have "cross-production allowed" mark.
+            nested: used when the function is called recursively: currently, hunspell (and spyll)
+                    allow chopping up to two suffixes (in the future it might become an integer ``depth`` parameter
+                    for more than two suffixes analysis).
+            required_flags: on compounding, flags that suffix **should** have
+            forbidden_flags: on compounding, flags that suffix **should not** have
         """
 
         def good_suffix(suffix):
@@ -526,7 +597,15 @@ class Lookup:
                      captype: CapType,
                      allow_nosuggest: bool = True) -> bool:
         """
-        Filter affix form
+        Decides whether the affix form is allowed, by checking compatibility of its components' flags
+        (this stem in its flags list, has flags for this suffix and this prefix) and various other
+        conditions. It's complicated! Read the code.
+
+        Args:
+            form: Form to filter
+            compoundpos: If called from ``compound_xx`` family of methods, position in compound word
+            captype: original capitalization type of the checked word
+            allow_nosuggest: when called from suggest, is set to ``False``
         """
 
         # Just to make the code a bit simpler, it asks aff. for tons of different stuff
@@ -626,8 +705,8 @@ class Lookup:
         "allowed in compound", or flag "allowed as a compound beginning", middle part has flag "allowed
         in compound", or "allowed as compound middle" and so on).
 
-        Works recursively by first trying to find the allowed beginning of compound, and if it is
-        found, calling itself with the rest of the word, and so on.
+        Works recursively by first trying to find the allowed beginning of compound (producing it
+        by :meth:`affix_forms`), and if it is found, calling itself with the rest of the word, and so on.
         """
 
         aff = self.aff
@@ -708,7 +787,7 @@ class Lookup:
         and then recursively split the rest of the word, limiting rules to those still partially matching
         current set of words.
 
-        Most of the magic happens in CompoundRule
+        Most of the magic happens in :class:`CompoundRule <spyll.hunspell.data.aff.CompoundRule>`
         """
 
         aff = self.aff
@@ -747,7 +826,8 @@ class Lookup:
         """
         After the hypothesis "this word is compound word, consisting of those parts" is produced, even
         if all the parts have appropriate flags (e.g. allowed to be in compound), there still could
-        be some settings
+        be some settings that make compound "bad" (like, some letter is tripled on the border of words,
+        or there exists special COMPOUNDPATTERN prohibiting exactly this).
         """
 
         aff = self.aff

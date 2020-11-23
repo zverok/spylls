@@ -1,4 +1,4 @@
-``hunspell.algo.lookup``
-========================
+``algo.lookup``
+===============
 
 .. automodule:: spyll.hunspell.algo.lookup
