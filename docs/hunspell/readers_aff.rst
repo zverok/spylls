@@ -1,5 +1,4 @@
-``hunspell.readers.aff``
-========================
+``readers.aff``
+===============
 
 .. automodule:: spyll.hunspell.readers.aff
-  :members:

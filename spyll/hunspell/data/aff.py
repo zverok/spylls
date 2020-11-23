@@ -94,7 +94,21 @@ for concept explantion.
 @dataclass
 class BreakPattern:
     """
-    Contents of the ``BREAK`` directive, pattern for splitting the word, compiled to regexp.
+    Contents of the :attr:`Aff.BREAK` directive, pattern for splitting the word, compiled to regexp.
+
+    Directives are stored this way:
+
+    .. code-block:: text
+
+        BREAK 3
+        BREAK -
+        BREAK ^-
+        BREAK -$
+
+    (That's, by the way, the default value of ``BREAK``). It means Hunspell while checking the word
+    like "left-right", will check "left" and "right" separately; also will ignore "-" at the beginning
+    and end of the word (second and third lines). Note that ``BREAK -`` without any special chars
+    will NOT ignore "-" at the beginning/end.
     """
     pattern: str
 
@@ -122,7 +136,7 @@ class Ignore:
 @dataclass
 class RepPattern:
     """
-    Contents of the :attr:``Aff.REP`` directive, pair of ``(frequent typo, its replacement)``. Typo pattern
+    Contents of the :attr:`Aff.REP` directive, pair of ``(frequent typo, its replacement)``. Typo pattern
     compiled to regexp.
 
     Example from Hunspell's docs, showing all the features:
@@ -227,7 +241,7 @@ class Prefix(Affix):
     """
 
     def __post_init__(self):
-        # "-" does NOT have a special meaning, while might happen as a regular word char (for ex., hu_HU)
+        # "-" does NOT have a special regex-meaning, while might happen as a regular word char (for ex., hu_HU)
         condition = self.condition.replace('-', '\\-')
         self.cond_regexp = re.compile('^' + condition)
 
@@ -257,7 +271,7 @@ class Suffix(Affix):
     """
 
     def __post_init__(self):
-        # "-" does NOT have a special meaning, while might happen as a regular word char (for ex., hu_HU)
+        # "-" does NOT have a special regex-meaning, while might happen as a regular word char (for ex., hu_HU)
         condition = self.condition.replace('-', '\\-')
         self.cond_regexp = re.compile(condition + '$')
 
@@ -284,7 +298,40 @@ class Suffix(Affix):
 @dataclass
 class CompoundRule:
     """
-    Regexp-alike rule for generating compound words.
+    Regexp-alike rule for generating compound words. It is a way of specifying compounding alternative
+    (and unrelated) to :attr:`Aff.COMPOUNDFLAG` and similar. Rules look this way:
+
+    .. code-block:: text
+
+        COMPOUNDRULE A*B?CD
+
+    ...reading: compound word might consist of any number of words with flag ``A``, then 0 or 1 words
+    with flag ``B``, then words with flags ``C`` and ``D``.
+
+    ``en_US.aff`` uses this feature to specify spelling of numerals. In .aff-file, it has
+
+    .. code-block:: text
+
+        COMPOUNDRULE 2
+        COMPOUNDRULE n*1t
+        COMPOUNDRULE n*mp
+
+    And, in .dic-file:
+
+    .. code-block:: text
+
+        0/nm
+        0th/pt
+        1/n1
+        1st/p
+        1th/tc
+        2/nm
+        2nd/p
+        2th/tc
+        # ...and so on...
+
+    Which makes "111th" valid (one hundred eleventh): "1" with "n", "1" with "1" and "1th" with "t"
+    is valid by rule ``n*1t``, but "121th" is not valid (should be "121st")
     """
 
     text: str
@@ -382,7 +429,25 @@ class ConvTable:
     :attr:`Aff.OCONV`. Format is as follows (as far as I can guess from code and tests, documentation
     is very sparse):
 
+    .. code-block:: text
 
+        ICONV <number of entries>
+        ICONV <pattern> <replacement>
+
+    Typically, ``pattern`` and ``replacement`` are just simple strings, used mostly for replacing
+    typographics (like trigraphs and "nice" apostrophes) before/after processing.
+
+    But if there is a ``_`` in ``pattern``, it is treated as: regexp ``^`` if at the beginning of
+    the pattern, regexp ``$`` if at the end, and just ignored otherwise. This seem to be a "hidden"
+    feature, demonstrated by ``nepali.*`` set of tests in Hunspell distribution
+
+    Conversion rules are applied as follows:
+
+    * for each position in word
+    * ...find any matching rules
+    * ...chose the one with longest pattern
+    * ...apply it, and shift to position after its applied (so there can't be recursive application
+      of several rules on top of each other).
     """
 
     pairs: List[Tuple[str, str]]
@@ -398,6 +463,7 @@ class ConvTable:
 
             return (pat1clean, re.compile(pat1re), pat2.replace('_', ' '))
 
+        # TODO: don't need key=?.. (default behavior)
         self.table = sorted([compile_row(*row) for row in self.pairs], key=itemgetter(0))
 
     def __call__(self, word):
@@ -532,11 +598,11 @@ class Aff:
     .. autoattribute:: PHONE
     .. autoattribute:: MAXCPDSUGS
 
-    *N-gram suggestions*
+    **N-gram suggestions**
 
+    .. autoattribute:: MAXNGRAMSUGS
     .. autoattribute:: MAXDIFF
     .. autoattribute:: ONLYMAXDIFF
-    .. autoattribute:: MAXNGRAMSUGS
 
     **Stemming**
 
@@ -581,12 +647,10 @@ class Aff:
     .. autoattribute:: AF
     .. autoattribute:: AM
 
-    **Other**
+    **Other/Ignored**
 
     .. autoattribute:: WARN
-
-    **Ignored**
-
+    .. autoattribute:: FORBIDWARN
     .. autoattribute:: SYLLABLENUM
     .. autoattribute:: SUBSTANDARD
 
@@ -602,7 +666,13 @@ class Aff:
         :type: spyll.hunspell.algo.capitalization.Casing
 
         "Casing" class (defining how the words in this language lowercased/uppercased). See
-        :class:`Casing <spyll.hunspell.algo.capitalization.Casing>` for details.
+        :class:`Casing <spyll.hunspell.algo.capitalization.Casing>` for details. In ``Aff``, basically, it is
+
+        * :class:`GermanCasing <spyll.hunspell.algo.capitalization.GermanCasing>` if :attr:`CHECKSHARPS`
+          is ``True``,
+        * :class:`TurkicCasing <spyll.hunspell.algo.capitalization.TurkicCasing>` if :attr:`LANG` is
+          one of Turkic languages (Turkish, Azerbaijani, Crimean Tatar),
+        * regular ``Casing`` otherwise.
 
     .. py:attribute:: suffixes_index
         :type: spyll.hunspell.algo.trie.Trie
@@ -845,20 +915,20 @@ class Aff:
     #: Flag saying "this stem can't be used without affixes". Can be also assigned to suffix/prefix,
     #: meaning "there should be other affixes besides this one".
     #:
-    #: *Usage:* lookup.Lookup.is_good_form
+    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     NEEDAFFIX: Optional[Flag] = None
 
     #: Suffixes signed with this flag may be on a word when this word also has a prefix with
     #: this flag, and vice versa.
     #:
-    #: *Usage:* lookup.Lookup.is_good_form
+    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     CIRCUMFIX: Optional[Flag] = None
 
     #: If two prefixes stripping is allowed (only one prefix by default). Random fun fact:
     #: of all currently available LibreOffice and Firefox dictionaries, only Firefox's Zulu has this
     #: flag.
     #:
-    #: *Usage:* lookup.Lookup.deprefix
+    #: *Usage:* :meth:`Lookup.deprefix <spyll.hunspell.algo.lookup.Lookup.deprefix>`
     COMPLEXPREFIXES: bool = False
 
     #: If affixes are allowed to remove entire stem.
@@ -872,31 +942,31 @@ class Aff:
     #: Defines break points for breaking words and checking word parts separately. See :class:`BreakPattern`
     #: for format definition.
     #:
-    #: *Usage:* :meth:`Lookup.try_break`
+    #: *Usage:* :meth:`Lookup.try_break <spyll.hunspell.algo.lookup.Lookup.try_break>`
     BREAK: List[BreakPattern] = \
         field(default_factory=lambda: [BreakPattern('-'), BreakPattern('^-'), BreakPattern('-$')])
 
     #: Rule of producing compound words, with regexp-like syntax. See :class:`CompoundRule` for
     #: format definition.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_rules`
+    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>`
     COMPOUNDRULE: List[CompoundRule] = field(default_factory=list)
 
     #: Minimum length of words used for compounding.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_rules` & :meth:`Lookup.compounds_by_flags`
+    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>` & :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
     COMPOUNDMIN: int = 3
 
     #: Set maximum word count in a compound word.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_rules` & :meth:`Lookup.compounds_by_flags`
+    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>` & :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
     COMPOUNDWORDMAX: Optional[int] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can be part of the compound.
     #: Note that triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`
     #: is more precise way of marking ("this word can be at the beginning of compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form` to compare form's compound position (or lack thereof) with
+    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>` to compare form's compound position (or lack thereof) with
     #: presence of teh flag.
     COMPOUNDFLAG: Optional[Flag] = None
 
@@ -905,7 +975,7 @@ class Aff:
     #: Part of the triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`;
     #: alternative to the triple is just :attr:`COMPOUNDFLAG` ("this form can be at any place in compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form`
+    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
     COMPOUNDBEGIN: Optional[Flag] = None
 
@@ -914,7 +984,7 @@ class Aff:
     #: Part of the triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`;
     #: alternative to the triple is just :attr:`COMPOUNDFLAG` ("this form can be at any place in compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form`
+    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
     COMPOUNDMIDDLE: Optional[Flag] = None
 
@@ -923,14 +993,14 @@ class Aff:
     #: Part of the triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`;
     #: alternative to the triple is just :attr:`COMPOUNDFLAG` ("this form can be at any place in compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form`
+    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
     COMPOUNDEND: Optional[Flag] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can only be part of the compound
     #: word, and never standalone.
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form`
+    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
     #: Also in :class:`Suggest` to produce list of the words suitable for ngram search.
     ONLYINCOMPOUND: Optional[Flag] = None
@@ -938,7 +1008,7 @@ class Aff:
     #: Prefixes are allowed at the beginning of compounds, suffixes are allowed at the end of compounds
     #: by default. Affixes with ``COMPOUNDPERMITFLAG`` may be inside of compounds.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags` to make list of flags passed to
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>` to make list of flags passed to
     #: `Lookup.produce_affix_forms`
     #: (for this part of the compound, try find affixed spellings, you can use affixes with this flag).
     COMPOUNDPERMITFLAG: Optional[Flag] = None
@@ -947,7 +1017,7 @@ class Aff:
     #: by default. Suffixes with ``COMPOUNDFORBIDFLAG`` may not be even at the end, and prefixes with
     #: this flag may not be even at the beginning.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags` to make list of flags passed to
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>` to make list of flags passed to
     #: `Lookup.produce_affix_forms`
     #: (for this part of the compound, try find affixed spellings, you can use affixes with this flag).
     COMPOUNDFORBIDFLAG: Optional[Flag] = None
@@ -956,43 +1026,43 @@ class Aff:
     #: word. Eg. Dutch word "straat" (street) with FORCEUCASE flags will allowed only in capitalized
     #: compound forms, according to the Dutch spelling rules for proper names.
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound`
-    #: :meth:`Suggest.suggest_internal` (if this flag is present in the .aff-file, we check that maybe
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
+    #: :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>` (if this flag is present in the .aff-file, we check that maybe
     #: just capitalization of misspelled word would make it right).
     FORCEUCASE: Optional[Flag] = None
 
     #: Forbid upper case characters at word boundaries in compounds.
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDCASE: bool = False
 
     #: Forbid word duplication in compounds (e.g. "foofoo").
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDDUP: bool = False
 
     #: Forbid compounding, if the (usually bad) compound word may be a non-compound word if some
     #: replacement by :attr:`REP` table (frequent misspellings) is made. Useful for languages with
     #: "compound friendly" orthography.
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDREP: bool = False
 
     #: Forbid compounding, if compound word contains triple repeating letters (e.g. `foo|ox` or `xo|oof`).
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDTRIPLE: bool = False
 
     #: List of patterns which forbid compound words when pair of words in compound matches this
     #: pattern. See :class:`CompoundPattern` for explanation about format.
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDPATTERN: List[CompoundPattern] = field(default_factory=list)
 
     #: Allow simplified 2-letter forms of the compounds forbidden by :attr:`CHECKCOMPOUNDTRIPLE`.
     #: Example: "Schiff"+"fahrt" -> "Schiffahrt"
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags`, after the main splitting cycle, we also try the
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`, after the main splitting cycle, we also try the
     #: hypothesis that if the letter on the current boundary is duplicated, we should triplicate it.
     SIMPLIFIEDTRIPLE: bool = False
 
@@ -1023,13 +1093,13 @@ class Aff:
     #: Input conversion table (what to do with word before checking if it is valid). See :class:`ConvTable`
     #: for format description.
     #:
-    #: *Usage:* :meth:`Lookup.__call__`
+    #: *Usage:* :meth:`Lookup.__call__ <spyll.hunspell.algo.lookup.Lookup.__call__>`
     ICONV: Optional[ConvTable] = None
 
     #: Output conversion table (what to do with suggestion before returning it to the user). See :class:`ConvTable`
     #: for format description.
     #:
-    #: *Usage:* :meth:`Suggest.suggest_internal`
+    #: *Usage:* :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>`
     OCONV: Optional[ConvTable] = None
 
     # **Aliasing**

@@ -695,19 +695,21 @@ class Lookup:
                                                           allow_nosuggest=allow_nosuggest):
                         yield [form.replace(text=beg), *others]
 
-    # Different way of producing compound words: by rules, looking like ``A*BC?CD``, where A, B, C, D
-    # are flags the word might have, and ``*?`` have the same meaning as in regular expressions.
-    #
-    # In this way, we start by finding rules that partially match the word parts at the beginning,
-    # and then recursively split the rest of the word, limiting rules to those still partially matching
-    # current set of words.
-    #
-    # Most of the magic happens in CompoundRule
     def compounds_by_rules(self,
                            word_rest: str,
                            prev_parts: List[data.dic.Word] = [],
                            rules: Optional[List[data.aff.CompoundRule]] = None,
                            allow_nosuggest: bool = True) -> Iterator[CompoundForm]:  # pylint: disable=unused-argument
+        """
+        Different way of producing compound words: by rules, looking like ``A*BC?CD``, where A, B, C, D
+        are flags the word might have, and ``*?`` have the same meaning as in regular expressions.
+
+        In this way, we start by finding rules that partially match the word parts at the beginning,
+        and then recursively split the rest of the word, limiting rules to those still partially matching
+        current set of words.
+
+        Most of the magic happens in CompoundRule
+        """
 
         aff = self.aff
 
@@ -741,10 +743,13 @@ class Lookup:
                     for rest in self.compounds_by_rules(word_rest[pos:], rules=compoundrules, prev_parts=parts):
                         yield [AffixForm(beg, beg), *rest]
 
-    # After the hypothesis "this word is compound word, consisting of those parts" is produced, even
-    # if all the parts have appropriate flags (e.g. allowed to be in compound), there still could
-    # be some settings
     def is_bad_compound(self, compound: CompoundForm, captype: CapType) -> bool:
+        """
+        After the hypothesis "this word is compound word, consisting of those parts" is produced, even
+        if all the parts have appropriate flags (e.g. allowed to be in compound), there still could
+        be some settings
+        """
+
         aff = self.aff
 
         if aff.FORCEUCASE and captype not in [CapType.ALL, CapType.INIT]:

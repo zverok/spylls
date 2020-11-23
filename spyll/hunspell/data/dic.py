@@ -14,7 +14,7 @@ This text file has the following format:
 
 See :class:`Word` for explanation about fields.
 
-The meaning of flags and data fields, as well as file encoding and other reading settings, are defined
+The meaning of flags, as well as file encoding and other reading settings, are defined
 by :class:`Aff <spyll.hunspell.data.aff.Aff>`.
 
 :class:`Dic` contains all the entries (converted to ``Word``) from the ``*.dic`` file in the linear
@@ -56,9 +56,37 @@ class Word:
     ``*.aff`` file), and ``ph:phoo is:bar`` are additional data tags (``ph`` is the tag and ``foo``
     is the value). Both flags and tags can be absent.
 
-    Both flags and data tags can be also represented by numeric aliases defined in ``*.aff`` file,
+    Both flags and data tags can be also represented by numeric aliases defined in ``*.aff`` file
+    (see :attr:`Aff.AF <spyll.hunspell.aff.Aff.AF>` and :attr:`Aff.AM <spyll.hunspell.aff.Aff.AM>`),
     this is handled on reading stage, see :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>` docs
     for details.
+
+    Meaning of data tags are discussed in `hunspell docs
+    <https://manpages.debian.org/experimental/libhunspell-dev/hunspell.5.en.html#Optional_data_fields>`_.
+    Spyll, for now, provides speicial handling only for ``ph:`` field. The code probably means
+    "phonetic", but the idea is that this field contains "alternative spellings" (or, rather, common
+    misspellings) of the word. The simplest example is
+
+    .. code-block:: text
+
+        which ph:wich
+
+    This specifies that dictionary word ``which`` is frequently misspelled as ``wich``, and would be
+    considered in :class:`Suggest <spyll.hunspell.algo.suggest.Suggest>`. More complicated forms:
+
+    .. code-block:: text
+
+        pretty ph:prity*
+        happy ph:hepi->happi
+
+    The first one means "any ``prit`` inside word should be replaced by ``pret`` (chomping off
+    the last letter of both), the second: "any ``hepi`` should be replaced to ``happi``, but we
+    store this fact with stem ``happy``" (think "hepiness -> happiness").
+
+    First (simple) form is stored in :attr:`alt_spellings` and used in
+    :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`,
+    more complex forms are processed at reading stage and is actually stored in
+    :attr:`Aff.REP <spyll.hunspell.data.aff.Aff.REP>`.
 
     **Attributes from source data:**
 
@@ -84,8 +112,7 @@ class Word:
 
     #: List of alternative word spellings, defined with ``ph:`` data tag, and
     #: used by :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`. Not everythin specified
-    #: with ``ph:`` is stored here, see :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>` for
-    #: details.
+    #: with ``ph:`` is stored here, see expanations in class docs.
     alt_spellings: List[str]
     #: One of :class:`capitalization.Type <spyll.hunspell.algo.capitalization.Type>` (no capitalization,
     #: initial letter capitalized, all letters, or mixed) analyzed on dictionary reading, will be useful on lookup.
@@ -100,8 +127,8 @@ class Dic:
     """
     Represents list of words from ``*.dic`` file. Each word is stored as an instance of :class:`Word`.
 
-    Besides flat list of all words, on initialization also creates word indexes, for regular search
-    (``{stem => [Words]}``), and case-insensitive search (``{lowercased stem => [Words]}``).
+    Besides flat list of all words, on initialization also creates word indexes, see :attr:`index`
+    and :attr:`lowercase_index`.
 
     Note, that there could be (and typically are) several entries in the dictionary with same stems
     but different flags and/or data tags, that's why index values are lists of words. For example,
@@ -112,13 +139,27 @@ class Dic:
     Typically, ``spyll`` user shouldn't create the instance of this class by themselves, it is
     created when the whole dictionary is read::
 
-        dictionary = Dictionary.from_files('dictionaries/en_US')
+        >>> dictionary = Dictionary.from_files('dictionaries/en_US')
 
-        dictionary.dic  # instance of Dic
+        >>> dictionary.dic
+        Dictionary(... 62119 words ...)
+
+        >>> dictionary.dic.homonyms('spell')
+        [Word(spell /G,R,S,J,Z,D)]
 
     **Data contents:**
 
     .. autoattribute:: words
+
+    .. py:attribute:: index
+        :type: Dict[str, List[Word]]
+
+        All .dic file entries for some stem.
+
+    .. py:attribute:: lowercase_index
+        :type: Dict[str, List[Word]]
+
+        All .dic file entries for lowercase version of some stem.
 
     **Querying** (used by lookup and suggest):
 
@@ -181,3 +222,6 @@ class Dic:
         self.index[word.stem].append(word)
         for lword in lower:
             self.lowercase_index[lword].append(word)
+
+    def __repr__(self):
+        return f'Dictionary(... {len(self.words)} words ...)'

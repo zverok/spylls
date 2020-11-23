@@ -1,5 +1,5 @@
-``hunspell.readers.dic``
-========================
+``readers.dic``
+===============
 
 .. automodule:: spyll.hunspell.readers.dic
   :members:

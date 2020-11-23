@@ -1,5 +1,5 @@
-Hunspell
-========
+``spyll.hunspell``
+==================
 
 How Hunspell works
 -------------------

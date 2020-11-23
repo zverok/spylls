@@ -1,7 +1,23 @@
+"""
+
+.. automethod:: spyll.hunspell.readers.aff.read_aff(source: BaseReader)
+
+.. autoclass:: Context
+    :members:
+
+Internal methods
+^^^^^^^^^^^^^^^^
+
+.. automethod:: spyll.hunspell.readers.aff.read_directive(source: BaseReader, line: str, *, context: Context) -> Union[None, Tuple[str, Any]]
+.. automethod:: spyll.hunspell.readers.aff.read_value(source: BaseReader, directive: str, *values, context) -> Any
+.. automethod:: spyll.hunspell.readers.aff.make_affix(kind, flag, crossproduct, _, strip, add, *rest, context)
+
+"""
+
 import re
 import itertools
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple, Any, Iterable
 
 from spyll.hunspell.data import aff
 
@@ -18,19 +34,36 @@ FLAG_NUM_REGEXP = re.compile(r'\d+(?=,|$)')
 @dataclass
 class Context:
     """
-    Class containing reading-time context necessary for reading both ``*.aff`` and ``*.dic`` file:
+    Class containing reading-time context necessary for reading both .aff and .dic file:
     encoding, flag format, chars to ignore.
+
+    It is created in :meth:`read_aff` and then reused in :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`.
     """
 
+    #: Encoding of dictionary (see :attr:`Aff.SET <spyll.hunspell.data.aff.Aff.SET>`)
     encoding: str = 'Windows-1252'
+
+    #: Flag format of dictionary (see :attr:`Aff.FLAG <spyll.hunspell.data.aff.Aff.FLAG>`)
     flag_format: str = 'short'
+
+    #: List of flag synonyms (like ``1 => {'A', 'B', 'C'}``),
+    #: see :attr:`Aff.AF <spyll.hunspell.data.aff.Aff.AF>`
     flag_synonyms: Dict[str, str] = field(default_factory=dict)
+
+    #: Chars to ignore (see :attr:`Aff.IGNORE <spyll.hunspell.data.aff.Aff.IGNORE>`)
     ignore: Optional[aff.Ignore] = None
 
-    def parse_flag(self, string):
+    def parse_flag(self, string: str) -> str:
+        """
+        Parse singular flag, considering attr:`flag_format`.
+        """
         return list(self.parse_flags(string))[0]
 
-    def parse_flags(self, string):
+    def parse_flags(self, string: str) -> Iterable[str]:
+        """
+        Parse set of flags, considering attr:`flag_format`.
+        """
+
         if string is None:
             return []
 
@@ -52,24 +85,29 @@ class Context:
 
 def read_aff(source: BaseReader) -> Tuple[aff.Aff, Context]:
     """
-    Reads ``*.aff`` file and creates an :class:`Aff <spyll.hunspell.data.aff.Aff>`.
+    Reads .aff file and creates an :class:`Aff <spyll.hunspell.data.aff.Aff>`.
+
+    For each line calls :meth:`read_directive` (which either returns pair of ``(directive, value)``,
+    or just skips the line).
 
     Args:
          source: "Reader" (thin wrapper around opened file or zipfile, targeting line-by-line reading)
 
     Returns:
-        Aff itself and a Context which then will be reused in :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`
+        Aff itself and a :class:`Context` which then will be reused in :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`
     """
 
     data: Dict[str, Any] = {'SFX': {}, 'PFX': {}, 'FLAG': 'short'}
     context = Context()
 
     for (_, line) in source:
-        directive, value = read_directive(source, line, context=context)
-
-        if not directive:
+        dir_value = read_directive(source, line, context=context)
+        if not dir_value:
             continue
 
+        directive, value = dir_value
+
+        # SFX/PFX are the only directives that have multiple entries in .aff file
         if directive in ['SFX', 'PFX']:
             data[directive][value[0].flag] = value
         else:
@@ -87,6 +125,7 @@ def read_aff(source: BaseReader) -> Tuple[aff.Aff, Context]:
             context.ignore = value
 
         if directive == 'FLAG' and value == 'UTF-8':
+            # Weirdly enough, **flag type** ``UTF-8`` implicitly states the encoding is ``UTF-8`` too...
             context.encoding = 'UTF-8'
             data['SET'] = 'UTF-8'
             source.reset_encoding('UTF-8')
@@ -94,32 +133,55 @@ def read_aff(source: BaseReader) -> Tuple[aff.Aff, Context]:
     return (aff.Aff(**data), context)   # type: ignore
 
 
-def read_directive(source, line, *, context):
+def read_directive(source: BaseReader, line: str, *, context: Context) -> Optional[Tuple[str, Any]]:
+    """
+    Try to read directive from the next line, delegating value parsing (directive-dependent) to
+    :meth:`read_value`.
+
+    If it is not a directive, just ignore. That's how Hunspell works: .aff file can contain literally
+    anything: pseudo-directives (lines looking like ``UPCASED_WORD some data`` but not a known directive
+    name), free form text, etc. Even comments are implemented this way (and not by scanning for ``#``!)
+    """
+
     name, *arguments = re.split(r'\s+', line)
 
-    # base_utf has lines like McDonalds’sá/w -- at the end...
-    # TODO: Check what's hunspell's logic to deal with this
-    #
-    # Directive-alike things that are seen in the wild, but actually not known:
-    #   FIRST in Firefox's Valencian
-    #   LEFTHYPHENMIN in Firefox's Gaelic (Scotland)
-    #   LANGCODE - libreoffice/bo/bo
-    # COMPOUNDFIRST, ONLYROOT are old flags, removed in 2003, and ignored currently
-    # GENERATE is hungarian
-    if not re.match(r'^[A-Z]+$', name) or name in ['FIRST', 'LEFTHYPHENMIN',
-                                                   'NAME', 'HOME', 'VERSION',
-                                                   'COMPOUNDFIRST', 'ONLYROOT',
-                                                   'LANGCODE', 'GENERATE']:
-        return (None, None)
+    # Simplify a bit: no need to try reading value if the start doesn't even look like a directive...
+    if not re.match(r'^[A-Z]+$', name):
+        return None
 
     name = SYNONYMS.get(name, name)
 
     value = read_value(source, name, *arguments, context=context)
 
+    if value is None:
+        return None
+
     return (name, value)
 
 
-def read_value(source, directive, *values, context):
+def read_value(source: BaseReader, directive: str, *values, context) -> Any:
+    """
+    Reads one value.
+
+    Note that for a table-alike directives "one value" might span several lines (and that's why
+    this method has ``source`` as its argument, and can read more lines from it on demand).
+
+    For example, if current directive is ``BREAK``, it means the file below looks like this:
+
+    .. code-block:: text
+
+        BREAK 3     # we are on this line currently
+        BREAK -
+        BREAK ^-
+        BREAK -$
+
+    The method would read value 3, understand that there are 3 more lines to read, read them and
+    return ``['-', '^-', '-$']``.
+
+    The values read are immediately parsed into proper data types (see :mod:`data.aff <spyll.hunspell.data.aff>`
+    for types definition).
+    """
+
     value = values[0] if values else None
 
     def _read_array(count=None):
@@ -198,11 +260,15 @@ def read_value(source, directive, *values, context):
             for search, replacement, *_ in _read_array()
         ])
 
-    # TODO: Maybe for ver 0.0.1 it is acceptable to just not recognize some flags?
-    raise Exception(f"Can't parse {directive}")
+    # If it wasn't some known directive, it is not a data at all.
+    return None
 
 
 def make_affix(kind, flag, crossproduct, _, strip, add, *rest, context):
+    """
+    Produces Prefix/Suffix from raw data
+    """
+
     kind_class = aff.Suffix if kind == 'SFX' else aff.Prefix
 
     # in LibreOffice ar.aff has at least one prefix (Ph) without any condition. Bug?
@@ -210,6 +276,7 @@ def make_affix(kind, flag, crossproduct, _, strip, add, *rest, context):
     add, _, flags = add.partition('/')
     if context.ignore:
         add = add.translate(context.ignore.tr)
+
     # TODO: Data fields (including AM)
     return kind_class(
         flag=flag,
