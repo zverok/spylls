@@ -1,5 +1,5 @@
-String processing
-=================
+``algo.permutations`` and ``algo.string_metrics``: string processing
+====================================================================
 
 .. automodule:: spyll.hunspell.algo.permutations
   :members:

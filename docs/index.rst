@@ -121,3 +121,8 @@ Some other approaches to spellchecking
 * `voikko <https://voikko.puimula.org/>`_, developed for Finnish, which Hunspell can't handle too well due to its complicated affixes;
 * `SymSpell <https://github.com/wolfgarbe/SymSpell>`_: very fast algorithm (relying on availability of full list of all language's words)
 * `JamSpell <https://github.com/bakwc/JamSpell>`_: machine learning-based one
+
+Author
+------
+
+`Victor Shepelev <https://zverok.github.io>`_

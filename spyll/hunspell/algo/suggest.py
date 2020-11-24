@@ -30,7 +30,7 @@ To follow algorithm details, start reading from :meth:`Suggest.__call__`
 .. toctree::
   :caption: Specific algorithms
 
-  algo_nsuggest
+  algo_ngram_suggest
   algo_phonet_suggest
 
 .. autoclass:: Suggest
