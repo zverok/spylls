@@ -94,7 +94,8 @@ def read_aff(source: BaseReader) -> Tuple[aff.Aff, Context]:
          source: "Reader" (thin wrapper around opened file or zipfile, targeting line-by-line reading)
 
     Returns:
-        Aff itself and a :class:`Context` which then will be reused in :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`
+        Aff itself and a :class:`Context` which then will be reused in
+        :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`
     """
 
     data: Dict[str, Any] = {'SFX': {}, 'PFX': {}, 'FLAG': 'short'}

@@ -1,4 +1,4 @@
-``hunspell.data.dic``
-=====================
+``data.dic``
+============
 
 .. automodule:: spyll.hunspell.data.dic

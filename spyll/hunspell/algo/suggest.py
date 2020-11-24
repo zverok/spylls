@@ -1,7 +1,42 @@
 """
+The main "suggest correction for this misspelling" module.
+
+On a bird-eye view level, suggest does:
+
+* tries small word changes (remove letters, insert letters, swap letters) and checks (with the help
+  of :mod:`lookup  <spyll.hunspell.algo.lookup>`) there are any valid ones
+* if no good suggestions found, tries "ngram-based" suggestions (calculating ngram-based distance to
+  all dictionary words and select the closest ones), handled by
+  :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`
+* metaphone-based suggestions, handled by :mod:`phonet_suggest <spyll.hunspell.algo.phonet_suggest>`
+
+Note that spyll implementation takes two liberties comparing to hunspell:
+
+1. In Hunspell, all permutations-based logic is run twice: first, checks if any of the permutated variants
+   is a valid non-compound word; then (if nothing good was found), for all the same permutations, checks
+   if maybe it is a valid compound word. It is done this way because checking whether word is correct
+   *not regarding compounding* is much faster. We ignore this optimization in the name of clarity
+   of the algorithm -- and on the way make suggestions better in edge cases: when compound and non-compound
+   word are accidentally joined, Hunspell can't sugest to split them (try with "11thhour": "11th" is
+   compound word in English dictionary, and hunspell wouldn't suggest "11th hour", but Spyll would).
+2. In Hunspell, ngram suggestions (select all words from dictionary that ngram-similar => produce suggestions)
+   and phonetic suggestios (select all words from dictionary that phonetically similar => produce suggestions)
+   are done in the same cycle, because they both iterate through entire dictionary. Spyll does it
+   in two separate cycles, again, for the sake of clarity (note that dictionaries with metaphone
+   transformation rules defined are extremely rare).
+
+To follow algorithm details, start reading from :meth:`Suggest.__call__`
+
+.. toctree::
+  :caption: Specific algorithms
+
+  algo_nsuggest
+  algo_phonet_suggest
+
 .. autoclass:: Suggest
-    :members:
-    :special-members:
+
+Suggestion classes
+^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: Suggestion
     :members:
@@ -27,17 +62,15 @@ class Suggestion:
     """
     Suggestions is what Suggest produces internally to store enough information about some suggestion
     to make sure it is a good one.
-
-    TODO: One vs two cycles
     """
 
     #: Actual suggestion text
     text: str
     #: Code specifying how suggestion was produced, useful for debugging, typically same as the method
-    #: of the permutation which led to this suggestion
+    #: of the permutation which led to this suggestion, like "badchar", "twowords", "phonet" etc.
     source: str
 
-    #: If False, then checking suggestion validity should be without trying to break it on dashes
+    #: If ``False``, then checking suggestion validity should be without trying to break it on dashes
     #: (or similar chars, depending on the language). This is used, for example, to check "very good"
     #: suggestions: "foobar" (misspeling) => "foo-bar" considered "very good" ONLY if the dictionary
     #: contains "foo-bar" itself, not "foo" and "bar".
@@ -62,7 +95,8 @@ class MultiWordSuggestion:
     source: str
 
     #: Whether those words are allowed to be joined by dash. We should disallow it if the multi-word
-    #: suggestion was produced by ``REP`` table, see :meth:`Suggest.good_permutations` for details.
+    #: suggestion was produced by :attr:`Aff.REP <spyll.hunspell.data.aff.Aff.REP>` table, see
+    #: :meth:`Suggest.good_permutations` for details.
     allow_dash: bool = True
 
     def stringify(self, separator=' '):
@@ -74,7 +108,39 @@ class MultiWordSuggestion:
 
 class Suggest:
     """
-    TODO
+    ``Suggest`` object is created on :class:`Dictionary <spyll.hunspell.Dictionary>` reading. Typically,
+    you would not use it directly, but you might want for experiments::
+
+        >>> dictionary = Dictionary.from_files('dictionaries/en_US')
+        >>> suggest = dictionary.suggester
+
+        >>> [*suggest('spyll')]
+        ['spell', 'spill', 'spy ll', 'spy-ll']
+
+        >>> for suggestion in suggest.suggest_internal('spyll'):
+        ...    print(suggestion)
+        Suggestion[badchar](spell)
+        Suggestion[badchar](spill)
+        Suggestion[twowords](spy ll)
+        Suggestion[twowords](spy-ll)
+
+    See :meth:`__call__` as the main entry point for algorithm explanation.
+
+    **Main methods**
+
+    .. automethod:: __call__
+    .. automethod:: suggest_internal
+
+    **Permutation-based suggestions**
+
+    .. automethod:: very_good_permutations
+    .. automethod:: good_permutations
+    .. automethod:: questionable_permutations
+
+    **Other suggestions**
+
+    .. automethod:: ngram_suggestions
+    .. automethod:: phonet_suggestions
     """
     def __init__(self, aff: data.Aff, dic: data.Dic, lookup):
         self.aff = aff
@@ -95,13 +161,40 @@ class Suggest:
 
     def __call__(self, word: str) -> Iterator[str]:
         """
-        Outer "public" interface: just takes all the Suggestion instances and takes text from them.
+        Outer "public" interface: returns a list of all valid suggestions, as strings.
+
+        Method returns a generator, so it is up to client code to fetch as many suggestions as it
+        needs::
+
+            >>> suggestions = suggester('unredable')
+            <generator object Suggest.__call__ at 0x7f74f5056350>
+            >>> suggestions.__next__()
+            'unreadable'
+
+        Note that suggestion to split words in two also returned as a single string, with a space::
+
+            >>> [*suggester('badcat')]
+            ['bad cat', 'bad-cat', 'baccarat']
+
+        Internally, the method just calls :meth:`suggest_internal` (which returns instances of :class:`Suggestion`)
+        and yields suggestion texts.
         """
         yield from (suggestion.text for suggestion in self.suggest_internal(word))
 
     def suggest_internal(self, word: str) -> Iterator[Suggestion]:
         """
-        Main suggestion search loop.
+        Main suggestion search loop. What it does, in general, is:
+
+        * generates possible misspelled word cases (for ex., "KIttens" in dictionary might've been
+          'KIttens', 'kIttens', 'kittens', or 'Kittens')
+        * produces word permutations with :meth:`good_permutations`, :meth:`very_good_permutations` and
+          :meth:`questionable_permutations` (with the help of :mod:`permutations <spyll.hunspell.algo.permutations>`
+          module), checks them with :class:`Lookup <spyll.hunspell.algo.lookup.Lookup>`,
+          and decides if that's maybe enough
+        * but if it is not (and if .aff settings allow), ngram-based suggestions are produced with
+          :meth:`ngram_suggestions`, and phonetically similar suggestions with :meth:`phonet_suggestions`
+
+        That's very simplified explanation, read the code!
         """
 
         # Whether some suggestion (permutation of the word) is an existing and allowed word,
@@ -260,7 +353,7 @@ class Suggest:
     def very_good_permutations(self, word: str) -> Iterator[Suggestion]:
         """
         "Very good" suggestions: suggest to split word ("alot" => "a lot"), but for now only yield
-        them as a _singular_ word suggestion: if the dictionary has _exact_ entry "a lot", it would
+        them as a *singular* word suggestion: if the dictionary has *exact* entry "a lot", it would
         be considered correct.
         """
 
@@ -274,7 +367,11 @@ class Suggest:
 
     def good_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         """
-        Good permutations (that produces words not very different from the initial one)
+        Good permutations (that produces words not very different from the initial one):
+
+        * uppercase word;
+        * replacements via :attr:`Aff.REP <spyll.hunspell.data.aff.Aff.REP>`-table (may produce
+          :class:`MultiWordSuggestion` if REP table included replacement with a space)
         """
 
         # suggestions for an uppercase word (html -> HTML)
@@ -299,7 +396,19 @@ class Suggest:
 
     def questionable_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         """
-        Permutations that are producing suggestions further from the original word.
+        Permutations that are producing suggestions further from the original word:
+
+        * replacements by :attr`Aff.MAP` table (very similar chars, like ``aáã``)
+        * adjacent char swapping
+        * non-adjacent char swapping
+        * replacements by :attr`Aff.KEY` table (chars that are close on keyboard)
+        * removal of characters
+        * insertion of characters
+        * moving of singular character
+        * replacement of chars by all chars in alphabet
+        * removal of possible two-char doubling ("vacacation => vacation")
+        * splitting of word into two
+
         Order is important: As the whole ``Suggest`` produces generator, client code may consume it
         one-by-one, so the first suggested means more likely.
         """
@@ -356,7 +465,11 @@ class Suggest:
 
     def ngram_suggestions(self, word: str, handled: Set[str]) -> Iterator[str]:
         """
-        See :mod:`ngram_suggest`
+        Produces ngram-based suggestions, by passing to
+        :meth:`ngram_suggest.ngram_suggest <spyll.hunspell.algo.ngram_suggest.ngram_suggest>` current
+        misspelling, already found suggestions and settings from .aff file.
+
+        See :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`.
         """
         if self.aff.MAXNGRAMSUGS == 0:
             return
@@ -371,7 +484,11 @@ class Suggest:
 
     def phonet_suggestions(self, word: str) -> Iterator[str]:
         """
-        See :mod:`phonet_suggest`
+        Produces phonetical similarity-based suggestions, by passing to
+        :meth:`phonet_suggest.phonet_suggest <spyll.hunspell.algo.phonet_suggest.phonet_suggest>` current
+        misspelling and settings from .aff file.
+
+        See :mod:`phonet_suggest <spyll.hunspell.algo.phonet_suggest.phonet_suggest>`.
         """
         if not self.aff.PHONE:
             return

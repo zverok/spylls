@@ -131,7 +131,7 @@ class Lookup:
         True
 
         >>> for form in lookup.good_forms('spells'):
-                print(form)
+        ...     print(form)
         AffixForm(spells = spells)
         AffixForm(spells = spell + Suffix(s: S×, on [[^sxzhy]]$))
 

@@ -12,15 +12,15 @@ import spyll.hunspell.algo.ngram_suggest as ng
 MAX_ROOTS = 100
 
 
-def phonet_suggest(word: str, *, dictionary_words: List[dic.Word], table: aff.PhonetTable) -> Iterator[str]:
+def phonet_suggest(misspelling: str, *, dictionary_words: List[dic.Word], table: aff.PhonetTable) -> Iterator[str]:
     """
     Phonetical suggestion algorithm provides suggestions based on phonetial (prononication) similarity.
     It requires ``*.aff``-file to define :attr:`PHONE <spyll.hunspell.data.aff.Aff.PHONE>` table --
     which, we should add, is *extremely* rare in known dictionaries.
     """
 
-    word = word.lower()
-    word_ph = metaphone(table, word)
+    misspelling = misspelling.lower()
+    misspelling_ph = metaphone(table, misspelling)
 
     scores: List[Tuple[float, str]] = []
 
@@ -33,33 +33,33 @@ def phonet_suggest(word: str, *, dictionary_words: List[dic.Word], table: aff.Ph
     #
     # Considering extreme rarity of metaphone-enabled dictionaries, and "educational" goal of
     # spyll, we split it out.
-    for dword in dictionary_words:
-        if abs(len(dword.stem) - len(word)) > 3:
+    for word in dictionary_words:
+        if abs(len(word.stem) - len(misspelling)) > 3:
             continue
 
         # First, we calculate "regular" similarity score, just like in ngram_suggest
-        nscore = ng.root_score(word, dword.stem)
+        nscore = ng.root_score(misspelling, word.stem)
 
-        if dword.alt_spellings:
-            for variant in dword.alt_spellings:
-                nscore = max(nscore, ng.root_score(word, variant))
+        if word.alt_spellings:
+            for variant in word.alt_spellings:
+                nscore = max(nscore, ng.root_score(misspelling, variant))
 
         if nscore <= 2:
             continue
 
         # ...and if it shows words are somewhat close, we calculate metaphone score
-        score = 2 * sm.ngram(3, word_ph, metaphone(table, dword.stem), longer_worse=True)
+        score = 2 * sm.ngram(3, misspelling_ph, metaphone(table, word.stem), longer_worse=True)
 
         if len(scores) > MAX_ROOTS:
-            heapq.heappushpop(scores, (score, dword.stem))
+            heapq.heappushpop(scores, (score, word.stem))
         else:
-            heapq.heappush(scores, (score, dword.stem))
+            heapq.heappush(scores, (score, word.stem))
 
     guesses = heapq.nlargest(MAX_ROOTS, scores)
 
     # Finally, we sort suggestions by simplistic string similarity metric (of the misspelling and
     # dictionary word's stem)
-    guesses2 = [(score + detailed_score(word, dword.lower()), dword) for (score, dword) in guesses]
+    guesses2 = [(score + detailed_score(misspelling, word.lower()), word) for (score, word) in guesses]
     # (NB: actually, we might not need ``key`` here, but it is
     # added for sorting stability; doesn't changes the objective quality of suggestions, but passes
     # hunspell test ``phone.sug``!)

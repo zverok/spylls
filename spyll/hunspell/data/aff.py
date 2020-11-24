@@ -954,20 +954,22 @@ class Aff:
 
     #: Minimum length of words used for compounding.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>` & :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
+    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>` &
+    #: :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
     COMPOUNDMIN: int = 3
 
     #: Set maximum word count in a compound word.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>` & :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
+    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>` &
+    #: :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
     COMPOUNDWORDMAX: Optional[int] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can be part of the compound.
     #: Note that triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`
     #: is more precise way of marking ("this word can be at the beginning of compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>` to compare form's compound position (or lack thereof) with
-    #: presence of teh flag.
+    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>` to compare
+    #: form's compound position (or lack thereof) with presence of teh flag.
     COMPOUNDFLAG: Optional[Flag] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can be at the beginning of the
@@ -1008,8 +1010,9 @@ class Aff:
     #: Prefixes are allowed at the beginning of compounds, suffixes are allowed at the end of compounds
     #: by default. Affixes with ``COMPOUNDPERMITFLAG`` may be inside of compounds.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>` to make list of flags passed to
-    #: `Lookup.produce_affix_forms`
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
+    #: to make list of flags passed to
+    #: :meth:`Lookup.produce_affix_forms <spyll.hunspell.algo.lookup.Lookup.produce_affix_forms>`
     #: (for this part of the compound, try find affixed spellings, you can use affixes with this flag).
     COMPOUNDPERMITFLAG: Optional[Flag] = None
 
@@ -1017,8 +1020,9 @@ class Aff:
     #: by default. Suffixes with ``COMPOUNDFORBIDFLAG`` may not be even at the end, and prefixes with
     #: this flag may not be even at the beginning.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>` to make list of flags passed to
-    #: `Lookup.produce_affix_forms`
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
+    #: to make list of flags passed to
+    #: :meth:`Lookup.produce_affix_forms <spyll.hunspell.algo.lookup.Lookup.produce_affix_forms>`
     #: (for this part of the compound, try find affixed spellings, you can use affixes with this flag).
     COMPOUNDFORBIDFLAG: Optional[Flag] = None
 
@@ -1027,7 +1031,8 @@ class Aff:
     #: compound forms, according to the Dutch spelling rules for proper names.
     #:
     #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
-    #: :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>` (if this flag is present in the .aff-file, we check that maybe
+    #: :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>` (if
+    #: this flag is present in the .aff-file, we check that maybe
     #: just capitalization of misspelled word would make it right).
     FORCEUCASE: Optional[Flag] = None
 
@@ -1062,7 +1067,8 @@ class Aff:
     #: Allow simplified 2-letter forms of the compounds forbidden by :attr:`CHECKCOMPOUNDTRIPLE`.
     #: Example: "Schiff"+"fahrt" -> "Schiffahrt"
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`, after the main splitting cycle, we also try the
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`,
+    #: after the main splitting cycle, we also try the
     #: hypothesis that if the letter on the current boundary is duplicated, we should triplicate it.
     SIMPLIFIEDTRIPLE: bool = False
 

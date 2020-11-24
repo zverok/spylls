@@ -10,48 +10,57 @@ MAX_ROOTS = 100
 MAX_GUESSES = 200
 
 
-def ngram_suggest(word: str, *,
+def ngram_suggest(misspelling: str, *,
                   dictionary_words: List[data.dic.Word],
                   prefixes: Dict[str, List[data.aff.Prefix]],
                   suffixes: Dict[str, List[data.aff.Suffix]],
                   known: Set[str], maxdiff: int, onlymaxdiff: bool = False) -> Iterator[str]:
     """
     Try to suggest all possible variants for misspelling based on ngram-similarity.
-    """
 
-    # TODO: lowering depends on BMP of word, true by default
+    Internally:
+
+    * calculates misspelling similarity to all dictionary word stems with :meth:`root_score`, and
+      choses the best ones
+    * of those words, produces all forms possible with suffixes/prefixes by :meth:`forms_for`,
+      calculates their score against misspelling with :meth:`rough_affix_score` and choses the best ones,
+      using threshold calculated in :meth:`detect_threshold`
+    * calculates more precise (but more time-consuming) score for those with :meth:`precise_affix_score` and
+      sorts by it
+    * filters suggestions depending on their score with :meth:`filter_guesses`
+    """
 
     root_scores: List[Tuple[float, str, data.dic.Word]] = []
 
     # First, find MAX_ROOTS candidate dictionary entries, by calculating stem score against the
     # misspelled word.
-    for dword in dictionary_words:
-        if abs(len(dword.stem) - len(word)) > 4:
+    for word in dictionary_words:
+        if abs(len(word.stem) - len(misspelling)) > 4:
             continue
 
         # TODO: hunspell has more exceptions/flag checks here (part of it we cover later in suggest,
         # deciding, for example, if the suggestion is forbidden)
 
-        score = root_score(word, dword.stem)
+        score = root_score(misspelling, word.stem)
 
         # If dictionary word have alternative spellings provided via `pp:` data tag, calculate
         # score against them, too. Note that only simple ph:spelling are listed in alt_spellings,
         # more complicated tags like ph:spellin* or ph:spellng->spelling are ignored in ngrams
-        if dword.alt_spellings:
-            for variant in dword.alt_spellings:
-                score = max(score, root_score(word, variant))
+        if word.alt_spellings:
+            for variant in word.alt_spellings:
+                score = max(score, root_score(misspelling, variant))
 
         # Pythons stdlib heapq used to always keep only MAX_ROOTS of best results
         if len(root_scores) > MAX_ROOTS:
-            heapq.heappushpop(root_scores, (score, dword.stem, dword))
+            heapq.heappushpop(root_scores, (score, word.stem, word))
         else:
-            heapq.heappush(root_scores, (score, dword.stem, dword))
+            heapq.heappush(root_scores, (score, word.stem, word))
 
     roots = heapq.nlargest(MAX_ROOTS, root_scores)
 
     # "Minimum passable" suggestion threshold (decided by replacing some chars in word with * and
     # calculating what score it would have).
-    threshold = detect_threshold(word)
+    threshold = detect_threshold(misspelling)
 
     guess_scores: List[Tuple[float, str, str]] = []
 
@@ -64,14 +73,14 @@ def ngram_suggest(word: str, *,
         if root.alt_spellings:
             # If any of alternative spelling passes the threshold
             for variant in root.alt_spellings:
-                score = rough_affix_score(word, variant)
+                score = rough_affix_score(misspelling, variant)
                 if score > threshold:
                     # ...we add them to the final suggestion list (but don't try to produce affix forms)
                     heapq.heappush(guess_scores, (score, variant, root.stem))
 
         # For all acceptable forms from current dictionary word (with all possible suffixes and prefixes)...
-        for form in forms_for(root, word, prefixes, suffixes):
-            score = rough_affix_score(word, form.lower())
+        for form in forms_for(root, prefixes, suffixes, similar_to=misspelling):
+            score = rough_affix_score(misspelling, form.lower())
             if score > threshold:
                 # ...push them to final suggestion list if they pass the threshold
                 heapq.heappush(guess_scores, (score, form, form))
@@ -81,9 +90,9 @@ def ngram_suggest(word: str, *,
 
     fact = (10.0 - maxdiff) / 5.0 if maxdiff >= 0 else 1.0
 
-    # Now, calculate more detailed scores for all good suggestions
+    # Now, calculate more precise scores for all good suggestions
     guesses2 = [
-        (detailed_affix_score(word, compared.lower(), fact, base=score), real)
+        (precise_affix_score(misspelling, compared.lower(), fact, base=score), real)
         for (score, compared, real) in guesses
     ]
 
@@ -102,7 +111,7 @@ def ngram_suggest(word: str, *,
 
 def root_score(word1: str, word2: str) -> float:
     """
-    Scoring, stage 1: Simple score for first dictionary words chosing**: 3-gram score + longest start
+    Scoring, stage 1: Simple score for first dictionary words chosing: 3-gram score + longest start
     substring.
     """
 
@@ -114,7 +123,7 @@ def root_score(word1: str, word2: str) -> float:
 
 def rough_affix_score(word1: str, word2: str) -> float:
     """
-    Scoring, stage 2: First (rough and quick) score of affixed forms**: n-gram score with n=length of
+    Scoring, stage 2: First (rough and quick) score of affixed forms: n-gram score with n=length of
     the misspelled word + longest start substring
     """
 
@@ -124,7 +133,7 @@ def rough_affix_score(word1: str, word2: str) -> float:
     )
 
 
-def detailed_affix_score(word1: str, word2: str, diff_factor: float, *, base: float) -> float:
+def precise_affix_score(word1: str, word2: str, diff_factor: float, *, base: float) -> float:
     """
     Scoring, stage 3: Hardcore final score for affixed forms!
 
@@ -203,7 +212,7 @@ def detect_threshold(word: str) -> float:
     return thresh // 3 - 1
 
 
-def forms_for(word: data.dic.Word, candidate: str, all_prefixes, all_suffixes):
+def forms_for(word: data.dic.Word, all_prefixes, all_suffixes, *, similar_to: str):
     """
     Produce forms with all possible affixes and prefixes from the dictionary word, but only those
     the ``candidate`` can have. Note that there is no comprehensive flag checks (like "this prefix
@@ -220,13 +229,13 @@ def forms_for(word: data.dic.Word, candidate: str, all_prefixes, all_suffixes):
         suffix
         for flag in word.flags
         for suffix in all_suffixes.get(flag, [])
-        if suffix.cond_regexp.search(word.stem) and candidate.endswith(suffix.add)
+        if suffix.cond_regexp.search(word.stem) and similar_to.endswith(suffix.add)
     ]
     prefixes = [
         prefix
         for flag in word.flags
         for prefix in all_prefixes.get(flag, [])
-        if prefix.cond_regexp.search(word.stem) and candidate.startswith(prefix.add)
+        if prefix.cond_regexp.search(word.stem) and similar_to.startswith(prefix.add)
     ]
 
     cross = [
@@ -255,7 +264,7 @@ def forms_for(word: data.dic.Word, candidate: str, all_prefixes, all_suffixes):
 def filter_guesses(guesses: List[Tuple[float, str]], *, known: Set[str], onlymaxdiff=True) -> Iterator[str]:
     """
     Filter guesses by score, to decide which ones we'll yield to the client, considering the "suggestion
-    bags" -- "very good", "normal", "questionable" (see :meth:`detailed_affix_score` for bags definition).
+    bags" -- "very good", "normal", "questionable" (see :meth:`precise_affix_score` for bags definition).
     """
 
     seen = False
