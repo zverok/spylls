@@ -15,4 +15,4 @@ dic = Dictionary.from_files('tests/integrational/fixtures/checksharps')
 # for k, vals in dic.aff.suffixes_index.index.items():
 #     print(f"{k}: {vals}")
 
-print(dic.lookup('MÜẞIG'))
+print(dic.lookup('AUSSTOß'))

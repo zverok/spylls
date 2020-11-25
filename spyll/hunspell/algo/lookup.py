@@ -301,7 +301,21 @@ class Lookup:
         # Now, for each of capitalization variants possible
         for variant in variants:
             # ...we yield all possible affix forms
-            yield from self.affix_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
+            for form in self.affix_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest):
+                # There is one funny condition in Hunspell for German words:
+                # * generally, "ß" is capitalized as "SS"
+                # * ...but allowed to be non-capitalized in uppercase words (STRAßE)
+                # * ...but there is a special clause for this situation: if the word in dictionary
+                #   is marked with "KEEPCASE" flag, the "STRAßE" is NOT allowed, only "STRASSE"
+                # ...and we can check it only this late.
+                # Fun fact: no known German dictionary uses this trick, actually...
+                if (self.aff.CHECKSHARPS and self.aff.KEEPCASE and        # pylint: disable=too-many-boolean-expressions
+                        'ß' in form.in_dictionary.stem and self.aff.KEEPCASE in form.flags() and   # type: ignore
+                        captype == CapType.ALL and 'ß' in word):
+                    continue
+
+                yield form
+
             # ...and then all possible compound forms
             yield from self.compound_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
 
@@ -634,9 +648,6 @@ class Lookup:
             # of KEEPCASE flag is different: "disallow ẞ -- uppercased ß -- and force word in
             # uppercase form always have SS"
             if not (aff.CHECKSHARPS and 'ß' in form.in_dictionary.stem):
-                return False
-
-            if aff.CHECKSHARPS and 'ß' in form.in_dictionary.stem and 'ß' in form.stem and captype == CapType.ALL:
                 return False
 
         # **Check affix flags**

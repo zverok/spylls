@@ -31,11 +31,9 @@ class Casing:
     some aspects different from generic one.
     """
 
-    def guess(self, word: str, *,                      # pylint: disable=no-self-use
-              for_corrections: bool = False) -> Type:  # pylint: disable=unused-argument
+    def guess(self, word: str) -> Type:     # pylint: disable=no-self-use
         """
-        Guess word's capitalization. Redefined in :class:`GermanCasing` (and ``for_corrections``
-        argument relevant only there).
+        Guess word's capitalization. Redefined in :class:`GermanCasing`.
         """
 
         if word.islower():
@@ -112,7 +110,7 @@ class Casing:
         "diCtionary", "dictionary", "Dictionary", and all of them are checked by Suggest.
         """
 
-        captype = self.guess(word, for_corrections=True)
+        captype = self.guess(word)
 
         if captype == Type.NO:
             result = [word]
@@ -188,9 +186,11 @@ class GermanCasing(Casing):
 
         return [lowered]
 
-    def guess(self, word, *, for_corrections=False):
+    def guess(self, word):
         result = super().guess(word)
-        # if for_corrections and 'ß' in word and super().guess(word.replace('ß', '')) == Type.ALL:
+
+        # In German uppercased words, ß (which is lowercase, and usually uppercased as SS) is allowed:
+        # "straße => STRAßE"
         if 'ß' in word and super().guess(word.replace('ß', '')) == Type.ALL:
             return Type.ALL
         return result
