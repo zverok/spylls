@@ -36,10 +36,11 @@ extensions = [
     # 'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx.ext.autodoc.typehints',
-    # 'sphinxcontrib.fulltoc',
+    # 'sphinxcontrib.fulltoc', -- included in rtd_theme
     'sphinx_rtd_theme',
     'code_include.extension',
-    'coderead'
+    'coderead',
+    'sphinx.ext.linkcode'
 ]
 
 autodoc_typehints = 'description'
@@ -72,3 +73,28 @@ html_css_files = [
 ]
 
 modindex_common_prefix = ['spyll.hunspell.', 'spyll.hunspell.data.', 'spyll.hunspell.readers.', 'spyll.hunspell.algo.']
+
+# The code below, I suspect, is godless unholy abomination.
+# Yet it works.
+# The idea is by linkcode's param (which is just a name of the object) to produce proper GitHub link to code
+# We do it by eval'ing the code object and then inspect'ing it to get source file and line
+# Sue me!
+
+import spyll
+import inspect
+
+# Git commit fetching is stolen from
+# https://stackoverflow.com/questions/61579937/how-to-access-the-git-commit-id-in-sphinxs-conf-py
+import subprocess
+commit_id = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('ascii')
+
+def linkcode_resolve(domain, info):
+    try:
+        obj = eval(f"{info['module']}.{info['fullname']}")
+        path = inspect.getsourcefile(obj).replace(os.path.abspath('..'), '')
+        lineno = inspect.getsourcelines(obj)[1]
+    except:
+        # Attributes and other similar stuff can't be resolved with inspect
+        return None
+
+    return f'http://github.com/spyll/spyll/blob/{commit_id}/{path}#L{lineno}'
