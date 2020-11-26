@@ -13,7 +13,8 @@ To follow algorithm details, start reading from :meth:`Lookup.__call__`
 .. autoclass:: AffixForm
     :members:
 
-.. autodata:: CompoundForm
+.. autoclass:: CompoundForm
+
 .. autodata:: WordForm
 .. autodata:: CompoundPos
     :annotation:
@@ -28,7 +29,6 @@ import dataclasses
 from dataclasses import dataclass
 
 from spyll.hunspell import data
-from spyll.hunspell.data.aff import Flag
 from spyll.hunspell.algo.capitalization import Type as CapType
 import spyll.hunspell.algo.permutations as pmt
 
@@ -100,12 +100,16 @@ class AffixForm:
         return result
 
 
-#: CompoundForm is a hypothesis of how some word could be split into several AffixForms (word parts
-#: with their own stems, and possible affixes).
-#: Typically, only first part of compound is allowed to have prefix, and only last part is allowed
-#: to have suffix, but there are languages where middle parts can have affixes too, which is
-#: specified by special flags.
-CompoundForm = List[AffixForm]
+@dataclass
+class CompoundForm:
+    """
+    CompoundForm is a hypothesis of how some word could be split into several AffixForms (word parts
+    with their own stems, and possible affixes).
+    Typically, only first part of compound is allowed to have prefix, and only last part is allowed
+    to have suffix, but there are languages where middle parts can have affixes too, which is
+    specified by special flags.
+    """
+    parts: List[AffixForm]
 
 
 #: Used when checking "whether this word could be part of the compound... specifically its begin/middl/end"
@@ -323,9 +327,9 @@ class Lookup:
                     word: str,
                     captype: CapType,
                     allow_nosuggest=True,
-                    prefix_flags: List[Flag] = [],
-                    suffix_flags: List[Flag] = [],
-                    forbidden_flags: List[Flag] = [],
+                    prefix_flags: List[str] = [],
+                    suffix_flags: List[str] = [],
+                    forbidden_flags: List[str] = [],
                     compoundpos: Optional[CompoundPos] = None,
                     with_forbidden=False) -> Iterator[AffixForm]:
         """
@@ -462,9 +466,9 @@ class Lookup:
 
     def produce_affix_forms(self,
                             word: str,
-                            prefix_flags: List[Flag],
-                            suffix_flags: List[Flag],
-                            forbidden_flags: List[Flag],
+                            prefix_flags: List[str],
+                            suffix_flags: List[str],
+                            forbidden_flags: List[str],
                             compoundpos: Optional[CompoundPos] = None) -> Iterator[AffixForm]:
         """
         Produces all possible affix forms: e.g. for all known suffixes & prefixes, if it looks like
@@ -517,8 +521,8 @@ class Lookup:
                     )
 
     def desuffix(self, word: str,
-                 required_flags: List[Flag],
-                 forbidden_flags: List[Flag],
+                 required_flags: List[str],
+                 forbidden_flags: List[str],
                  nested: bool = False,
                  crossproduct: bool = False) -> Iterator[AffixForm]:
         """
@@ -569,8 +573,8 @@ class Lookup:
                     yield form2.replace(suffix2=suffix, text=word)
 
     def deprefix(self, word: str,
-                 required_flags: List[Flag],
-                 forbidden_flags: List[Flag],
+                 required_flags: List[str],
+                 forbidden_flags: List[str],
                  nested: bool = False) -> Iterator[AffixForm]:
         """
         Everything is the same as for :meth:`desuffix`.
@@ -645,8 +649,8 @@ class Lookup:
         # way.
         if captype != form.in_dictionary.captype and aff.KEEPCASE in root_flags:
             # but if this is German (with CHECKSHARPS flag), and word has "sharp s", the meaning
-            # of KEEPCASE flag is different: "disallow ẞ -- uppercased ß -- and force word in
-            # uppercase form always have SS"
+            # of KEEPCASE flag is different: "disallow leaving ß in uppercased word, always require
+            # SS, but all casing forms are possible"
             if not (aff.CHECKSHARPS and 'ß' in form.in_dictionary.stem):
                 return False
 
@@ -741,7 +745,7 @@ class Lookup:
                                          forbidden_flags=forbidden_flags,
                                          allow_nosuggest=allow_nosuggest):
                 # return it to the recursively calling method
-                yield [form]
+                yield CompoundForm([form])
 
         # Check compounding limitation (if the rest of the word is less than 2 allowed parts, or if
         # the further compounding would produce more parts than allowed)
@@ -767,9 +771,9 @@ class Lookup:
                                          allow_nosuggest=allow_nosuggest):
                 # Recursively try to split the rest of the word ("the whole rest is compound end" also
                 # might be the result)
-                for others in self.compounds_by_flags(rest, captype=captype, depth=depth+1,
-                                                      allow_nosuggest=allow_nosuggest):
-                    yield [form, *others]
+                for partial in self.compounds_by_flags(rest, captype=captype, depth=depth+1,
+                                                       allow_nosuggest=allow_nosuggest):
+                    yield CompoundForm([form, *partial.parts])
 
             # Complication! If the affix has SIMPLIFIEDTRIPLE boolean setting, we must check the
             # possibility that "foobbar" is actually consisting of "foobb" and "bar" (some language
@@ -781,9 +785,9 @@ class Lookup:
                                              suffix_flags=permitflags,
                                              forbidden_flags=forbidden_flags,
                                              allow_nosuggest=allow_nosuggest):
-                    for others in self.compounds_by_flags(rest, captype=captype, depth=depth+1,
-                                                          allow_nosuggest=allow_nosuggest):
-                        yield [form.replace(text=beg), *others]
+                    for partial in self.compounds_by_flags(rest, captype=captype, depth=depth+1,
+                                                           allow_nosuggest=allow_nosuggest):
+                        yield CompoundForm([form.replace(text=beg), *partial.parts])
 
     def compounds_by_rules(self,
                            word_rest: str,
@@ -817,7 +821,7 @@ class Lookup:
                 parts = [*prev_parts, homonym]
                 flag_sets = [w.flags for w in parts]
                 if any(r.fullmatch(flag_sets) for r in rules):
-                    yield [AffixForm(word_rest, word_rest)]
+                    yield CompoundForm([AffixForm(word_rest, word_rest)])
 
         if len(word_rest) < aff.COMPOUNDMIN * 2 or \
                 (aff.COMPOUNDWORDMAX and len(prev_parts) >= aff.COMPOUNDWORDMAX):
@@ -831,7 +835,7 @@ class Lookup:
                 compoundrules = [r for r in rules if r.partial_match(flag_sets)]
                 if compoundrules:
                     for rest in self.compounds_by_rules(word_rest[pos:], rules=compoundrules, prev_parts=parts):
-                        yield [AffixForm(beg, beg), *rest]
+                        yield CompoundForm([AffixForm(beg, beg), *rest.parts])
 
     def is_bad_compound(self, compound: CompoundForm, captype: CapType) -> bool:
         """
@@ -844,13 +848,13 @@ class Lookup:
         aff = self.aff
 
         if aff.FORCEUCASE and captype not in [CapType.ALL, CapType.INIT]:
-            if self.dic.has_flag(compound[-1].text, aff.FORCEUCASE):
+            if self.dic.has_flag(compound.parts[-1].text, aff.FORCEUCASE):
                 return True
 
         # Now we check all adjacent pairs in the compound parts
-        for idx, left_paradigm in enumerate(compound[:-1]):
+        for idx, left_paradigm in enumerate(compound.parts[:-1]):
             left = left_paradigm.text
-            right_paradigm = compound[idx+1]
+            right_paradigm = compound.parts[idx+1]
             right = right_paradigm.text
 
             if aff.COMPOUNDFORBIDFLAG:
@@ -895,7 +899,7 @@ class Lookup:
 
             if aff.CHECKCOMPOUNDDUP:
                 # duplication only forbidden at the end (TODO: check, that's what I guess from test)
-                if left == right and idx == len(compound) - 2:
+                if left == right and idx == len(compound.parts) - 2:
                     return True
 
         return False

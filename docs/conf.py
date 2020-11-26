@@ -13,6 +13,10 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
+
+import sphinx_rtd_theme
+import coderead
 
 
 # -- Project information -----------------------------------------------------
@@ -29,9 +33,13 @@ author = 'Victor Shepelev'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode',
+    # 'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
-    'sphinx.ext.autodoc.typehints'
+    'sphinx.ext.autodoc.typehints',
+    # 'sphinxcontrib.fulltoc',
+    'sphinx_rtd_theme',
+    'code_include.extension',
+    'coderead'
 ]
 
 autodoc_typehints = 'description'
@@ -51,12 +59,16 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = 'pyramid'
+# html_theme = 'pyramid'
+html_theme = 'sphinx_rtd_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_css_files = [
+    'css/coderead.css',
+]
+
+modindex_common_prefix = ['spyll.hunspell.', 'spyll.hunspell.data.', 'spyll.hunspell.readers.', 'spyll.hunspell.algo.']

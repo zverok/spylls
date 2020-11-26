@@ -1,0 +1,22 @@
+.coderead .coderead-content {
+  display: none;
+}
+
+.coderead .coderead-toggle a {
+  display: inline-block;
+  color: #27ae60;
+  font-weight: bold;
+  padding-left: 0;
+}
+
+.coderead .coderead-toggle a::before {
+  content: "Show ";
+}
+
+.coderead.coderead-on .coderead-content {
+  display: block;
+}
+
+.coderead.coderead-on .coderead-toggle a::before {
+  content: "Hide ";
+}

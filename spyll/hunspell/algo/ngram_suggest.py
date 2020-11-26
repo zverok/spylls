@@ -1,3 +1,18 @@
+"""
+.. autofunction:: ngram_suggest
+
+.. autofunction:: forms_for
+
+Scoring
+^^^^^^^
+
+.. autofunction:: detect_threshold
+.. autofunction:: root_score
+.. autofunction:: rough_affix_score
+.. autofunction:: precise_affix_score
+
+"""
+
 from typing import Iterator, Tuple, List, Set, Dict
 from operator import itemgetter
 import heapq

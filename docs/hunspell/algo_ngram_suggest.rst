@@ -2,4 +2,3 @@
 ===============================================
 
 .. automodule:: spyll.hunspell.algo.ngram_suggest
-  :members:

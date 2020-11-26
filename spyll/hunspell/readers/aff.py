@@ -1,6 +1,6 @@
 """
 
-.. automethod:: spyll.hunspell.readers.aff.read_aff(source: BaseReader)
+.. autofunction:: read_aff
 
 .. autoclass:: Context
     :members:
@@ -8,9 +8,9 @@
 Internal methods
 ^^^^^^^^^^^^^^^^
 
-.. automethod:: spyll.hunspell.readers.aff.read_directive(source: BaseReader, line: str, *, context: Context) -> Union[None, Tuple[str, Any]]
-.. automethod:: spyll.hunspell.readers.aff.read_value(source: BaseReader, directive: str, *values, context) -> Any
-.. automethod:: spyll.hunspell.readers.aff.make_affix(kind, flag, crossproduct, _, strip, add, *rest, context)
+.. autofunction:: read_directive
+.. autofunction:: read_value
+.. autofunction:: make_affix
 
 """
 
@@ -208,7 +208,7 @@ def read_value(source: BaseReader, directive: str, *values, context) -> Any:
                      'COMPOUNDPERMITFLAG', 'COMPOUNDFORBIDFLAG', 'FORCEUCASE',
                      'SUBSTANDARD',
                      'SYLLABLENUM', 'COMPOUNDROOT']:
-        return aff.Flag(context.parse_flag(value))
+        return context.parse_flag(value)
     if directive in ['COMPLEXPREFIXES', 'FULLSTRIP', 'NOSPLITSUGS', 'CHECKSHARPS',
                      'CHECKCOMPOUNDCASE', 'CHECKCOMPOUNDDUP', 'CHECKCOMPOUNDREP', 'CHECKCOMPOUNDTRIPLE',
                      'SIMPLIFIEDTRIPLE', 'ONLYMAXDIFF', 'COMPOUNDMORESUFFIXES']:

@@ -43,8 +43,6 @@ conventions and usage of directives.
 ``Aff``
 -------
 
-.. autodata:: Flag
-
 .. autoclass:: Aff
 
 ``Prefix`` and ``Suffix``
@@ -78,17 +76,10 @@ from operator import itemgetter
 from collections import defaultdict
 
 from dataclasses import dataclass, field
-from typing import List, Set, Dict, Tuple, Optional, NewType
+from typing import List, Set, Dict, Tuple, Optional
 
 from spyll.hunspell.algo.capitalization import Casing, GermanCasing, TurkicCasing
 from spyll.hunspell.algo.trie import Trie
-
-
-Flag = NewType('Flag', str)
-"""
-Flag is a short (1 or 2 chars typically) string to mark stems and affixes. See :attr:`Aff.FLAG`
-for concept explantion.
-"""
 
 
 @dataclass
@@ -220,7 +211,7 @@ class Affix:
 
     #: Flag this affix marked with. Note that several affixes can have same flag (and in this case,
     #: which of them is relevant for the word, is decided by its :attr:`condition`)
-    flag: Flag
+    flag: str
     #: Whether this affix is compatible with opposite affix (e.g. if the word has both suffix and prefix,
     #: both of them should have ``crossproduct=True``)
     crossproduct: bool
@@ -231,7 +222,7 @@ class Affix:
     #: Condition against which stem should be checked to understand whether this affix is relevant
     condition: str
     #: Flags this affix has
-    flags: Set[Flag] = field(default_factory=set)
+    flags: Set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -738,7 +729,11 @@ class Aff:
     #: for some words by applying to word :attr:`KEEPCASE` flag (which for other situations has
     #: different meaning).
     #:
-    #: *Usage:* TBD, broken!
+    #: *Usage:* To define whether to use
+    #: :class:`GermanCasing <spyll.hunspell.algo.capitalization.GermanCasing>` in :attr:`casing`
+    #: (which changes word lower/upper-casing slightly), and in
+    #: :meth:`Lookup.good_forms <spyll.hunspell.algo.lookup.Lookup.good_forms>` to drop forms where
+    #: lowercase "ß" is prohibited.
     CHECKSHARPS: bool = False
 
     #: Flag that marks word as forbidden. The main usage of this flag is to specify that some form
@@ -754,7 +749,7 @@ class Aff:
     #:
     #: *Usage:* multiple times in both :class:`Lookup <spyll.hunspell.algo.lookup.Lookup>` and
     #: :class:`Suggest <spyll.hunspell.algo.suggest.Suggest>`
-    FORBIDDENWORD: Optional[Flag] = None
+    FORBIDDENWORD: Optional[str] = None
 
     #: Flag to mark words which shouldn't be considered correct unless their casing is exactly like in
     #: the dictionary.
@@ -766,7 +761,7 @@ class Aff:
     #: *Usage:* :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>`
     #: to produce suggestions in proper case,
     #: :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`.
-    KEEPCASE: Optional[Flag] = None
+    KEEPCASE: Optional[str] = None
 
     # **Suggestions**
 
@@ -777,7 +772,7 @@ class Aff:
     #: dictionary words for ngram-check), and in
     #: :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>` (if the lookup is
     #: called from suggest, with ``allow_nosuggest=False``)
-    NOSUGGEST: Optional[Flag] = None
+    NOSUGGEST: Optional[str] = None
 
     #: String that specifies sets of adjacent characters on keyboard (so suggest could understand
     #: that "kitteb" is most probable misspelling of "kitten"). Format is "abc|def|xyz". For QWERTY
@@ -916,13 +911,13 @@ class Aff:
     #: meaning "there should be other affixes besides this one".
     #:
     #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
-    NEEDAFFIX: Optional[Flag] = None
+    NEEDAFFIX: Optional[str] = None
 
     #: Suffixes signed with this flag may be on a word when this word also has a prefix with
     #: this flag, and vice versa.
     #:
     #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
-    CIRCUMFIX: Optional[Flag] = None
+    CIRCUMFIX: Optional[str] = None
 
     #: If two prefixes stripping is allowed (only one prefix by default). Random fun fact:
     #: of all currently available LibreOffice and Firefox dictionaries, only Firefox's Zulu has this
@@ -970,7 +965,7 @@ class Aff:
     #:
     #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>` to compare
     #: form's compound position (or lack thereof) with presence of teh flag.
-    COMPOUNDFLAG: Optional[Flag] = None
+    COMPOUNDFLAG: Optional[str] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can be at the beginning of the
     #: compound.
@@ -979,7 +974,7 @@ class Aff:
     #:
     #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
-    COMPOUNDBEGIN: Optional[Flag] = None
+    COMPOUNDBEGIN: Optional[str] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can be in the middle of the
     #: compound (not the last part, and not the first).
@@ -988,7 +983,7 @@ class Aff:
     #:
     #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
-    COMPOUNDMIDDLE: Optional[Flag] = None
+    COMPOUNDMIDDLE: Optional[str] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can be at the end of the
     #: compound.
@@ -997,7 +992,7 @@ class Aff:
     #:
     #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
-    COMPOUNDEND: Optional[Flag] = None
+    COMPOUNDEND: Optional[str] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can only be part of the compound
     #: word, and never standalone.
@@ -1005,7 +1000,7 @@ class Aff:
     #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
     #: Also in :class:`Suggest` to produce list of the words suitable for ngram search.
-    ONLYINCOMPOUND: Optional[Flag] = None
+    ONLYINCOMPOUND: Optional[str] = None
 
     #: Prefixes are allowed at the beginning of compounds, suffixes are allowed at the end of compounds
     #: by default. Affixes with ``COMPOUNDPERMITFLAG`` may be inside of compounds.
@@ -1014,7 +1009,7 @@ class Aff:
     #: to make list of flags passed to
     #: :meth:`Lookup.produce_affix_forms <spyll.hunspell.algo.lookup.Lookup.produce_affix_forms>`
     #: (for this part of the compound, try find affixed spellings, you can use affixes with this flag).
-    COMPOUNDPERMITFLAG: Optional[Flag] = None
+    COMPOUNDPERMITFLAG: Optional[str] = None
 
     #: Prefixes are allowed at the beginning of compounds, suffixes are allowed at the end of compounds
     #: by default. Suffixes with ``COMPOUNDFORBIDFLAG`` may not be even at the end, and prefixes with
@@ -1024,7 +1019,7 @@ class Aff:
     #: to make list of flags passed to
     #: :meth:`Lookup.produce_affix_forms <spyll.hunspell.algo.lookup.Lookup.produce_affix_forms>`
     #: (for this part of the compound, try find affixed spellings, you can use affixes with this flag).
-    COMPOUNDFORBIDFLAG: Optional[Flag] = None
+    COMPOUNDFORBIDFLAG: Optional[str] = None
 
     #: Last word part of a compound with flag FORCEUCASE forces capitalization of the whole compound
     #: word. Eg. Dutch word "straat" (street) with FORCEUCASE flags will allowed only in capitalized
@@ -1034,7 +1029,7 @@ class Aff:
     #: :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>` (if
     #: this flag is present in the .aff-file, we check that maybe
     #: just capitalization of misspelled word would make it right).
-    FORCEUCASE: Optional[Flag] = None
+    FORCEUCASE: Optional[str] = None
 
     #: Forbid upper case characters at word boundaries in compounds.
     #:
@@ -1087,12 +1082,12 @@ class Aff:
     #: Need for special compounding rules in Hungarian. (The previous phrase is the only docs Hunspell provides ``:)``)
     #:
     #: Not used in Spyll.
-    SYLLABLENUM: Optional[Flag] = None
+    SYLLABLENUM: Optional[str] = None
 
     #: Flag that signs the compounds in the dictionary (Now it is used only in the Hungarian language specific code).
     #:
     #: Not used in Spyll.
-    COMPOUNDROOT: Optional[Flag] = None
+    COMPOUNDROOT: Optional[str] = None
 
     # **Pre/post-processing**
 
@@ -1124,7 +1119,7 @@ class Aff:
     #: ``foo/ABC``, meaning stem ``foo`` has flags ``A, B, C``.
     #:
     #: *Usage:* Stored in :class:`readers.aff.Context` to decode flags on reading ``*.aff`` and ``*.dic``
-    AF: Dict[str, Set[Flag]] = field(default_factory=dict)
+    AF: Dict[str, Set[str]] = field(default_factory=dict)
 
     #: Table of word data aliases. Logic of aiasing is the same as for :attr:`AM`.
     #:
@@ -1137,7 +1132,7 @@ class Aff:
     #: With command-line flag ``-r``, Hunspell will warn about words with this flag in input text.
     #:
     #: Not implemented in Spyll
-    WARN: Optional[Flag] = None
+    WARN: Optional[str] = None
 
     #: Sets if words with :attr:`WARN` flag should be considered as misspellings (errors, not warnings).
     #:
@@ -1148,7 +1143,7 @@ class Aff:
     #: and root words removed from suggestion.
     #:
     #: Not implemented in Spyll
-    SUBSTANDARD: Optional[Flag] = None
+    SUBSTANDARD: Optional[str] = None
 
     def __post_init__(self):
         suffixes = defaultdict(list)

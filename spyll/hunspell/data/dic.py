@@ -38,7 +38,6 @@ from dataclasses import dataclass
 from typing import List, Set, Dict
 
 from spyll.hunspell.algo.capitalization import Type as CapType
-from spyll.hunspell.data.aff import Flag
 
 
 @dataclass
@@ -193,7 +192,7 @@ class Dic:
             return self.lowercase_index.get(stem, [])
         return self.index.get(stem, [])
 
-    def has_flag(self, stem: str, flag: Flag, *, for_all: bool = False) -> bool:
+    def has_flag(self, stem: str, flag: str, *, for_all: bool = False) -> bool:
         """
         If any/all of the homonyms have specified flag. It is frequently necessary in lookup algo to
         check something like "...but if there is ANY dictionary entry with this stem and 'forbidden'
