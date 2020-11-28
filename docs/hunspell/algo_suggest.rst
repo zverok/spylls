@@ -2,5 +2,5 @@
 ===========================================
 
 
-.. automodule:: spyll.hunspell.algo.suggest
+.. automodule:: spylls.hunspell.algo.suggest
 

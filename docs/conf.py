@@ -21,7 +21,7 @@ import coderead
 
 # -- Project information -----------------------------------------------------
 
-project = 'Spyll'
+project = 'Spylls'
 copyright = '2020, Victor Shepelev'
 author = 'Victor Shepelev'
 
@@ -70,7 +70,7 @@ html_css_files = [
     'css/coderead.css',
 ]
 
-modindex_common_prefix = ['spyll.hunspell.', 'spyll.hunspell.data.', 'spyll.hunspell.readers.', 'spyll.hunspell.algo.']
+modindex_common_prefix = ['spylls.hunspell.', 'spylls.hunspell.data.', 'spylls.hunspell.readers.', 'spylls.hunspell.algo.']
 
 # The code below, I suspect, is godless unholy abomination.
 # Yet it works.
@@ -78,7 +78,7 @@ modindex_common_prefix = ['spyll.hunspell.', 'spyll.hunspell.data.', 'spyll.huns
 # We do it by eval'ing the code object and then inspect'ing it to get source file and line
 # Sue me!
 
-import spyll
+import spylls
 import inspect
 
 # Git commit fetching is stolen from
@@ -95,4 +95,4 @@ def linkcode_resolve(domain, info):
         # Attributes and other similar stuff can't be resolved with inspect
         return None
 
-    return f'http://github.com/spyll/spyll/blob/{commit_id}/{path}#L{lineno}'
+    return f'http://github.com/spylls/spylls/blob/{commit_id}/{path}#L{lineno}'

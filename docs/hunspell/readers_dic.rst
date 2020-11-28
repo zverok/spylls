@@ -1,5 +1,5 @@
 ``readers.dic``: reading of .dic file
 =====================================
 
-.. automodule:: spyll.hunspell.readers.dic
+.. automodule:: spylls.hunspell.readers.dic
   :members:

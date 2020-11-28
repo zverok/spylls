@@ -1,4 +1,4 @@
 ``Dictionary``: main library interface
 ======================================
 
-.. autoclass:: spyll.hunspell.dictionary.Dictionary
+.. autoclass:: spylls.hunspell.dictionary.Dictionary

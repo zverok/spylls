@@ -1,4 +1,4 @@
 ``algo.lookup``: correctness check algorithm
 ============================================
 
-.. automodule:: spyll.hunspell.algo.lookup
+.. automodule:: spylls.hunspell.algo.lookup

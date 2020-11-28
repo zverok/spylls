@@ -4,11 +4,11 @@
 ``algo.permutations``
 ---------------------
 
-.. automodule:: spyll.hunspell.algo.permutations
+.. automodule:: spylls.hunspell.algo.permutations
   :members:
 
 ``algo.string_metrics``
 -----------------------
 
-.. automodule:: spyll.hunspell.algo.string_metrics
+.. automodule:: spylls.hunspell.algo.string_metrics
   :members:

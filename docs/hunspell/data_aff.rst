@@ -1,4 +1,4 @@
 ``data.aff``: contents of .aff file
 ===================================
 
-.. automodule:: spyll.hunspell.data.aff
+.. automodule:: spylls.hunspell.data.aff

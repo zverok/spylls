@@ -1,7 +1,7 @@
-Spyll: Hunspell ported to Python
-================================
+Spylls: Hunspell ported to Python
+=================================
 
-**Spyll** is an effort of porting prominent spellcheckers into clear, well-structured, well-documented Python. It is inteded to be useful both as a library and as some kind of "reference (or investigatory, if you will) implementation". Currently, only `Hunspell <https://github.com/hunspell/hunspell>`_ is ported.
+**Spylls** is an effort of porting prominent spellcheckers into clear, well-structured, well-documented Python. It is inteded to be useful both as a library and as some kind of "reference (or investigatory, if you will) implementation". Currently, only `Hunspell <https://github.com/hunspell/hunspell>`_ is ported.
 
 Reasons
 -------
@@ -10,12 +10,12 @@ Spellchecking is a notoriously hard task that looks easy. The MVP everybody star
 
 There are some modern approaches to spell and grammar checking, which are base on machine learning, can recognize context and do a lot of other interesting stuff. But "classic", dictionary-based spellcheckers are still most widespread solution, with **Hunspell** being the most widespread of all. It is embedded into Chrome, Firefox, OpenOffice, Adobe's products, Linux and MacOS distributions; there are Hunspell-compatible dictionaries for most of human languages.
 
-At the same time, Hunspell is long-living, complicated, almost undocumented piece of software, and it was our feeling that the significant part of human knowledge is somehow "locked" in a form of large C++ project. That's how **Spyll** was born: as an attempt to "unlock" it, via well-structured and well-documented implementation in high-level language.
+At the same time, Hunspell is long-living, complicated, almost undocumented piece of software, and it was our feeling that the significant part of human knowledge is somehow "locked" in a form of large C++ project. That's how **Spylls** was born: as an attempt to "unlock" it, via well-structured and well-documented implementation in high-level language.
 
 Design choices
 --------------
 
-* **Spyll** is implemented in Python, as a most widespread high-level language of 2020s (besides EcmaScript, but I just can't do it... for personal reasons);
+* **Spylls** is implemented in Python, as a most widespread high-level language of 2020s (besides EcmaScript, but I just can't do it... for personal reasons);
 * The code is as "vanilla Python" as possible, so it should be reasonable readable for developer in any modern language; the most Python-specific feature used is method returning generators (instead of arrays);
 * Code is structured in a (reasonably) low amount of classes with (reasonably) large methods, exposing the imperative nature of Hunspell's algorithms; probably "very OO" or "very functional" approach could've made code more appealing for some, but I tried to communicate the algorithms themselves (for possible reimplementations in other languages and architectures), not my own views on how to code;
 * ...At the same time, it doesn't try to reproduce Hunspell's structure of classes, method names and calls, but rather express "what it does" in the most simple/straightforward ways
@@ -25,7 +25,7 @@ Usage as a library
 
 .. code-block:: python
 
-  from spyll.hunspell import Dictionary
+  from spylls.hunspell import Dictionary
 
   # from folder where en_US.aff and en_US.dic are present
   dictionary = Dictionary.from_files('/path/to/dictionary/en_US')
@@ -34,16 +34,16 @@ Usage as a library
   # or, from system folders (on Linux)
   dictionary = Dictionary.from_system('en_US')
 
-  print(dictionary.lookup('spyll'))
+  print(dictionary.lookup('spylls'))
   # False
-  for suggestion in dictionary.suggest('spyll'):
+  for suggestion in dictionary.suggest('spylls'):
     print(sugestion)
   # spell
   # spill
   # spy ll
   # spy-ll
 
-See :class:`Dictionary <spyll.hunspell.dictionary.Dictionary>` class docs for more details.
+See :class:`Dictionary <spylls.hunspell.dictionary.Dictionary>` class docs for more details.
 
 .. toctree::
    :maxdepth: 2
@@ -63,15 +63,15 @@ Reading the code
 Completeness
 ------------
 
-Generally, **Spyll** thrives for the *full* port, handling all possible quirks and rare options, that's the idea of the project. (Would be rather easy to make dictionary reader + word lookup working for most simple cases, but that wouldn't demonstrate the complexity and interlinkedness of the task.)
+Generally, **Spylls** thrives for the *full* port, handling all possible quirks and rare options, that's the idea of the project. (Would be rather easy to make dictionary reader + word lookup working for most simple cases, but that wouldn't demonstrate the complexity and interlinkedness of the task.)
 
 Current state of the port:
 
 * Two main features of Hunspell are implemented: lookup (whether word in the dictionary) and suggest (for misspelled words). It means no morphological analysis (which some dictionaries allow), and no tokenization of source text (Python has enough libraries for that)
-* All known directives are at least *read* successfully; almost all of them are used in code where relevant (see :class:`Aff <spyll.hunspell.data.aff.Aff>` directive comments to see which are not); those that aren't (fully) implemented, are either very rare (not used in any known dictionary) and cumbersome, or related to aspects of Hunspell we don't implement (tokenization);
-* Of **107** Hunspell's lookup tests, **6 are "pending"**: 5 due to the same rare form of :attr:`CHECKCOMPOUNDPATTERN <spyll.hunspell.data.aff.Aff.CHECKCOMPOUNDPATTERN>` directive, which used in no humanly known dictionary, and, ironically as it is, Hungarian one, which in the original Hunspell is handled by several exceptional branches with explicit "if this is hungarian..." clauses
+* All known directives are at least *read* successfully; almost all of them are used in code where relevant (see :class:`Aff <spylls.hunspell.data.aff.Aff>` directive comments to see which are not); those that aren't (fully) implemented, are either very rare (not used in any known dictionary) and cumbersome, or related to aspects of Hunspell we don't implement (tokenization);
+* Of **107** Hunspell's lookup tests, **6 are "pending"**: 5 due to the same rare form of :attr:`CHECKCOMPOUNDPATTERN <spylls.hunspell.data.aff.Aff.CHECKCOMPOUNDPATTERN>` directive, which used in no humanly known dictionary, and, ironically as it is, Hungarian one, which in the original Hunspell is handled by several exceptional branches with explicit "if this is hungarian..." clauses
 * Of **34** Hunspell's suggest tests, **3 are "pending"** (mostly due to hanling of dots, which is related to tokenization)
-* spyll is confirmed to at least read successfully all dictionaries available in Firefox and LibreOffice official dictionary repositories
+* spylls is confirmed to at least read successfully all dictionaries available in Firefox and LibreOffice official dictionary repositories
 
 So, it is, like ~80% theoretically complete and ~95% pragmatically complete.
 
@@ -91,26 +91,26 @@ I believe that significantly better performance is hard/impossibe to achieve *in
 Q&A
 ---
 
-Why all the code is namespaced under ``spyll.hunspell`` (and not just ``spyll``)?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Why all the code is namespaced under ``spylls.hunspell`` (and not just ``spylls``)?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Due to author's delusion of grandeur! I plan/hope/dream it will once include not only Hunspell's "explanatory ports", but for some other spellcheckers, too (for example, ``voikko`` and ``morfologik`` both look interesting in different approaches they take).
 
 Why all the complexity if Peter Norvig's `spellchecker <https://norvig.com/spell-correct.html>`_ is just 36 lines of Python?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Actually, what Norvig's implementation is demonstrating is *one of the possible approaches to suggestion*. To work, it assumes that full list of words for given language is existing, finite and have reasonable size; to work well, it requires having weighted wordlist. Basically, it is an algorithm for spell suggestion which works for English, if you prepared word list well (and even then, you might be surprised with some suggestions). Hunspell (and Spyll) works for dosens of languages with pre-existing dictionaries, but in order to do so, it is required to be times more complicated.
+Actually, what Norvig's implementation is demonstrating is *one of the possible approaches to suggestion*. To work, it assumes that full list of words for given language is existing, finite and have reasonable size; to work well, it requires having weighted wordlist. Basically, it is an algorithm for spell suggestion which works for English, if you prepared word list well (and even then, you might be surprised with some suggestions). Hunspell (and Spylls) works for dosens of languages with pre-existing dictionaries, but in order to do so, it is required to be times more complicated.
 
 Where do I get the dictionaries?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Two main sources of Hunspell-compatible dictionaries are `Firefox dictionaries <https://addons.mozilla.org/en-US/firefox/language-tools/>`_, `LibreOffice Dictionaries <https://extensions.libreoffice.org/?Tags%5B%5D=50>`_, `OpenOffice Dictionaries <https://extensions.openoffice.org/en/search?f%5B0%5D=field_project_tags%3A157>`_. All of those are downloadable as "extensions" (``.xpi`` for Firefox, ``.oxt`` for Libre/OpenOffice). "Extensions" are actually just ``.zip`` archives, which you can unpack and extract ``.aff``/``.dic`` files, but for convenience, Spyll can work with archives too:
+Two main sources of Hunspell-compatible dictionaries are `Firefox dictionaries <https://addons.mozilla.org/en-US/firefox/language-tools/>`_, `LibreOffice Dictionaries <https://extensions.libreoffice.org/?Tags%5B%5D=50>`_, `OpenOffice Dictionaries <https://extensions.openoffice.org/en/search?f%5B0%5D=field_project_tags%3A157>`_. All of those are downloadable as "extensions" (``.xpi`` for Firefox, ``.oxt`` for Libre/OpenOffice). "Extensions" are actually just ``.zip`` archives, which you can unpack and extract ``.aff``/``.dic`` files, but for convenience, Spylls can work with archives too:
 
 .. code-block:: python
 
   >>> dictionary = Dictionary.from_zip('english_united_states_dictionary-68.0.xpi')
 
-  >>> print(dictionary.lookup('spyll'))
+  >>> print(dictionary.lookup('spylls'))
   False
 
 
