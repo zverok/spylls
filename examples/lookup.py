@@ -1,12 +1,12 @@
-import re
-import os.path
+import pathlib
+path = pathlib.Path(__file__).parent  / 'en_US'
 
 from spyll.hunspell.dictionary import Dictionary
 from spyll.hunspell.algo.capitalization import Type as CapType
 
-dic = Dictionary.from_files('dictionaries/en_US')
+dictionary = Dictionary.from_files(str(path))
 
-print(*dic.lookuper.good_forms('building'))
-print(*dic.lookuper.good_forms('111th'))
+print([*dictionary.lookuper.good_forms('building')])
+print([*dictionary.lookuper.good_forms('111th')])
 
-print(*dic.lookuper.affix_forms('reboots', captype=CapType.NO))
+print(*dictionary.lookuper.affix_forms('reboots', captype=CapType.NO))

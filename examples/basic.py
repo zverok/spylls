@@ -5,5 +5,6 @@ from spyll.hunspell import Dictionary
 
 dictionary = Dictionary.from_files(str(path))
 
-print(dictionary.dic)
-print(dictionary.dic.homonyms('spell'))
+print(dictionary.lookup('spell'))
+print(dictionary.lookup('spyll'))
+print([*dictionary.suggest('spyll')])

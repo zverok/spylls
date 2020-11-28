@@ -7,3 +7,5 @@ dist
 experiment
 .mypy_cache/
 docs/_build
+internal/
+build/

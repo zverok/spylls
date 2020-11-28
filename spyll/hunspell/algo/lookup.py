@@ -86,6 +86,9 @@ class AffixForm:
         return [*filter(None, [self.prefix2, self.prefix, self.suffix, self.suffix2])]
 
     def __repr__(self):
+        if self.is_base():
+            return f'AffixForm({self.text})'
+
         result = f'AffixForm({self.text} = '
         if self.prefix:
             result += f'{self.prefix!r} + '
