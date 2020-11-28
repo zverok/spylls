@@ -5,18 +5,18 @@ import zipfile
 
 from typing import Iterator
 
-from spyll.hunspell import data, readers
-from spyll.hunspell.readers.file_reader import FileReader, ZipReader
-from spyll.hunspell.algo import lookup, suggest
+from spylls.hunspell import data, readers
+from spylls.hunspell.readers.file_reader import FileReader, ZipReader
+from spylls.hunspell.algo import lookup, suggest
 
 
 class Dictionary:
     """
-    The main and only interface to ``spyll.hunspell`` as a library.
+    The main and only interface to ``spylls.hunspell`` as a library.
 
     Usage::
 
-        from spyll.hunspell import Dictionary
+        from spylls.hunspell import Dictionary
 
         # from folder where en_US.aff and en_US.dic are present
         dictionary = Dictionary.from_files('/path/to/dictionary/en_US')
@@ -25,9 +25,9 @@ class Dictionary:
         # or, from system folders (on Linux)
         dictionary = Dictionary.from_system('en_US')
 
-        print(dictionary.lookup('spyll'))
+        print(dictionary.lookup('spylls'))
         # False
-        for suggestion in dictionary.suggest('spyll'):
+        for suggestion in dictionary.suggest('spylls'):
             print(sugestion)
         # spell
         # spill
@@ -45,7 +45,7 @@ class Dictionary:
         # AffixForm(building = build + Suffix(ing: G×, on [[^e]]$))
 
         # Internal suggest method, showing information about suggestion method
-        for suggestion in dictionary.suggester.suggest_internal('spyll'):
+        for suggestion in dictionary.suggester.suggest_internal('spylls'):
             print(suggestion)
 
         # Suggestion[badchar](spell)
@@ -80,9 +80,9 @@ class Dictionary:
     #: Contents of ``*.dic``
     dic: data.dic.Dic
 
-    #: Instance of ``Lookup``, can be used for experimenting, see :mod:`algo.lookup <spyll.hunspell.algo.lookup>`.
+    #: Instance of ``Lookup``, can be used for experimenting, see :mod:`algo.lookup <spylls.hunspell.algo.lookup>`.
     lookuper: lookup.Lookup
-    #: Instance of ``Suggest``, can be used for experimenting, see :mod:`algo.suggest <spyll.hunspell.algo.suggest>`.
+    #: Instance of ``Suggest``, can be used for experimenting, see :mod:`algo.suggest <spylls.hunspell.algo.suggest>`.
     suggester: suggest.Suggest
 
     # TODO: Firefox dictionaries path
@@ -174,7 +174,7 @@ class Dictionary:
 
         ::
 
-            >>> dictionary.lookup('spyll')
+            >>> dictionary.lookup('spylls')
             False
             >>> dictionary.lookup('spell')
             True
@@ -192,10 +192,10 @@ class Dictionary:
 
         ::
 
-            >>> suggestions = dictionary.suggest('spyll')
+            >>> suggestions = dictionary.suggest('spylls')
             <generator object Dictionary.suggest at 0x7f5c63e4a2d0>
 
-            >>> for suggestion in dictionary.suggest('spyll'):
+            >>> for suggestion in dictionary.suggest('spylls'):
             ...    print(sugestion)
             spell
             spill

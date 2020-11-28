@@ -10,7 +10,7 @@ class Leaf:     # pylint: disable=too-few-public-methods,missing-class-docstring
 class Trie:
     """
     `Trie <https://en.wikipedia.org/wiki/Trie>`_ is a data structure for effective prefix search. It
-    is used in Spyll to store prefixes and suffixes. For example, if we have suffixes "s", "ions",
+    is used in Spylls to store prefixes and suffixes. For example, if we have suffixes "s", "ions",
     "ications", they are stored (reversed) this way:
 
     .. code-block:: text
@@ -24,9 +24,9 @@ class Trie:
     pass through trie.
 
     **Important:** Profiling shows that search through Trie of suffixes/prefixes is the center of
-    Spyll performance, that's why it is very primitive and fast implementation instead of some
+    Spylls performance, that's why it is very primitive and fast implementation instead of some
     library like `pygtrie <https://github.com/google/pygtrie>`_. Probably, by chosing fast (C)
-    implementation of trie, the whole spyll can be make much faster.
+    implementation of trie, the whole spylls can be make much faster.
     """
     def __init__(self, data=None):
         self.root = Leaf()

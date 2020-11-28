@@ -4,10 +4,10 @@ from typing import Iterator, List, Tuple
 from operator import itemgetter
 import heapq
 
-from spyll.hunspell.data import aff, dic
+from spylls.hunspell.data import aff, dic
 
-import spyll.hunspell.algo.string_metrics as sm
-import spyll.hunspell.algo.ngram_suggest as ng
+import spylls.hunspell.algo.string_metrics as sm
+import spylls.hunspell.algo.ngram_suggest as ng
 
 MAX_ROOTS = 100
 
@@ -15,20 +15,20 @@ MAX_ROOTS = 100
 def phonet_suggest(misspelling: str, *, dictionary_words: List[dic.Word], table: aff.PhonetTable) -> Iterator[str]:
     """
     Phonetical suggestion algorithm provides suggestions based on phonetial (prononication) similarity.
-    It requires .aff file to define :attr:`PHONE <spyll.hunspell.data.aff.Aff.PHONE>` table --
+    It requires .aff file to define :attr:`PHONE <spylls.hunspell.data.aff.Aff.PHONE>` table --
     which, we should add, is *extremely* rare in known dictionaries.
 
     Internally:
 
-    * selects words from dictionary similarly to :meth:`ngram_suggest <spyll.hunspell.algo.ngram_suggest.ngram_suggest>`
-      (and even reuses its :meth:`root_score <spyll.hunspell.algo.ngram_suggest.root_score>`)
+    * selects words from dictionary similarly to :meth:`ngram_suggest <spylls.hunspell.algo.ngram_suggest.ngram_suggest>`
+      (and even reuses its :meth:`root_score <spylls.hunspell.algo.ngram_suggest.root_score>`)
     * and scores their phonetic representations (calculated with :meth:`metaphone`) with phonetic
       representation of misspelling
     * then chooses the most similar ones with :meth:`final_score` (ngram-based comparison)
 
-    Note, that as both this method, and :meth:`ngram_suggest <spyll.hunspell.algo.ngram_suggest.ngram_suggest>`
+    Note, that as both this method, and :meth:`ngram_suggest <spylls.hunspell.algo.ngram_suggest.ngram_suggest>`
     iterate through the whole dictionary, Hunspell optimizes suggestion search to making it all
-    in one module/one loop. Spyll splits them for clarity.
+    in one module/one loop. Spylls splits them for clarity.
 
     Args:
         misspelling: Misspelled word
@@ -49,7 +49,7 @@ def phonet_suggest(misspelling: str, *, dictionary_words: List[dic.Word], table:
     # understand and debug.
     #
     # Considering extreme rarity of metaphone-enabled dictionaries, and "educational" goal of
-    # spyll, we split it out.
+    # spylls, we split it out.
     for word in dictionary_words:
         if abs(len(word.stem) - len(misspelling)) > 3:
             continue
@@ -102,14 +102,14 @@ def metaphone(table: aff.PhonetTable, word: str) -> str:
     Metaphone calculation
 
     Args:
-        table: Metaphone table from :attr:`PHONE <spyll.hunspell.data.aff.Aff.PHONE>` directive
+        table: Metaphone table from :attr:`PHONE <spylls.hunspell.data.aff.Aff.PHONE>` directive
         word: Word to calculate metaphone for
     """
 
     pos = 0
     word = word.upper()
     res = ''
-    # Metaphone production in Spyll currently is implemented very naively, as just "search and replace"
+    # Metaphone production in Spylls currently is implemented very naively, as just "search and replace"
     # for rules. To see what _potentially_ should been done, look at aspell's original description:
     # http://aspell.net/man-html/Phonetic-Code.html
     while pos < len(word):

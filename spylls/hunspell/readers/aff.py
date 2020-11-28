@@ -19,9 +19,9 @@ import itertools
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple, Any, Iterable
 
-from spyll.hunspell.data import aff
+from spylls.hunspell.data import aff
 
-from spyll.hunspell.readers.file_reader import BaseReader
+from spylls.hunspell.readers.file_reader import BaseReader
 
 
 # Outdated directive names
@@ -37,20 +37,20 @@ class Context:
     Class containing reading-time context necessary for reading both .aff and .dic file:
     encoding, flag format, chars to ignore.
 
-    It is created in :meth:`read_aff` and then reused in :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`.
+    It is created in :meth:`read_aff` and then reused in :meth:`read_dic <spylls.hunspell.readers.dic.read_dic>`.
     """
 
-    #: Encoding of dictionary (see :attr:`Aff.SET <spyll.hunspell.data.aff.Aff.SET>`)
+    #: Encoding of dictionary (see :attr:`Aff.SET <spylls.hunspell.data.aff.Aff.SET>`)
     encoding: str = 'Windows-1252'
 
-    #: Flag format of dictionary (see :attr:`Aff.FLAG <spyll.hunspell.data.aff.Aff.FLAG>`)
+    #: Flag format of dictionary (see :attr:`Aff.FLAG <spylls.hunspell.data.aff.Aff.FLAG>`)
     flag_format: str = 'short'
 
     #: List of flag synonyms (like ``1 => {'A', 'B', 'C'}``),
-    #: see :attr:`Aff.AF <spyll.hunspell.data.aff.Aff.AF>`
+    #: see :attr:`Aff.AF <spylls.hunspell.data.aff.Aff.AF>`
     flag_synonyms: Dict[str, str] = field(default_factory=dict)
 
-    #: Chars to ignore (see :attr:`Aff.IGNORE <spyll.hunspell.data.aff.Aff.IGNORE>`)
+    #: Chars to ignore (see :attr:`Aff.IGNORE <spylls.hunspell.data.aff.Aff.IGNORE>`)
     ignore: Optional[aff.Ignore] = None
 
     def parse_flag(self, string: str) -> str:
@@ -85,7 +85,7 @@ class Context:
 
 def read_aff(source: BaseReader) -> Tuple[aff.Aff, Context]:
     """
-    Reads .aff file and creates an :class:`Aff <spyll.hunspell.data.aff.Aff>`.
+    Reads .aff file and creates an :class:`Aff <spylls.hunspell.data.aff.Aff>`.
 
     For each line calls :meth:`read_directive` (which either returns pair of ``(directive, value)``,
     or just skips the line).
@@ -95,7 +95,7 @@ def read_aff(source: BaseReader) -> Tuple[aff.Aff, Context]:
 
     Returns:
         Aff itself and a :class:`Context` which then will be reused in
-        :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`
+        :meth:`read_dic <spylls.hunspell.readers.dic.read_dic>`
     """
 
     data: Dict[str, Any] = {'SFX': {}, 'PFX': {}, 'FLAG': 'short'}
@@ -185,7 +185,7 @@ def read_value(source: BaseReader, directive: str, *values, context: Context) ->
     The method would read value 3, understand that there are 3 more lines to read, read them and
     return ``['-', '^-', '-$']``.
 
-    The values read are immediately parsed into proper data types (see :mod:`data.aff <spyll.hunspell.data.aff>`
+    The values read are immediately parsed into proper data types (see :mod:`data.aff <spylls.hunspell.data.aff>`
     for types definition).
 
     Args:

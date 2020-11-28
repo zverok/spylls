@@ -4,13 +4,13 @@ The main "suggest correction for this misspelling" module.
 On a bird-eye view level, suggest does:
 
 * tries small word changes (remove letters, insert letters, swap letters) and checks (with the help
-  of :mod:`lookup  <spyll.hunspell.algo.lookup>`) there are any valid ones
+  of :mod:`lookup  <spylls.hunspell.algo.lookup>`) there are any valid ones
 * if no good suggestions found, tries "ngram-based" suggestions (calculating ngram-based distance to
   all dictionary words and select the closest ones), handled by
-  :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`
-* if possible, tries metaphone-based suggestions, handled by :mod:`phonet_suggest <spyll.hunspell.algo.phonet_suggest>`
+  :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`
+* if possible, tries metaphone-based suggestions, handled by :mod:`phonet_suggest <spylls.hunspell.algo.phonet_suggest>`
 
-Note that Spyll's implementation takes two liberties comparing to Hunspell's:
+Note that Spylls's implementation takes two liberties comparing to Hunspell's:
 
 1. In Hunspell, all permutations-based logic is run twice: first, checks if any of the permutated variants
    is a valid non-compound word; then (if nothing good was found), for all the same permutations, checks
@@ -18,10 +18,10 @@ Note that Spyll's implementation takes two liberties comparing to Hunspell's:
    *not regarding compounding* is much faster. We ignore this optimization in the name of clarity
    of the algorithm -- and on the way make suggestions better in edge cases: when compound and non-compound
    word are accidentally joined, Hunspell can't sugest to split them (try with "11thhour": "11th" is
-   compound word in English dictionary, and hunspell wouldn't suggest "11th hour", but Spyll would).
+   compound word in English dictionary, and hunspell wouldn't suggest "11th hour", but Spylls would).
 2. In Hunspell, ngram suggestions (select all words from dictionary that ngram-similar => produce suggestions)
    and phonetic suggestios (select all words from dictionary that phonetically similar => produce suggestions)
-   are done in the same cycle, because they both iterate through entire dictionary. Spyll does it
+   are done in the same cycle, because they both iterate through entire dictionary. Spylls does it
    in two separate cycles, again, for the sake of clarity (note that dictionaries with metaphone
    transformation rules defined are extremely rare).
 
@@ -50,9 +50,9 @@ from typing import Iterator, List, Set, Union
 import dataclasses
 from dataclasses import dataclass
 
-from spyll.hunspell import data
-from spyll.hunspell.algo.capitalization import Type as CapType
-from spyll.hunspell.algo import ngram_suggest, phonet_suggest, permutations as pmt
+from spylls.hunspell import data
+from spylls.hunspell.algo.capitalization import Type as CapType
+from spylls.hunspell.algo import ngram_suggest, phonet_suggest, permutations as pmt
 
 MAXPHONSUGS = 2
 
@@ -95,7 +95,7 @@ class MultiWordSuggestion:
     source: str
 
     #: Whether those words are allowed to be joined by dash. We should disallow it if the multi-word
-    #: suggestion was produced by :attr:`Aff.REP <spyll.hunspell.data.aff.Aff.REP>` table, see
+    #: suggestion was produced by :attr:`Aff.REP <spylls.hunspell.data.aff.Aff.REP>` table, see
     #: :meth:`Suggest.good_permutations` for details.
     allow_dash: bool = True
 
@@ -108,16 +108,16 @@ class MultiWordSuggestion:
 
 class Suggest:
     """
-    ``Suggest`` object is created on :class:`Dictionary <spyll.hunspell.Dictionary>` reading. Typically,
+    ``Suggest`` object is created on :class:`Dictionary <spylls.hunspell.Dictionary>` reading. Typically,
     you would not use it directly, but you might want for experiments::
 
         >>> dictionary = Dictionary.from_files('dictionaries/en_US')
         >>> suggest = dictionary.suggester
 
-        >>> [*suggest('spyll')]
+        >>> [*suggest('spylls')]
         ['spell', 'spill', 'spy ll', 'spy-ll']
 
-        >>> for suggestion in suggest.suggest_internal('spyll'):
+        >>> for suggestion in suggest.suggest_internal('spylls'):
         ...    print(suggestion)
         Suggestion[badchar](spell)
         Suggestion[badchar](spill)
@@ -191,8 +191,8 @@ class Suggest:
         * generates possible misspelled word cases (for ex., "KIttens" in dictionary might've been
           'KIttens', 'kIttens', 'kittens', or 'Kittens')
         * produces word permutations with :meth:`good_permutations`, :meth:`very_good_permutations` and
-          :meth:`questionable_permutations` (with the help of :mod:`permutations <spyll.hunspell.algo.permutations>`
-          module), checks them with :class:`Lookup <spyll.hunspell.algo.lookup.Lookup>`,
+          :meth:`questionable_permutations` (with the help of :mod:`permutations <spylls.hunspell.algo.permutations>`
+          module), checks them with :class:`Lookup <spylls.hunspell.algo.lookup.Lookup>`,
           and decides if that's maybe enough
         * but if it is not (and if .aff settings allow), ngram-based suggestions are produced with
           :meth:`ngram_suggestions`, and phonetically similar suggestions with :meth:`phonet_suggestions`
@@ -387,7 +387,7 @@ class Suggest:
         Good permutations (that produces words not very different from the initial one):
 
         * uppercase word;
-        * replacements via :attr:`Aff.REP <spyll.hunspell.data.aff.Aff.REP>`-table (may produce
+        * replacements via :attr:`Aff.REP <spylls.hunspell.data.aff.Aff.REP>`-table (may produce
           :class:`MultiWordSuggestion` if REP table included replacement with a space)
 
         Args:
@@ -418,10 +418,10 @@ class Suggest:
         """
         Permutations that are producing suggestions further from the original word:
 
-        * replacements by :attr:`Aff.MAP <spyll.hunspell.data.aff.Aff.MAP>` table (very similar chars, like ``aáã``)
+        * replacements by :attr:`Aff.MAP <spylls.hunspell.data.aff.Aff.MAP>` table (very similar chars, like ``aáã``)
         * adjacent char swapping
         * non-adjacent char swapping
-        * replacements by :attr:`Aff.KEY <spyll.hunspell.data.aff.Aff.KEY>` table (chars that are close on keyboard)
+        * replacements by :attr:`Aff.KEY <spylls.hunspell.data.aff.Aff.KEY>` table (chars that are close on keyboard)
         * removal of characters
         * insertion of characters
         * moving of singular character
@@ -489,15 +489,15 @@ class Suggest:
     def ngram_suggestions(self, word: str, handled: Set[str]) -> Iterator[str]:
         """
         Produces ngram-based suggestions, by passing to
-        :meth:`ngram_suggest.ngram_suggest <spyll.hunspell.algo.ngram_suggest.ngram_suggest>` current
+        :meth:`ngram_suggest.ngram_suggest <spylls.hunspell.algo.ngram_suggest.ngram_suggest>` current
         misspelling, already found suggestions and settings from .aff file.
 
-        See :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`.
+        See :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`.
 
         Args:
             word: Misspelled word
             handled: List of already handled (known) suggestions; it is reused in
-                     :meth:`ngram_suggest.filter_guesses <spyll.hunspell.algo.ngram_suggest.filter_guesses>`
+                     :meth:`ngram_suggest.filter_guesses <spylls.hunspell.algo.ngram_suggest.filter_guesses>`
                      to decide whether we add "not really good" ngram-based suggestions to result
         """
         if self.aff.MAXNGRAMSUGS == 0:
@@ -514,10 +514,10 @@ class Suggest:
     def phonet_suggestions(self, word: str) -> Iterator[str]:
         """
         Produces phonetical similarity-based suggestions, by passing to
-        :meth:`phonet_suggest.phonet_suggest <spyll.hunspell.algo.phonet_suggest.phonet_suggest>` current
+        :meth:`phonet_suggest.phonet_suggest <spylls.hunspell.algo.phonet_suggest.phonet_suggest>` current
         misspelling and settings from .aff file.
 
-        See :mod:`phonet_suggest <spyll.hunspell.algo.phonet_suggest.phonet_suggest>`.
+        See :mod:`phonet_suggest <spylls.hunspell.algo.phonet_suggest.phonet_suggest>`.
 
         Args:
             word: Misspelled word

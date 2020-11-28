@@ -5,7 +5,7 @@ to keep track of them.
 
 from typing import Iterator, Union, List, Set
 
-from spyll.hunspell.data import aff
+from spylls.hunspell.data import aff
 
 
 MAX_CHAR_DISTANCE = 4
@@ -13,7 +13,7 @@ MAX_CHAR_DISTANCE = 4
 
 def replchars(word: str, reptable: List[aff.RepPattern]) -> Iterator[Union[str, List[str]]]:
     """
-    Uses :attr:`aff.REP <spyll.hunspell.data.aff.Aff.REP>` table (typical misspellings) to replace
+    Uses :attr:`aff.REP <spylls.hunspell.data.aff.Aff.REP>` table (typical misspellings) to replace
     in the word provided. If the pattern's replacement contains "_", it means replacing to " " and
     yielding _two_ different hypotheses: it was one (dictionary) word "foo bar" (and should be
     checked as such) or it was words ["foo", "bar"] and should be checked separately.
@@ -33,7 +33,7 @@ def replchars(word: str, reptable: List[aff.RepPattern]) -> Iterator[Union[str, 
 
 def mapchars(word: str, maptable: List[Set[str]]) -> Iterator[str]:
     """
-    Uses :attr:`aff.MAP <spyll.hunspell.data.aff.Aff.MAP>` table ( sets of potentially similar chars)
+    Uses :attr:`aff.MAP <spylls.hunspell.data.aff.Aff.MAP>` table ( sets of potentially similar chars)
     and tries to replace them recursively. E.g., assuming ``MAP`` has entry ``aáã``, and we have
     a misspelling "anarchia", ``mapchars`` will do this:
 
@@ -112,7 +112,7 @@ def badcharkey(word: str, layout: str) -> Iterator[str]:
     Produces permutations with chars replaced by adjacent chars on keyboard layout ("vat -> cat")
     or downcased (if it was accidental uppercase).
 
-    Uses :attr:`aff.KEY <spyll.hunspell.data.aff.Aff.KEY>`
+    Uses :attr:`aff.KEY <spylls.hunspell.data.aff.Aff.KEY>`
     """
 
     for i, c in enumerate(word):
@@ -148,7 +148,7 @@ def forgotchar(word: str, trystring: str) -> Iterator[str]:
     """
     Produces permutations with one char inserted in all possible possitions.
 
-    List of chars is taken from :attr:`aff.TRY <spyll.hunspell.data.aff.Aff.TRY>` -- if it is absent,
+    List of chars is taken from :attr:`aff.TRY <spylls.hunspell.data.aff.Aff.TRY>` -- if it is absent,
     doesn't try anything! Chars there are expected to be sorted in order of chars usage in language
     (most used characters first).
     """
@@ -181,7 +181,7 @@ def movechar(word: str) -> Iterator[str]:
 
 def badchar(word: str, trystring: str) -> Iterator[str]:
     """
-    Produces permutations with chars replaced by chars in :attr:`aff.TRY <spyll.hunspell.data.aff.Aff.TRY>`
+    Produces permutations with chars replaced by chars in :attr:`aff.TRY <spylls.hunspell.data.aff.Aff.TRY>`
     set.
     """
 

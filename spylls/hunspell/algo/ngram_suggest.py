@@ -18,8 +18,8 @@ from typing import Iterator, Tuple, List, Set, Dict
 from operator import itemgetter
 import heapq
 
-from spyll.hunspell import data
-import spyll.hunspell.algo.string_metrics as sm
+from spylls.hunspell import data
+import spylls.hunspell.algo.string_metrics as sm
 
 
 MAX_ROOTS = 100
@@ -51,8 +51,8 @@ def ngram_suggest(misspelling: str, *,
                           and such)
         prefixes: all prefixes from .aff file to try produce forms with
         suffixes: all suffixes from .aff file to try produce forms with
-        maxdiff: contents of :attr:`Aff.MAXDIFF <spyll.hunspell.data.aff.Aff.MAXDIFF>` (changes amount of suggestions)
-        onlymaxdiff: contents of :attr:`Aff.ONLYMAXDIFF <spyll.hunspell.data.aff.Aff.ONLYMAXDIFF>`
+        maxdiff: contents of :attr:`Aff.MAXDIFF <spylls.hunspell.data.aff.Aff.MAXDIFF>` (changes amount of suggestions)
+        onlymaxdiff: contents of :attr:`Aff.ONLYMAXDIFF <spylls.hunspell.data.aff.Aff.ONLYMAXDIFF>`
                      (exlcudes not very good suggestions, see :meth:`filter_guesses`)
     """
 
@@ -184,7 +184,7 @@ def precise_affix_score(word1: str, word2: str, diff_factor: float, *, base: flo
     Args:
         word1: misspelled word
         word2: possible suggestion
-        diff_factor: factor changing amount of suggestions (:attr:`Aff.MAXDIFF <spyll.hunspell.data.aff.Aff.MAXDIFF>`)
+        diff_factor: factor changing amount of suggestions (:attr:`Aff.MAXDIFF <spylls.hunspell.data.aff.Aff.MAXDIFF>`)
         base: initial score of word1 against word2
     """
 
@@ -261,7 +261,7 @@ def forms_for(word: data.dic.Word, all_prefixes, all_suffixes, *, similar_to: st
     the ``candidate`` can have. Note that there is no comprehensive flag checks (like "this prefix
     is prohibited with suffix with this flag"). Probably main suggest's code should check it
     (e.g. use ``filter_guesses`` (in
-    :meth:`suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>`)
+    :meth:`suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>`)
     for ngram-based suggestions, too).
 
     Args:
@@ -318,7 +318,7 @@ def filter_guesses(guesses: List[Tuple[float, str]], *, known: Set[str], onlymax
     Args:
         guesses: All possible suggestions
         known: Passed from main Suggest, list of already produced suggestions
-        onlymaxdiff: contents of :attr:`Aff.ONLYMAXDIFF <spyll.hunspell.data.aff.Aff.ONLYMAXDIFF>`
+        onlymaxdiff: contents of :attr:`Aff.ONLYMAXDIFF <spylls.hunspell.data.aff.Aff.ONLYMAXDIFF>`
                      (exlcudes not very good suggestions, see code)
     """
 

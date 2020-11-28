@@ -6,7 +6,7 @@ def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
     Number of occurences of the exactly same characters in exactly same position.
     Returns also boolean flag if the only difference in characters of two strings is exactly one
     swap ("paris" => "piras") -- both values are used in the same place of
-    :meth:`ngram_suggest.precise_affix_score <spyll.hunspell.algo.ngram_suggest.precise_affix_score>`
+    :meth:`ngram_suggest.precise_affix_score <spylls.hunspell.algo.ngram_suggest.precise_affix_score>`
     """
 
     num = 0

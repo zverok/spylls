@@ -15,12 +15,12 @@ This text file has the following format:
 See :class:`Word` for explanation about fields.
 
 The meaning of flags, as well as file encoding and other reading settings, are defined
-by :class:`Aff <spyll.hunspell.data.aff.Aff>`.
+by :class:`Aff <spylls.hunspell.data.aff.Aff>`.
 
 :class:`Dic` contains all the entries (converted to ``Word``) from the ``*.dic`` file in the linear
 list, and also provides some indexes and utilities for convenience.
 
-``Dic`` is read by :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`.
+``Dic`` is read by :meth:`read_dic <spylls.hunspell.readers.dic.read_dic>`.
 
 ``Dic``: list of entries
 ------------------------
@@ -37,7 +37,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Set, Dict
 
-from spyll.hunspell.algo.capitalization import Type as CapType
+from spylls.hunspell.algo.capitalization import Type as CapType
 
 
 @dataclass
@@ -56,13 +56,13 @@ class Word:
     is the value). Both flags and tags can be absent.
 
     Both flags and data tags can be also represented by numeric aliases defined in .aff file
-    (see :attr:`Aff.AF <spyll.hunspell.aff.Aff.AF>` and :attr:`Aff.AM <spyll.hunspell.aff.Aff.AM>`),
-    this is handled on reading stage, see :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>` docs
+    (see :attr:`Aff.AF <spylls.hunspell.aff.Aff.AF>` and :attr:`Aff.AM <spylls.hunspell.aff.Aff.AM>`),
+    this is handled on reading stage, see :meth:`read_dic <spylls.hunspell.readers.dic.read_dic>` docs
     for details.
 
     Meaning of data tags are discussed in `hunspell docs
     <https://manpages.debian.org/experimental/libhunspell-dev/hunspell.5.en.html#Optional_data_fields>`_.
-    Spyll, for now, provides special handling only for ``ph:`` field. The code probably means
+    Spylls, for now, provides special handling only for ``ph:`` field. The code probably means
     "phonetic", but the idea is that this field contains "alternative spellings" (or, rather, common
     misspellings) of the word. The simplest example is
 
@@ -71,7 +71,7 @@ class Word:
         which ph:wich
 
     This specifies that dictionary word ``which`` is frequently misspelled as ``wich``, and would be
-    considered in :class:`Suggest <spyll.hunspell.algo.suggest.Suggest>`. More complicated forms:
+    considered in :class:`Suggest <spylls.hunspell.algo.suggest.Suggest>`. More complicated forms:
 
     .. code-block:: text
 
@@ -83,9 +83,9 @@ class Word:
     store this fact with stem ``happy``" (think "hepiness -> happiness").
 
     First (simple) form is stored in :attr:`alt_spellings` and used in
-    :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`,
+    :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`,
     more complex forms are processed at reading stage and is actually stored in
-    :attr:`Aff.REP <spyll.hunspell.data.aff.Aff.REP>`.
+    :attr:`Aff.REP <spylls.hunspell.data.aff.Aff.REP>`.
 
     **Attributes from source data:**
 
@@ -110,10 +110,10 @@ class Word:
     data: Dict[str, List[str]]
 
     #: List of alternative word spellings, defined with ``ph:`` data tag, and
-    #: used by :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`. Not everythin specified
+    #: used by :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`. Not everythin specified
     #: with ``ph:`` is stored here, see expanations in class docs.
     alt_spellings: List[str]
-    #: One of :class:`capitalization.Type <spyll.hunspell.algo.capitalization.Type>` (no capitalization,
+    #: One of :class:`capitalization.Type <spylls.hunspell.algo.capitalization.Type>` (no capitalization,
     #: initial letter capitalized, all letters, or mixed) analyzed on dictionary reading, will be useful on lookup.
     captype: CapType
 
@@ -135,7 +135,7 @@ class Dic:
     formula) may be different entries, defining different possible sets of suffixes and morphological
     properties.
 
-    Typically, ``spyll`` user shouldn't create the instance of this class by themselves, it is
+    Typically, ``spylls`` user shouldn't create the instance of this class by themselves, it is
     created when the whole dictionary is read::
 
         >>> dictionary = Dictionary.from_files('dictionaries/en_US')
@@ -213,7 +213,7 @@ class Dic:
 
     def append(self, word: Word, *, lower: List[str]):
         """
-        Used only by :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>` to put the word into the
+        Used only by :meth:`read_dic <spylls.hunspell.readers.dic.read_dic>` to put the word into the
         dictionary.
 
         Args:
@@ -221,7 +221,7 @@ class Dic:
             lower: List of all the lowercase forms of word stems. They are pre-calculated on dictionary
                    reading, because proper lowercasing requires casing context; and may produce several
                    lowercased variants (for German). See
-                   :meth:`Casing.lower <spyll.hunspell.algo.capitalization.Casing.lower>` for details.
+                   :meth:`Casing.lower <spylls.hunspell.algo.capitalization.Casing.lower>` for details.
         """
         self.words.append(word)
         self.index[word.stem].append(word)

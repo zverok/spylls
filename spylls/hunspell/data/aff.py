@@ -78,8 +78,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Set, Dict, Tuple, Optional
 
-from spyll.hunspell.algo.capitalization import Casing, GermanCasing, TurkicCasing
-from spyll.hunspell.algo.trie import Trie
+from spylls.hunspell.algo.capitalization import Casing, GermanCasing, TurkicCasing
+from spylls.hunspell.algo.trie import Trie
 
 
 @dataclass
@@ -383,7 +383,7 @@ class CompoundPattern:
     ``replacement`` complicates things, allowing to specify "...but this string at the border of the
     words, should be unpacked into this ``endchars`` and that ``beginchars``, but make the compound
     allowed"... It complicates algorithm significantly, and **no known dictionary** uses this feature,
-    so ``replacement`` is just ignored by Spyll.
+    so ``replacement`` is just ignored by Spylls.
     """
 
     left: str
@@ -488,7 +488,7 @@ class PhonetTable:
     from aspell and described `in its docs <http://aspell.net/man-html/Phonetic-Code.html>`_.
 
     Basically, each line of the table specifies pair of "pattern"/"replacement". Replacement is
-    a literal string (with "_" meaning "empty string"), and pattern is ... complicated. Spyll, as
+    a literal string (with "_" meaning "empty string"), and pattern is ... complicated. Spylls, as
     of now, parses rules fully (see ``parse_rule`` method in the source), but doesn't implements all
     the algorithm's details (like rule prioritizing, concept of "follow-up rule" etc.)
 
@@ -567,7 +567,7 @@ class Aff:
 
     Attribute **docs** include explanations derived from
     `Hunspell's man page <https://www.manpagez.com/man/5/hunspell/>`_ (sometimes rephrased/abbreviated),
-    plus links to relevant chunks of ``spyll`` code which uses the directive.
+    plus links to relevant chunks of ``spylls`` code which uses the directive.
 
     Note that **all** directives are optional, empty .aff file is a valid one.
 
@@ -649,7 +649,7 @@ class Aff:
     .. autoattribute:: SYLLABLENUM
     .. autoattribute:: SUBSTANDARD
 
-    Some other directives that are in docs, but are deprecated/not used (and never implemented by Spyll):
+    Some other directives that are in docs, but are deprecated/not used (and never implemented by Spylls):
 
     * ``LEMMA_PRESENT``
 
@@ -658,25 +658,25 @@ class Aff:
     This attributes are calculated after Aff reading and initialization
 
     .. py:attribute:: casing
-        :type: spyll.hunspell.algo.capitalization.Casing
+        :type: spylls.hunspell.algo.capitalization.Casing
 
         "Casing" class (defining how the words in this language lowercased/uppercased). See
-        :class:`Casing <spyll.hunspell.algo.capitalization.Casing>` for details. In ``Aff``, basically, it is
+        :class:`Casing <spylls.hunspell.algo.capitalization.Casing>` for details. In ``Aff``, basically, it is
 
-        * :class:`GermanCasing <spyll.hunspell.algo.capitalization.GermanCasing>` if :attr:`CHECKSHARPS`
+        * :class:`GermanCasing <spylls.hunspell.algo.capitalization.GermanCasing>` if :attr:`CHECKSHARPS`
           is ``True``,
-        * :class:`TurkicCasing <spyll.hunspell.algo.capitalization.TurkicCasing>` if :attr:`LANG` is
+        * :class:`TurkicCasing <spylls.hunspell.algo.capitalization.TurkicCasing>` if :attr:`LANG` is
           one of Turkic languages (Turkish, Azerbaijani, Crimean Tatar),
         * regular ``Casing`` otherwise.
 
     .. py:attribute:: suffixes_index
-        :type: spyll.hunspell.algo.trie.Trie
+        :type: spylls.hunspell.algo.trie.Trie
 
         `Trie <https://en.wikipedia.org/wiki/Trie>`_ structure for fast selecting of all possible suffixes
         for some word, created from :attr:`SFX`
 
     .. py:attribute:: prefixes_index
-        :type: spyll.hunspell.algo.trie.Trie
+        :type: spylls.hunspell.algo.trie.Trie
 
         `Trie <https://en.wikipedia.org/wiki/Trie>`_ structure for fast selecting all possible prefixes
         for some word, created from :attr:`PFX`
@@ -684,10 +684,10 @@ class Aff:
 
     #: .aff and .dic encoding.
     #:
-    #: *Usage*: Stored in :class:`readers.aff.Context <spyll.hunspell.readers.aff.Context>` and used
+    #: *Usage*: Stored in :class:`readers.aff.Context <spylls.hunspell.readers.aff.Context>` and used
     #: for reopening .aff file (after the directive was read) in
-    #: :meth:`reader_aff <spyll.hunspell.readers.aff.read_aff>`, and for opening .dic file
-    #: in :meth:`reader_dic <spyll.hunspell.readers.dic.read_dic>`
+    #: :meth:`reader_aff <spylls.hunspell.readers.aff.read_aff>`, and for opening .dic file
+    #: in :meth:`reader_dic <spylls.hunspell.readers.dic.read_dic>`
     SET: str = 'Windows-1252'
 
     #: .aff file declares one of the possible flag formats:
@@ -701,9 +701,9 @@ class Aff:
     #: .dic file entry ``cat/ABCD`` can be considered having flags ``{"A", "B", "C", "D"}``
     #: (default flag format, "short"), or ``{"AB", "CD"}`` (flag format "long")
     #:
-    #: *Usage*: Stored in :class:`readers.aff.Context <spyll.hunspell.readers.aff.Context>` and used
-    #: in :meth:`reader_aff <spyll.hunspell.readers.aff.read_aff>`, and
-    #: in :meth:`reader_dic <spyll.hunspell.readers.dic.read_dic>`
+    #: *Usage*: Stored in :class:`readers.aff.Context <spylls.hunspell.readers.aff.Context>` and used
+    #: in :meth:`reader_aff <spylls.hunspell.readers.aff.read_aff>`, and
+    #: in :meth:`reader_dic <spylls.hunspell.readers.dic.read_dic>`
     FLAG: str = 'short'  # TODO: Enum of possible values, in fact
 
     #: ISO language code. The only codes that change behavior is codes of Turkic languages, which
@@ -715,15 +715,15 @@ class Aff:
     #: Extends tokenizer of Hunspell command line interface with additional word characters, for example,
     #: dot, dash, n-dash, numbers.
     #:
-    #: *Usage*: Not used in Spyll at all, as it doesn't do tokenization.
+    #: *Usage*: Not used in Spylls at all, as it doesn't do tokenization.
     WORDCHARS: Optional[str] = None
 
     #: Sets characters to ignore dictionary words, affixes and input words. Useful for optional characters,
     #: as Arabic (harakat) or Hebrew (niqqud) diacritical marks.
     #:
-    #: *Usage*: in :meth:`Lookup.__call__ <spyll.hunspell.algo.lookup.Lookup.__call__>` for preparing
-    #: input word, and in :meth:`reader_aff <spyll.hunspell.readers.aff.read_aff>`, and
-    #: in :meth:`reader_dic <spyll.hunspell.readers.dic.read_dic>`.
+    #: *Usage*: in :meth:`Lookup.__call__ <spylls.hunspell.algo.lookup.Lookup.__call__>` for preparing
+    #: input word, and in :meth:`reader_aff <spylls.hunspell.readers.aff.read_aff>`, and
+    #: in :meth:`reader_dic <spylls.hunspell.readers.dic.read_dic>`.
     IGNORE: Optional[Ignore] = None
 
     #: Specify this language has German "sharp S" (ß), so this language is probably German
@@ -735,9 +735,9 @@ class Aff:
     #: different meaning).
     #:
     #: *Usage:* To define whether to use
-    #: :class:`GermanCasing <spyll.hunspell.algo.capitalization.GermanCasing>` in :attr:`casing`
+    #: :class:`GermanCasing <spylls.hunspell.algo.capitalization.GermanCasing>` in :attr:`casing`
     #: (which changes word lower/upper-casing slightly), and in
-    #: :meth:`Lookup.good_forms <spyll.hunspell.algo.lookup.Lookup.good_forms>` to drop forms where
+    #: :meth:`Lookup.good_forms <spylls.hunspell.algo.lookup.Lookup.good_forms>` to drop forms where
     #: lowercase "ß" is prohibited.
     CHECKSHARPS: bool = False
 
@@ -752,8 +752,8 @@ class Aff:
     #: in .aff's FORBIDDENWORD directive. Now, this word wouldn't be considered correct, but all other
     #: combinations would.
     #:
-    #: *Usage:* multiple times in both :class:`Lookup <spyll.hunspell.algo.lookup.Lookup>` and
-    #: :class:`Suggest <spyll.hunspell.algo.suggest.Suggest>`
+    #: *Usage:* multiple times in both :class:`Lookup <spylls.hunspell.algo.lookup.Lookup>` and
+    #: :class:`Suggest <spylls.hunspell.algo.suggest.Suggest>`
     FORBIDDENWORD: Optional[str] = None
 
     #: Flag to mark words which shouldn't be considered correct unless their casing is exactly like in
@@ -763,9 +763,9 @@ class Aff:
     #:      may be capitalized and uppercased, but uppercased forms of these words may not contain "ß",
     #:      only "SS".
     #:
-    #: *Usage:* :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>`
+    #: *Usage:* :meth:`Suggest.suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>`
     #: to produce suggestions in proper case,
-    #: :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`.
+    #: :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>`.
     KEEPCASE: Optional[str] = None
 
     # **Suggestions**
@@ -773,9 +773,9 @@ class Aff:
     #: Flag to mark word/affix as "shouldn't be suggested" (but considered correct on lookup), like
     #: obscenities.
     #:
-    #: *Usage:* on :class:`Suggest <spyll.hunspell.algo.suggest.Suggest>` creation (to make list of
+    #: *Usage:* on :class:`Suggest <spylls.hunspell.algo.suggest.Suggest>` creation (to make list of
     #: dictionary words for ngram-check), and in
-    #: :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>` (if the lookup is
+    #: :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>` (if the lookup is
     #: called from suggest, with ``allow_nosuggest=False``)
     NOSUGGEST: Optional[str] = None
 
@@ -784,17 +784,17 @@ class Aff:
     #: English keyboard might be ``qwertyuiop|asdfghjkl|zxcvbnm``
     #:
     #: *Usage:*
-    #: :meth:`Suggest.questionable_permutations <spyll.hunspell.algo.suggest.Suggest.questionable_permutations>`
-    #: to pass to :meth:`permutations.badcharkey <spyll.hunspell.algo.permutations.badcharkey>`.
+    #: :meth:`Suggest.questionable_permutations <spylls.hunspell.algo.suggest.Suggest.questionable_permutations>`
+    #: to pass to :meth:`permutations.badcharkey <spylls.hunspell.algo.permutations.badcharkey>`.
     KEY: str = ''
 
     #: List of all characters that can be used in words, *in order of probability* (most probable first),
     #: used on permutation for suggestions (trying to add missing, or replace erroneous character).
     #:
     #: *Usage:*
-    #: :meth:`Suggest.questionable_permutations <spyll.hunspell.algo.suggest.Suggest.questionable_permutations>`
-    #: to pass to :meth:`permutations.badchar <spyll.hunspell.algo.permutations.badchar>` and
-    #: :meth:`permutations.forgotchar <spyll.hunspell.algo.permutations.forgotchar>`. Note that,
+    #: :meth:`Suggest.questionable_permutations <spylls.hunspell.algo.suggest.Suggest.questionable_permutations>`
+    #: to pass to :meth:`permutations.badchar <spylls.hunspell.algo.permutations.badchar>` and
+    #: :meth:`permutations.forgotchar <spylls.hunspell.algo.permutations.forgotchar>`. Note that,
     #: obscurely enough, Suggest checks this option to
     #: decide whether dash should be used when suggesting two words (e.g. for misspelled "foobar",
     #: when it is decided that it is two words erroneously joined, suggest either returns only
@@ -806,11 +806,11 @@ class Aff:
     #: *Table* of replacements for typical typos (like "shun"->"tion") to try on suggest. See :class:`RepPattern`
     #: for details of format.
     #:
-    #: *Usage:* :meth:`Suggest.good_permutations <spyll.hunspell.algo.suggest.Suggest.good_permutations>` to pass to
-    #: :meth:`permutations.replchars <spyll.hunspell.algo.permutations.replchars>`.
+    #: *Usage:* :meth:`Suggest.good_permutations <spylls.hunspell.algo.suggest.Suggest.good_permutations>` to pass to
+    #: :meth:`permutations.replchars <spylls.hunspell.algo.permutations.replchars>`.
     #: Note that the table populated from aff's ``REP`` directive, *and* from dic's file ``ph:``
-    #: tags (see :class:`Word <spyll.hunspell.data.dic.Word>` and
-    #: :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>` for detailed explanations).
+    #: tags (see :class:`Word <spylls.hunspell.data.dic.Word>` and
+    #: :meth:`read_dic <spylls.hunspell.readers.dic.read_dic>` for detailed explanations).
     REP: List[RepPattern] = field(default_factory=list)
 
     #: Sets of "similar" chars to try in suggestion (like ``aáã`` -- if they all exist in the language,
@@ -818,8 +818,8 @@ class Aff:
     #: grouped by parentheses: ``MAP ß(ss)`` (German "sharp s" and "ss" sequence are more or less the same).
     #:
     #: *Usage:*
-    #: :meth:`Suggest.questionable_permutations <spyll.hunspell.algo.suggest.Suggest.questionable_permutations>`
-    #: to pass to :meth:`permutations.mapchars <spyll.hunspell.algo.permutations.mapchars>`.
+    #: :meth:`Suggest.questionable_permutations <spylls.hunspell.algo.suggest.Suggest.questionable_permutations>`
+    #: to pass to :meth:`permutations.mapchars <spylls.hunspell.algo.permutations.mapchars>`.
     MAP: List[Set[str]] = field(default_factory=list)
 
     #: Never try to suggest "this word should be split in two". LibreOffice sv_SE dictionary says
@@ -827,7 +827,7 @@ class Aff:
     #: all).
     #:
     #: *Usage:*
-    #: :meth:`Suggest.questionable_permutations <spyll.hunspell.algo.suggest.Suggest.questionable_permutations>`
+    #: :meth:`Suggest.questionable_permutations <spylls.hunspell.algo.suggest.Suggest.questionable_permutations>`
     NOSPLITSUGS: bool = False
 
     #: Table for metaphone transformations. Format is borrowed from aspell and described
@@ -849,11 +849,11 @@ class Aff:
     #:  >>> [*withmetaphone.suggest(misspelled)]
     #:  ['excerpted', 'exercised', 'excessive']
     #:
-    #: *Usage:* :mod:`phonet_suggest <spyll.hunspell.algo.phonet_suggest>`
+    #: *Usage:* :mod:`phonet_suggest <spylls.hunspell.algo.phonet_suggest>`
     PHONE: Optional[PhonetTable] = None
 
     #: Limits number of compound suggetions.
-    #: Currently, not used in Spyll. See Suggest class comments about Hunspell/Spyll difference in
+    #: Currently, not used in Spylls. See Suggest class comments about Hunspell/Spylls difference in
     #: handling separate "compound cycle".
     MAXCPDSUGS: int = 0
 
@@ -862,9 +862,9 @@ class Aff:
     #: Set max. number of n-gram suggestions. Value 0 switches off the n-gram suggestions (see also
     #: :attr:`MAXDIFF`).
     #:
-    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>`
+    #: *Usage:* :meth:`Suggest.ngram_suggestions <spylls.hunspell.algo.suggest.Suggest.ngram_suggestions>`
     #: (to decide whether ``ngram_suggest`` should be called at all) and
-    #: :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>` (to limit
+    #: :meth:`Suggest.suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>` (to limit
     #: amount of ngram-based suggestions).
     MAXNGRAMSUGS: int = 4
 
@@ -874,16 +874,16 @@ class Aff:
     #: * 0 = fewer n-gram suggestions, but at least one;
     #: * 10 (max) = :attr:`MAXNGRAMSUGS` n-gram suggestions.
     #:
-    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>` where
-    #: it is passed to :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>` module, and used in
-    #: :meth:`detailed_affix_score <spyll.hunspell.algo.ngram_suggest.detailed_affix_score>`.
+    #: *Usage:* :meth:`Suggest.ngram_suggestions <spylls.hunspell.algo.suggest.Suggest.ngram_suggestions>` where
+    #: it is passed to :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>` module, and used in
+    #: :meth:`detailed_affix_score <spylls.hunspell.algo.ngram_suggest.detailed_affix_score>`.
     MAXDIFF: int = -1
 
     #: Remove all bad n-gram suggestions (default mode keeps one, see :attr:`MAXDIFF`).
     #:
-    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>` where
-    #: it is passed to :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>` module, and used in
-    #: :meth:`filter_guesses <spyll.hunspell.algo.ngram_suggest.filter_guesses>`.
+    #: *Usage:* :meth:`Suggest.ngram_suggestions <spylls.hunspell.algo.suggest.Suggest.ngram_suggestions>` where
+    #: it is passed to :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>` module, and used in
+    #: :meth:`filter_guesses <spylls.hunspell.algo.ngram_suggest.filter_guesses>`.
     ONLYMAXDIFF: bool = False
 
     # **Stemming**
@@ -893,11 +893,11 @@ class Aff:
     #:
     #: Usage:
     #:
-    #: * in :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>`
-    #:   to pass to :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`
+    #: * in :meth:`Suggest.ngram_suggestions <spylls.hunspell.algo.suggest.Suggest.ngram_suggestions>`
+    #:   to pass to :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`
     #:   (and there to construct all possible forms).
     #: * also parsed into :attr:`prefixes_index` Trie, which then used in
-    #:   :meth:`Lookup.deprefix <spyll.hunspell.algo.lookup.Lookup.deprefix>`
+    #:   :meth:`Lookup.deprefix <spylls.hunspell.algo.lookup.Lookup.deprefix>`
     PFX: Dict[str, List[Prefix]] = field(default_factory=dict)
 
     #: Dictionary of ``flag => suffixes with this flag``. See :class:`Affix` for detailed format and
@@ -905,35 +905,35 @@ class Aff:
     #:
     #: Usage:
     #:
-    #: * in :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>`
-    #:   to pass to :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`
+    #: * in :meth:`Suggest.ngram_suggestions <spylls.hunspell.algo.suggest.Suggest.ngram_suggestions>`
+    #:   to pass to :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`
     #:   (and there to construct all possible forms).
     #: * also parsed into :attr:`suffixes_index` Trie, which then used in
-    #:   :meth:`Lookup.desuffix <spyll.hunspell.algo.lookup.Lookup.desuffix>`
+    #:   :meth:`Lookup.desuffix <spylls.hunspell.algo.lookup.Lookup.desuffix>`
     SFX: Dict[str, List[Suffix]] = field(default_factory=dict)
 
     #: Flag saying "this stem can't be used without affixes". Can be also assigned to suffix/prefix,
     #: meaning "there should be other affixes besides this one".
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
+    #: *Usage:* :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>`
     NEEDAFFIX: Optional[str] = None
 
     #: Suffixes signed with this flag may be on a word when this word also has a prefix with
     #: this flag, and vice versa.
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
+    #: *Usage:* :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>`
     CIRCUMFIX: Optional[str] = None
 
     #: If two prefixes stripping is allowed (only one prefix by default). Random fun fact:
     #: of all currently available LibreOffice and Firefox dictionaries, only Firefox's Zulu has this
     #: flag.
     #:
-    #: *Usage:* :meth:`Lookup.deprefix <spyll.hunspell.algo.lookup.Lookup.deprefix>`
+    #: *Usage:* :meth:`Lookup.deprefix <spylls.hunspell.algo.lookup.Lookup.deprefix>`
     COMPLEXPREFIXES: bool = False
 
     #: If affixes are allowed to remove entire stem.
     #:
-    #: Not used in Spyll (e.g. spyll doesn't fails when this option is False and entire word is removed,
+    #: Not used in Spylls (e.g. spylls doesn't fails when this option is False and entire word is removed,
     #: so hunspell's tests ``fullstrip.*`` are passing).
     FULLSTRIP: bool = False
 
@@ -942,33 +942,33 @@ class Aff:
     #: Defines break points for breaking words and checking word parts separately. See :class:`BreakPattern`
     #: for format definition.
     #:
-    #: *Usage:* :meth:`Lookup.break_word <spyll.hunspell.algo.lookup.Lookup.break_word>`
+    #: *Usage:* :meth:`Lookup.break_word <spylls.hunspell.algo.lookup.Lookup.break_word>`
     BREAK: List[BreakPattern] = \
         field(default_factory=lambda: [BreakPattern('-'), BreakPattern('^-'), BreakPattern('-$')])
 
     #: Rule of producing compound words, with regexp-like syntax. See :class:`CompoundRule` for
     #: format definition.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>`
+    #: *Usage:* :meth:`Lookup.compounds_by_rules <spylls.hunspell.algo.lookup.Lookup.compounds_by_rules>`
     COMPOUNDRULE: List[CompoundRule] = field(default_factory=list)
 
     #: Minimum length of words used for compounding.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>` &
-    #: :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
+    #: *Usage:* :meth:`Lookup.compounds_by_rules <spylls.hunspell.algo.lookup.Lookup.compounds_by_rules>` &
+    #: :meth:`Lookup.compounds_by_flags <spylls.hunspell.algo.lookup.Lookup.compounds_by_flags>`
     COMPOUNDMIN: int = 3
 
     #: Set maximum word count in a compound word.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_rules <spyll.hunspell.algo.lookup.Lookup.compounds_by_rules>` &
-    #: :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
+    #: *Usage:* :meth:`Lookup.compounds_by_rules <spylls.hunspell.algo.lookup.Lookup.compounds_by_rules>` &
+    #: :meth:`Lookup.compounds_by_flags <spylls.hunspell.algo.lookup.Lookup.compounds_by_flags>`
     COMPOUNDWORDMAX: Optional[int] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can be part of the compound.
     #: Note that triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`
     #: is more precise way of marking ("this word can be at the beginning of compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>` to compare
+    #: *Usage:* :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>` to compare
     #: form's compound position (or lack thereof) with presence of teh flag.
     COMPOUNDFLAG: Optional[str] = None
 
@@ -977,7 +977,7 @@ class Aff:
     #: Part of the triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`;
     #: alternative to the triple is just :attr:`COMPOUNDFLAG` ("this form can be at any place in compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
+    #: *Usage:* :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
     COMPOUNDBEGIN: Optional[str] = None
 
@@ -986,7 +986,7 @@ class Aff:
     #: Part of the triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`;
     #: alternative to the triple is just :attr:`COMPOUNDFLAG` ("this form can be at any place in compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
+    #: *Usage:* :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
     COMPOUNDMIDDLE: Optional[str] = None
 
@@ -995,25 +995,25 @@ class Aff:
     #: Part of the triple of flags :attr:`COMPOUNDBEGIN`, :attr:`COMPOUNDMIDDLE`, :attr:`COMPOUNDEND`;
     #: alternative to the triple is just :attr:`COMPOUNDFLAG` ("this form can be at any place in compound").
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
+    #: *Usage:* :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
     COMPOUNDEND: Optional[str] = None
 
     #: Forms with this flag (marking either stem, or one of affixes) can only be part of the compound
     #: word, and never standalone.
     #:
-    #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
+    #: *Usage:* :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
-    #: Also in :class:`Suggest  <spyll.hunspell.algo.suggest.Suggest>` to produce list of the words
+    #: Also in :class:`Suggest  <spylls.hunspell.algo.suggest.Suggest>` to produce list of the words
     #: suitable for ngram search.
     ONLYINCOMPOUND: Optional[str] = None
 
     #: Prefixes are allowed at the beginning of compounds, suffixes are allowed at the end of compounds
     #: by default. Affixes with ``COMPOUNDPERMITFLAG`` may be inside of compounds.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spylls.hunspell.algo.lookup.Lookup.compounds_by_flags>`
     #: to make list of flags passed to
-    #: :meth:`Lookup.produce_affix_forms <spyll.hunspell.algo.lookup.Lookup.produce_affix_forms>`
+    #: :meth:`Lookup.produce_affix_forms <spylls.hunspell.algo.lookup.Lookup.produce_affix_forms>`
     #: (for this part of the compound, try find affixed spellings, you can use affixes with this flag).
     COMPOUNDPERMITFLAG: Optional[str] = None
 
@@ -1021,9 +1021,9 @@ class Aff:
     #: by default. Suffixes with ``COMPOUNDFORBIDFLAG`` may not be even at the end, and prefixes with
     #: this flag may not be even at the beginning.
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spylls.hunspell.algo.lookup.Lookup.compounds_by_flags>`
     #: to make list of flags passed to
-    #: :meth:`Lookup.produce_affix_forms <spyll.hunspell.algo.lookup.Lookup.produce_affix_forms>`
+    #: :meth:`Lookup.produce_affix_forms <spylls.hunspell.algo.lookup.Lookup.produce_affix_forms>`
     #: (for this part of the compound, try find affixed spellings, you can use affixes with this flag).
     COMPOUNDFORBIDFLAG: Optional[str] = None
 
@@ -1031,69 +1031,69 @@ class Aff:
     #: word. Eg. Dutch word "straat" (street) with FORCEUCASE flags will allowed only in capitalized
     #: compound forms, according to the Dutch spelling rules for proper names.
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spylls.hunspell.algo.lookup.Lookup.is_bad_compound>`
     #: and
-    #: :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>` (if
+    #: :meth:`Suggest.suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>` (if
     #: this flag is present in the .aff file, we check that maybe
     #: just capitalization of misspelled word would make it right).
     FORCEUCASE: Optional[str] = None
 
     #: Forbid upper case characters at word boundaries in compounds.
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spylls.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDCASE: bool = False
 
     #: Forbid word duplication in compounds (e.g. "foofoo").
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spylls.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDDUP: bool = False
 
     #: Forbid compounding, if the (usually bad) compound word may be a non-compound word if some
     #: replacement by :attr:`REP` table (frequent misspellings) is made. Useful for languages with
     #: "compound friendly" orthography.
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spylls.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDREP: bool = False
 
     #: Forbid compounding, if compound word contains triple repeating letters (e.g. `foo|ox` or `xo|oof`).
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spylls.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDTRIPLE: bool = False
 
     #: List of patterns which forbid compound words when pair of words in compound matches this
     #: pattern. See :class:`CompoundPattern` for explanation about format.
     #:
-    #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
+    #: *Usage:* :meth:`Lookup.is_bad_compound <spylls.hunspell.algo.lookup.Lookup.is_bad_compound>`
     CHECKCOMPOUNDPATTERN: List[CompoundPattern] = field(default_factory=list)
 
     #: Allow simplified 2-letter forms of the compounds forbidden by :attr:`CHECKCOMPOUNDTRIPLE`.
     #: Example: "Schiff"+"fahrt" -> "Schiffahrt"
     #:
-    #: *Usage:* :meth:`Lookup.compounds_by_flags <spyll.hunspell.algo.lookup.Lookup.compounds_by_flags>`,
+    #: *Usage:* :meth:`Lookup.compounds_by_flags <spylls.hunspell.algo.lookup.Lookup.compounds_by_flags>`,
     #: after the main splitting cycle, we also try the
     #: hypothesis that if the letter on the current boundary is duplicated, we should triplicate it.
     SIMPLIFIEDTRIPLE: bool = False
 
     #: Need for special compounding rules in Hungarian.
     #:
-    #: Not implemented in Spyll
+    #: Not implemented in Spylls
     COMPOUNDSYLLABLE: Optional[Tuple[int, str]] = None
 
     #: Allow twofold suffixes within compounds.
     #:
-    #: Not used in Spyll and doesn't have tests in Hunspell
+    #: Not used in Spylls and doesn't have tests in Hunspell
     COMPOUNDMORESUFFIXES: bool = False
 
     # *Hu-only, COMPLICATED!*
 
     #: Need for special compounding rules in Hungarian. (The previous phrase is the only docs Hunspell provides ``:)``)
     #:
-    #: Not used in Spyll.
+    #: Not used in Spylls.
     SYLLABLENUM: Optional[str] = None
 
     #: Flag that signs the compounds in the dictionary (Now it is used only in the Hungarian language specific code).
     #:
-    #: Not used in Spyll.
+    #: Not used in Spylls.
     COMPOUNDROOT: Optional[str] = None
 
     # **Pre/post-processing**
@@ -1101,13 +1101,13 @@ class Aff:
     #: Input conversion table (what to do with word before checking if it is valid). See :class:`ConvTable`
     #: for format description.
     #:
-    #: *Usage:* :meth:`Lookup.__call__ <spyll.hunspell.algo.lookup.Lookup.__call__>`
+    #: *Usage:* :meth:`Lookup.__call__ <spylls.hunspell.algo.lookup.Lookup.__call__>`
     ICONV: Optional[ConvTable] = None
 
     #: Output conversion table (what to do with suggestion before returning it to the user). See :class:`ConvTable`
     #: for format description.
     #:
-    #: *Usage:* :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>`
+    #: *Usage:* :meth:`Suggest.suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>`
     OCONV: Optional[ConvTable] = None
 
     # **Aliasing**
@@ -1125,13 +1125,13 @@ class Aff:
     #: just a sequental number in the table). Now, in .dic-file, ``foo/1`` would be equivalent of
     #: ``foo/ABC``, meaning stem ``foo`` has flags ``A, B, C``.
     #:
-    #: *Usage:* Stored in :class:`readers.aff.Context <spyll.hunspell.readers.aff.Context>` to decode
+    #: *Usage:* Stored in :class:`readers.aff.Context <spylls.hunspell.readers.aff.Context>` to decode
     #: flags on reading .aff and .dic files.
     AF: Dict[str, Set[str]] = field(default_factory=dict)
 
     #: Table of word data aliases. Logic of aiasing is the same as for :attr:`AM`.
     #:
-    #: *Usage:* :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>`
+    #: *Usage:* :meth:`read_dic <spylls.hunspell.readers.dic.read_dic>`
     AM: Dict[str, Set[str]] = field(default_factory=dict)
 
     # **Other**
@@ -1139,18 +1139,18 @@ class Aff:
     #: This flag is for rare words, which are also often spelling mistakes.
     #: With command-line flag ``-r``, Hunspell will warn about words with this flag in input text.
     #:
-    #: Not implemented in Spyll
+    #: Not implemented in Spylls
     WARN: Optional[str] = None
 
     #: Sets if words with :attr:`WARN` flag should be considered as misspellings (errors, not warnings).
     #:
-    #: Not used in any known dictionary, and not implemented in Spyll (even in aff-reader).
+    #: Not used in any known dictionary, and not implemented in Spylls (even in aff-reader).
     FORBIDWARN: bool = False
 
     #: Flag signs affix rules and dictionary words (allomorphs) not used in morphological generation
     #: and root words removed from suggestion.
     #:
-    #: Not implemented in Spyll
+    #: Not implemented in Spylls
     SUBSTANDARD: Optional[str] = None
 
     def __post_init__(self):

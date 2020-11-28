@@ -162,7 +162,7 @@ class TurkicCasing(Casing):
     Redefines :meth:`Casing.upper` and :meth:`Casing.lower`, because in Turkic languages lowercase
     "i" is uppercased as "İ", and uppercae "I" is downcased as "ı"::
 
-        >>> turkic = spyll.hunspell.algo.capitalization.TurkicCasing()
+        >>> turkic = spylls.hunspell.algo.capitalization.TurkicCasing()
         >>> turkic.lower('Izmir'))
         ['ızmir']
         >>> turkic.upper('Izmir')
@@ -184,7 +184,7 @@ class GermanCasing(Casing):
     """
     Redefines :meth:`Casing.lower` because in German "SS" can be lowercased both as "ss" and "ß"::
 
-        >>> german = spyll.hunspell.algo.capitalization.GermanCasing()
+        >>> german = spylls.hunspell.algo.capitalization.GermanCasing()
         >>> german.lower('STRASSE'))
         ['straße', 'strasse']
     """

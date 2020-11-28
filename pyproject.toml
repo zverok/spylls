@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "spyll"
-version = "0.1.0"
+name = "spylls"
+version = "0.0.1"
 description = ""
 authors = ["Victor Shepelev <zverok.offline@gmail.com>"]
 

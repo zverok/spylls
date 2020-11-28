@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from spyll.hunspell import Dictionary
+from spylls.hunspell import Dictionary
 
 BASE_FOLDER = Path('tests/integrational/fixtures')
 

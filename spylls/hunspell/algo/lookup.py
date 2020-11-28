@@ -32,9 +32,9 @@ from typing import List, Iterator, Union, Optional
 import dataclasses
 from dataclasses import dataclass
 
-from spyll.hunspell import data
-from spyll.hunspell.algo.capitalization import Type as CapType
-import spyll.hunspell.algo.permutations as pmt
+from spylls.hunspell import data
+from spylls.hunspell.algo.capitalization import Type as CapType
+import spylls.hunspell.algo.permutations as pmt
 
 NUMBER_REGEXP = re.compile(r'^\d+(\.\d+)?$')
 
@@ -130,13 +130,13 @@ WordForm = Union[AffixForm, CompoundForm]
 
 class Lookup:
     """
-    ``Lookup`` object is created on :class:`Dictionary <spyll.hunspell.dictionary.Dictionary>` reading. Typically,
+    ``Lookup`` object is created on :class:`Dictionary <spylls.hunspell.dictionary.Dictionary>` reading. Typically,
     you would not use it directly, but you might want for experiments::
 
         >>> dictionary = Dictionary.from_files('dictionaries/en_US')
         >>> lookup = dictionary.lookuper
 
-        >>> lookup('spyll')
+        >>> lookup('spylls')
         False
         >>> lookup('spells')
         True
@@ -189,7 +189,7 @@ class Lookup:
         If there is none, also tries to break word by break-points (like dashes) with :meth:`break_word`,
         and check each part separately.
 
-        Boolean flags are used when the Lookup is called from :class:`Suggest <spyll.hunspell.algo.suggest.Suggest>`.
+        Boolean flags are used when the Lookup is called from :class:`Suggest <spylls.hunspell.algo.suggest.Suggest>`.
 
         Args:
             word: Word to check
@@ -309,7 +309,7 @@ class Lookup:
             # are ``["Paris", "paris"]``, and the *first* one is found in the dictionary; that's why
             # we need to check all variants.
             #
-            # See :class:`Casing <spyll.hunspell.algo.capitalization.Casing>` for capitalization quirks.
+            # See :class:`Casing <spylls.hunspell.algo.capitalization.Casing>` for capitalization quirks.
             captype, variants = self.aff.casing.variants(word)
         else:
             captype = self.aff.casing.guess(word)
@@ -551,7 +551,7 @@ class Lookup:
             word: word to chop suffixes of
             crossproduct: used when trying to chop the suffix of already deprefixed form, in this
                           case the suffix should have "cross-production allowed" mark.
-            nested: used when the function is called recursively: currently, hunspell (and spyll)
+            nested: used when the function is called recursively: currently, hunspell (and spylls)
                     allow chopping up to two suffixes (in the future it might become an integer ``depth`` parameter
                     for more than two suffixes analysis).
             required_flags: on compounding, flags that suffix **should** have
@@ -827,7 +827,7 @@ class Lookup:
         and then recursively split the rest of the word, limiting rules to those still partially matching
         current set of words.
 
-        Most of the magic happens in :class:`CompoundRule <spyll.hunspell.data.aff.CompoundRule>`
+        Most of the magic happens in :class:`CompoundRule <spylls.hunspell.data.aff.CompoundRule>`
 
         Args:
             word_rest: the part of the word to split into compounds (entire word initially)
