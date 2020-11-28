@@ -7,5 +7,5 @@ dictionary = Dictionary.from_files(str(path))
 
 suggest = dictionary.suggester
 
-for suggestion in suggest.suggest_internal('spyll'):
+for suggestion in suggest.suggest_internal('spylls'):
     print(suggestion)

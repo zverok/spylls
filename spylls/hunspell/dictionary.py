@@ -29,10 +29,8 @@ class Dictionary:
         # False
         for suggestion in dictionary.suggest('spylls'):
             print(sugestion)
-        # spell
-        # spill
-        # spy ll
-        # spy-ll
+        # spells
+        # spills
 
     Internal algorithm implementations :attr:`lookuper` and :attr:`suggester` are exposed in order
     to allow experimenting with the implementation::
@@ -48,10 +46,8 @@ class Dictionary:
         for suggestion in dictionary.suggester.suggest_internal('spylls'):
             print(suggestion)
 
-        # Suggestion[badchar](spell)
-        # Suggestion[badchar](spill)
-        # Suggestion[twowords](spy ll)
-        # Suggestion[twowords](spy-ll)
+        # Suggestion[badchar](spells)
+        # Suggestion[badchar](spills)
 
     **Dictionary creation**
 
@@ -176,7 +172,7 @@ class Dictionary:
 
             >>> dictionary.lookup('spylls')
             False
-            >>> dictionary.lookup('spell')
+            >>> dictionary.lookup('spells')
             True
 
         Args:
@@ -197,10 +193,8 @@ class Dictionary:
 
             >>> for suggestion in dictionary.suggest('spylls'):
             ...    print(sugestion)
-            spell
-            spill
-            spy ll
-            spy-ll
+            spells
+            spills
 
         Args:
             word: Misspelled word

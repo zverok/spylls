@@ -38,10 +38,8 @@ Usage as a library
   # False
   for suggestion in dictionary.suggest('spylls'):
     print(sugestion)
-  # spell
-  # spill
-  # spy ll
-  # spy-ll
+  # spells
+  # spills
 
 See :class:`Dictionary <spylls.hunspell.dictionary.Dictionary>` class docs for more details.
 
@@ -75,7 +73,7 @@ Current state of the port:
 
 So, it is, like ~80% theoretically complete and ~95% pragmatically complete.
 
-On the other hand, I haven't used it extensively in large production project, or tried to spellcheck large texts in all supported languages, so there still might be some weird behavior in edge cases, not covered by Hunspell's tests.
+On the other hand, I haven't used it extensively in large production project, or tried to spellcheck large texts in all supported languages, so there still might be some weird behavior in edge cases, not covered by Hunspell's tests. Also it should be noted there are a lot of ``TODO:`` and ``FIXME:`` in test, frequently signifying places where Hunspell's code was more complicated (simplifications not manifesting in failing tests, but probably slightly changing edge case behavior).
 
 Performance
 -----------

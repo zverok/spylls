@@ -95,4 +95,4 @@ def linkcode_resolve(domain, info):
         # Attributes and other similar stuff can't be resolved with inspect
         return None
 
-    return f'http://github.com/spylls/spylls/blob/{commit_id}/{path}#L{lineno}'
+    return f'http://github.com/zverok/spylls/blob/{commit_id}{path}#L{lineno}'

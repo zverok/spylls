@@ -115,14 +115,12 @@ class Suggest:
         >>> suggest = dictionary.suggester
 
         >>> [*suggest('spylls')]
-        ['spell', 'spill', 'spy ll', 'spy-ll']
+        ['spells', 'spills']
 
         >>> for suggestion in suggest.suggest_internal('spylls'):
         ...    print(suggestion)
         Suggestion[badchar](spell)
         Suggestion[badchar](spill)
-        Suggestion[twowords](spy ll)
-        Suggestion[twowords](spy-ll)
 
     See :meth:`__call__` as the main entry point for algorithm explanation.
 
