@@ -7,7 +7,6 @@ authors = ["Victor Shepelev <zverok.offline@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.7"
 pytest = "^5.3.5"
-pygtrie = "^2.3.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
