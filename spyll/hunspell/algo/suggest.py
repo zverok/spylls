@@ -181,7 +181,7 @@ class Suggest:
         """
         yield from (suggestion.text for suggestion in self.suggest_internal(word))
 
-    def suggest_internal(self, word: str) -> Iterator[Suggestion]:
+    def suggest_internal(self, word: str) -> Iterator[Suggestion]:  # pylint: disable=too-many-statements
         """
         Main suggestion search loop. What it does, in general, is:
 
@@ -238,7 +238,9 @@ class Suggest:
             text = suggestion.text
             # If any of the homonyms has KEEPCASE flag, we shouldn't coerce it from the base form.
             # But CHECKSHARPS flag presence changes the meaning of KEEPCASE...
-            if (self.aff.KEEPCASE and not self.aff.CHECKSHARPS) and self.dic.has_flag(text, self.aff.KEEPCASE):
+
+            if (self.aff.KEEPCASE and self.dic.has_flag(text, self.aff.KEEPCASE) and not
+                    (self.aff.CHECKSHARPS and 'ß' in text)):
                 # Don't try to change text's case
                 pass
             else:
@@ -250,6 +252,12 @@ class Suggest:
                 # ...but if this particular capitalized form is forbidden, return back to original text
                 if text != suggestion.text and is_forbidden(text):
                     text = suggestion.text
+
+                # "aNew" will suggest "a new", here we fix it back to "a New"
+                if captype in [CapType.HUH, CapType.HUHINIT] and ' ' in text:
+                    pos = text.find(' ')
+                    if text[pos + 1] != word[pos] and text[pos + 1].upper() == word[pos]:
+                        text = text[:pos+1] + word[pos] + text[pos+2:]
 
             # If the word is forbidden, nothing more to do
             if is_forbidden(text):

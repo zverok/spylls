@@ -84,6 +84,8 @@ report('breakdefault')
 # ==================
 section('Suggest base')
 
+# We don's support tokenization-related stuff (though in this edge case it is hard to guess
+# whose responsibility is this...)
 report('sug', pending=['permanent.Vacation'])
 report('sugutf', pending=['permanent.Vacation'])
 
@@ -103,21 +105,20 @@ report('reputf')
 section('Prohibit bad suggestions')
 
 report('forceucase')
-report('keepcase', pending=['bar']) # one of suggestions with .
+report('keepcase', pending=['bar']) # one of suggestions with "."
 report('nosuggest')
 report('onlyincompound')
 report('nosplitsugs')
 
-# Funnily enough, those two is working better in Spyll than in Hunspell :)
-# report('opentaal_forbiddenword1')
-# report('opentaal_forbiddenword2')
+report('opentaal_forbiddenword1')
+report('opentaal_forbiddenword2')
 # report('opentaal_keepcase')
 
 # ==================
 section('Phonetical suggestions')
 
 report('ph')
-report('ph2', pending=['rootforbiddenroot']) # see opentaal_forbidden comments
+report('ph2')
 report('phone')
 
 # ==================
@@ -140,9 +141,9 @@ report('IJ')
 report('1463589')
 report('1463589_utf')
 report('1695964')
-report('i35725', pending=['pernament', 'Pernament'])
+report('i35725')
 report('i54633')
-report('i58202', pending=['fooBar', 'FooBar', 'BazFoo'])
+report('i58202')
 
 
 summary(stats)
