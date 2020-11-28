@@ -142,6 +142,12 @@ def read_directive(source: BaseReader, line: str, *, context: Context) -> Option
     If it is not a directive, just ignore. That's how Hunspell works: .aff file can contain literally
     anything: pseudo-directives (lines looking like ``UPCASED_WORD some data`` but not a known directive
     name), free form text, etc. Even comments are implemented this way (and not by scanning for ``#``!)
+
+    Args:
+        source: passed from :meth:`read_aff` (because reading of one directive may require reading of
+                more lines from source)
+        line: current line read from source
+        context: current reading context
     """
 
     name, *arguments = re.split(r'\s+', line)
@@ -160,7 +166,7 @@ def read_directive(source: BaseReader, line: str, *, context: Context) -> Option
     return (name, value)
 
 
-def read_value(source: BaseReader, directive: str, *values, context) -> Any:
+def read_value(source: BaseReader, directive: str, *values, context: Context) -> Any:
     """
     Reads one value.
 
@@ -181,6 +187,12 @@ def read_value(source: BaseReader, directive: str, *values, context) -> Any:
 
     The values read are immediately parsed into proper data types (see :mod:`data.aff <spyll.hunspell.data.aff>`
     for types definition).
+
+    Args:
+        source: Can be changed inside method
+        directive: Name of current directive
+        values: Values already read from the line where directive was
+        context: Reading context
     """
 
     value = values[0] if values else None

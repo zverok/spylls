@@ -1,10 +1,14 @@
 """
 The main "is this word correct?" algorithm implementation.
 
-On a bird-eye view level, word correctness check is implemented as an attempt to analyze word form
-(maybe it has this suffix? maybe it has this prefix? maybe it consists of several words? maybe they
-have suffixes and prefixes?), and the word considered correct if at least one such form found, that
-it has valid suffixes/prefixes from Aff and valid stem from Dic, and they all compatible with each other.
+On a bird-eye view level:
+
+* word correctness check is implemented as an attempt to analyze word form
+  (maybe it has this suffix? maybe it has this prefix? maybe it consists of several words? maybe they
+  have suffixes and prefixes?)
+* the word considered correct if at least one such form found, that
+  it has valid suffixes/prefixes from .aff file and valid stem from .dic file, and they all compatible
+  with each other.
 
 To follow algorithm details, start reading from :meth:`Lookup.__call__`
 
@@ -126,7 +130,7 @@ WordForm = Union[AffixForm, CompoundForm]
 
 class Lookup:
     """
-    ``Lookup`` object is created on :class:`Dictionary <spyll.hunspell.Dictionary>` reading. Typically,
+    ``Lookup`` object is created on :class:`Dictionary <spyll.hunspell.dictionary.Dictionary>` reading. Typically,
     you would not use it directly, but you might want for experiments::
 
         >>> dictionary = Dictionary.from_files('dictionaries/en_US')
@@ -282,6 +286,12 @@ class Lookup:
         * decides all word's possible casings ("KITTEN" -> "kitten", "Kitten", "KITTEN")
         * for each of them, tries to find good affixed forms with :meth:`affix_forms`
         * ...and then good compound forms with :meth:`compound_forms`
+
+        Args:
+            word: Word to check
+
+            capitalization: if ``False``, produces forms with ONLY exactly this capitalization
+            allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
         """
 
         # "capitalization" might be ``False`` if it is passed from ``Suggest``, meaning "check only
@@ -433,6 +443,12 @@ class Lookup:
         Delegates all real work to two different compounding algorithms: :meth:`compounds_by_flags`
         and :meth:`compounds_by_rules`, and then just check if their results pass various correctness
         checks in :meth:`is_bad_compound`.
+
+        Args:
+            word: Word to check
+
+            capitalization: if ``False``, produces forms with ONLY exactly this capitalization
+            allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
         """
 
         # if we try to decompound "forbiddenword's", AND "forbiddenword" with suffix "'s" is forbidden,
@@ -725,6 +741,12 @@ class Lookup:
 
         Works recursively by first trying to find the allowed beginning of compound (producing it
         by :meth:`affix_forms`), and if it is found, calling itself with the rest of the word, and so on.
+
+        Args:
+            word_rest: the part of the word to split into compounds (entire word initially)
+            captype: word's capitalization type
+            depth: current recursion depth (0 initially)
+            allow_nosuggest: see :meth:`good_forms`
         """
 
         aff = self.aff
@@ -806,6 +828,13 @@ class Lookup:
         current set of words.
 
         Most of the magic happens in :class:`CompoundRule <spyll.hunspell.data.aff.CompoundRule>`
+
+        Args:
+            word_rest: the part of the word to split into compounds (entire word initially)
+            prev_parts: already produced word parts
+            rules: list of rules that are still valid on current stage of recursion (all rules from
+                   .aff file initially)
+            allow_nosuggest: see :meth:`good_forms`
         """
 
         aff = self.aff
@@ -846,6 +875,10 @@ class Lookup:
         if all the parts have appropriate flags (e.g. allowed to be in compound), there still could
         be some settings that make compound "bad" (like, some letter is tripled on the border of words,
         or there exists special COMPOUNDPATTERN prohibiting exactly this).
+
+        Args:
+            compound: Form to check currectness of
+            captype: Checked word capitalization type
         """
 
         aff = self.aff

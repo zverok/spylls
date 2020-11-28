@@ -5,7 +5,8 @@ def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
     """
     Number of occurences of the exactly same characters in exactly same position.
     Returns also boolean flag if the only difference in characters of two strings is exactly one
-    swap ("paris" => "piras") -- both values are used in the same place of Hunspell ngram algorithm.
+    swap ("paris" => "piras") -- both values are used in the same place of
+    :meth:`ngram_suggest.precise_affix_score <spyll.hunspell.algo.ngram_suggest.precise_affix_score>`
     """
 
     num = 0
@@ -36,7 +37,7 @@ def leftcommonsubstring(s1: str, s2: str) -> int:
 
 
 def ngram(max_ngram_size: int, s1: str, s2: str, *,
-          weighted=False, any_mismatch=False, longer_worse=False) -> int:
+          weighted: bool = False, any_mismatch: bool = False, longer_worse: bool = False) -> int:
 
     """
     Calculates how many of n-grams of s1 are contained in s2 (the more the number, the more words

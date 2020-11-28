@@ -44,7 +44,7 @@ class Casing:
             return Type.INIT if word[1:].islower() else Type.HUHINIT
         return Type.HUH
 
-    def lower(self, word) -> List[str]:  # pylint: disable=no-self-use
+    def lower(self, word: str) -> List[str]:  # pylint: disable=no-self-use
         """
         Lowercases the word. It returns *list* of possible lowercasings for all casing classes to
         behave consistently. In :class:`GermanCasing` (and only there), lowercasing word like
@@ -52,7 +52,10 @@ class Casing:
         to SS, so we can't decide which of downcased words is "right" and need to check both).
 
         Redefined also in :class:`TurkicCasing`, because in Turkic languages lowercase
-        "i" is uppercased as "İ", and uppercae "I" is downcased as "ı".
+        "i" is uppercased as "İ", and uppercase "I" is downcased as "ı".
+
+        Args:
+            word:
         """
 
         # can't be properly lowercased in non-Turkic collaction
@@ -62,24 +65,33 @@ class Casing:
         # turkic "lowercase dot i" to latinic "i", just in case
         return [word.lower().replace('i̇', 'i')]
 
-    def upper(self, word) -> str:   # pylint: disable=no-self-use
+    def upper(self, word: str) -> str:   # pylint: disable=no-self-use
         """
         Uppercase the word. Redefined in :class:`TurkicCasing`, because in Turkic languages lowercase
         "i" is uppercased as "İ", and uppercae "I" is downcased as "ı".
+
+        Args:
+            word:
         """
         return word.upper()
 
-    def capitalize(self, word) -> Iterator[str]:
+    def capitalize(self, word: str) -> Iterator[str]:
         """
         Capitalize (convert word to all lowercase and first letter uppercase). Returns a list of
         results for same reasons as :meth:`lower`
+
+        Args:
+            word:
         """
         return (self.upper(word[0]) + lower for lower in self.lower(word[1:]))
 
-    def lowerfirst(self, word) -> Iterator[str]:
+    def lowerfirst(self, word: str) -> Iterator[str]:
         """
         Just change the case of the first letter to lower. Returns a list of
         results for same reasons as :meth:`lower`
+
+        Args:
+            word:
         """
         return (letter + word[1:] for letter in self.lower(word[0]))
 
@@ -87,6 +99,9 @@ class Casing:
         """
         Returns hypotheses of how the word might have been cased (in dictionary), if we consider it is
         spelled correctly. E.g., if the word is "Kitten", hypotheses are "kitten", "Kitten".
+
+        Args:
+            word:
         """
         captype = self.guess(word)
 
@@ -108,6 +123,9 @@ class Casing:
         Returns hyphotheses of how the word might have been cased if it is a misspelling. For example,
         the word "DiCtionary" (HUHINIT capitalization) produces hypotheses "DiCtionary" (itself),
         "diCtionary", "dictionary", "Dictionary", and all of them are checked by Suggest.
+
+        Args:
+            word:
         """
 
         captype = self.guess(word)

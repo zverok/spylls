@@ -1,3 +1,8 @@
+"""
+Note: names of methods in this module, if seem weird, are the same as in Hunspell's ``suggest.cxx``
+to keep track of them.
+"""
+
 from typing import Iterator, Union, List, Set
 
 from spyll.hunspell.data import aff
@@ -8,10 +13,10 @@ MAX_CHAR_DISTANCE = 4
 
 def replchars(word: str, reptable: List[aff.RepPattern]) -> Iterator[Union[str, List[str]]]:
     """
-    suggestions for a typical fault of spelling, that
-    differs with more than 1 letter from the right form.
-
-    uses :attr:`aff.REP <spyll.hunspell.data.aff.Aff.REP>` table
+    Uses :attr:`aff.REP <spyll.hunspell.data.aff.Aff.REP>` table (typical misspellings) to replace
+    in the word provided. If the pattern's replacement contains "_", it means replacing to " " and
+    yielding _two_ different hypotheses: it was one (dictionary) word "foo bar" (and should be
+    checked as such) or it was words ["foo", "bar"] and should be checked separately.
     """
 
     if len(word) < 2 or not reptable:
@@ -28,9 +33,25 @@ def replchars(word: str, reptable: List[aff.RepPattern]) -> Iterator[Union[str, 
 
 def mapchars(word: str, maptable: List[Set[str]]) -> Iterator[str]:
     """
-    Suggestions for when chose the wrong char out of a related set
+    Uses :attr:`aff.MAP <spyll.hunspell.data.aff.Aff.MAP>` table ( sets of potentially similar chars)
+    and tries to replace them recursively. E.g., assuming ``MAP`` has entry ``aáã``, and we have
+    a misspelling "anarchia", ``mapchars`` will do this:
 
-    Uses :attr:`aff.MAP <spyll.hunspell.data.aff.Aff.MAP>` -- list of sets of potentially similar chars
+    >>> [*pmt.mapchars("anarchia", ['aáã'])]
+    ['ánarchia',
+     'ánárchia',
+     'ánárchiá',
+     'ánárchiã',
+     'ánãrchia',
+     'ánãrchiá',
+     'ánãrchiã',
+     'ãnarchia',
+     'ãnárchia',
+     'ãnárchiá',
+     'ãnárchiã',
+     'ãnãrchia',
+     'ãnãrchiá',
+     'ãnãrchiã']
     """
 
     if len(word) < 2 or not maptable:
@@ -57,7 +78,10 @@ def mapchars(word: str, maptable: List[Set[str]]) -> Iterator[str]:
 
 
 def swapchar(word: str) -> Iterator[str]:
-    """error is adjacent letter were swapped"""
+    """
+    Produces permutations with adjacent chars swapped. For short (4 or 5 letters) words produces
+    also doubleswaps: ahev -> have.
+    """
 
     if len(word) < 2:
         return
@@ -74,7 +98,9 @@ def swapchar(word: str) -> Iterator[str]:
 
 
 def longswapchar(word: str) -> Iterator[str]:
-    """error is not adjacent letter were swapped"""
+    """
+    Produces permutations with non-adjacent chars swapped (up to 4 chars distance)
+    """
 
     for first in range(0, len(word) - 2):
         for second in range(first + 2, min(first + MAX_CHAR_DISTANCE, len(word))):
@@ -82,7 +108,12 @@ def longswapchar(word: str) -> Iterator[str]:
 
 
 def badcharkey(word: str, layout: str) -> Iterator[str]:
-    """error is wrong char in place of correct one (case and keyboard related version)"""
+    """
+    Produces permutations with chars replaced by adjacent chars on keyboard layout ("vat -> cat")
+    or downcased (if it was accidental uppercase).
+
+    Uses :attr:`aff.KEY <spyll.hunspell.data.aff.Aff.KEY>`
+    """
 
     for i, c in enumerate(word):
         before = word[:i]
@@ -103,7 +134,9 @@ def badcharkey(word: str, layout: str) -> Iterator[str]:
 
 
 def extrachar(word: str) -> Iterator[str]:
-    """error is word has an extra letter it does not need"""
+    """
+    Produces permutations with one char removed in all possible positions
+    """
     if len(word) < 2:
         return
 
@@ -113,9 +146,11 @@ def extrachar(word: str) -> Iterator[str]:
 
 def forgotchar(word: str, trystring: str) -> Iterator[str]:
     """
-    error is missing a letter it needs
+    Produces permutations with one char inserted in all possible possitions.
 
-    uses :attr:`aff.TRY <spyll.hunspell.data.aff.Aff.TRY>` -- if it is absent, doesn't try anything!
+    List of chars is taken from :attr:`aff.TRY <spyll.hunspell.data.aff.Aff.TRY>` -- if it is absent,
+    doesn't try anything! Chars there are expected to be sorted in order of chars usage in language
+    (most used characters first).
     """
 
     if not trystring:
@@ -128,7 +163,8 @@ def forgotchar(word: str, trystring: str) -> Iterator[str]:
 
 def movechar(word: str) -> Iterator[str]:
     """
-    error is a letter was moved
+    Produces permutations with one character moved by 2, 3 or 4 places forward or backward (not 1,
+    because it is already handled by :meth:`swapchar`)
     """
 
     if len(word) < 2:
@@ -145,9 +181,8 @@ def movechar(word: str) -> Iterator[str]:
 
 def badchar(word: str, trystring: str) -> Iterator[str]:
     """
-    error is wrong char in place of correct one
-
-    uses :attr:`aff.TRY <spyll.hunspell.data.aff.Aff.TRY>` -- if it is absent, doesn't try anything!
+    Produces permutations with chars replaced by chars in :attr:`aff.TRY <spyll.hunspell.data.aff.Aff.TRY>`
+    set.
     """
 
     if not trystring:
@@ -161,10 +196,8 @@ def badchar(word: str, trystring: str) -> Iterator[str]:
 
 
 def doubletwochars(word: str) -> Iterator[str]:
-    r"""
-    perhaps we doubled two characters
-    (for example vacation -> vacacation)
-    The recognized pattern with regex back-references: ``"(.)(.)\1\2\1"`` or ``"..(.)(.)\1\2"``
+    """
+    Produces permutations with accidental two-letter-doubling fixed (vacation -> vacacation)
     """
 
     if len(word) < 5:
@@ -179,7 +212,7 @@ def doubletwochars(word: str) -> Iterator[str]:
 
 def twowords(word: str) -> Iterator[List[str]]:
     """
-    error is should have been two words
+    Produces permutation of splitting in two words in all possible positions.
     """
 
     for i in range(1, len(word)):

@@ -2,6 +2,7 @@
 .. autofunction:: ngram_suggest
 
 .. autofunction:: forms_for
+.. autofunction:: filter_guesses
 
 Scoring
 ^^^^^^^
@@ -43,6 +44,16 @@ def ngram_suggest(misspelling: str, *,
     * calculates more precise (but more time-consuming) score for those with :meth:`precise_affix_score` and
       sorts by it
     * filters suggestions depending on their score with :meth:`filter_guesses`
+
+    Args:
+        misspelling: Misspelled word
+        dictionary_words: all entries from dictionary to iterate agains (without forbidden, ``ONLYINCOMPOUND``
+                          and such)
+        prefixes: all prefixes from .aff file to try produce forms with
+        suffixes: all suffixes from .aff file to try produce forms with
+        maxdiff: contents of :attr:`Aff.MAXDIFF <spyll.hunspell.data.aff.Aff.MAXDIFF>` (changes amount of suggestions)
+        onlymaxdiff: contents of :attr:`Aff.ONLYMAXDIFF <spyll.hunspell.data.aff.Aff.ONLYMAXDIFF>`
+                     (exlcudes not very good suggestions, see :meth:`filter_guesses`)
     """
 
     root_scores: List[Tuple[float, str, data.dic.Word]] = []
@@ -128,6 +139,10 @@ def root_score(word1: str, word2: str) -> float:
     """
     Scoring, stage 1: Simple score for first dictionary words chosing: 3-gram score + longest start
     substring.
+
+    Args:
+        word1: misspelled word
+        word2: possible suggestion
     """
 
     return (
@@ -140,6 +155,10 @@ def rough_affix_score(word1: str, word2: str) -> float:
     """
     Scoring, stage 2: First (rough and quick) score of affixed forms: n-gram score with n=length of
     the misspelled word + longest start substring
+
+    Args:
+        word1: misspelled word
+        word2: possible suggestion
     """
 
     return (
@@ -161,6 +180,12 @@ def precise_affix_score(word1: str, word2: str, diff_factor: float, *, base: flo
     * -100...1000: just a normal suggestion score, defining its sorting position
 
     See also :meth:`filter_guesses` below which uses this separation into "groups" to drop some results.
+
+    Args:
+        word1: misspelled word
+        word2: possible suggestion
+        diff_factor: factor changing amount of suggestions (:attr:`Aff.MAXDIFF <spyll.hunspell.data.aff.Aff.MAXDIFF>`)
+        base: initial score of word1 against word2
     """
 
     lcs = sm.lcslen(word1, word2)
@@ -210,6 +235,9 @@ def detect_threshold(word: str) -> float:
 
     Mangle original word three differnt ways (by replacing each 4th character with "*", starting from
     1st, 2nd or 3rd), and score them to generate a minimum acceptable score.
+
+    Args:
+        word: misspelled word
     """
 
     thresh = 0.0
@@ -232,9 +260,15 @@ def forms_for(word: data.dic.Word, all_prefixes, all_suffixes, *, similar_to: st
     Produce forms with all possible affixes and prefixes from the dictionary word, but only those
     the ``candidate`` can have. Note that there is no comprehensive flag checks (like "this prefix
     is prohibited with suffix with this flag"). Probably main suggest's code should check it
-    (e.g. use ``filter_suggestions`` (in
+    (e.g. use ``filter_guesses`` (in
     :meth:`suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>`)
     for ngram-based suggestions, too).
+
+    Args:
+        word: dictionary stem to produce forms for
+        all_prefixes:
+        all_suffixes:
+        similar_to: initial misspelling (to filter suffixes/prefixes against it)
     """
 
     # word without prefixes/suffixes is also present
@@ -280,6 +314,12 @@ def filter_guesses(guesses: List[Tuple[float, str]], *, known: Set[str], onlymax
     """
     Filter guesses by score, to decide which ones we'll yield to the client, considering the "suggestion
     bags" -- "very good", "normal", "questionable" (see :meth:`precise_affix_score` for bags definition).
+
+    Args:
+        guesses: All possible suggestions
+        known: Passed from main Suggest, list of already produced suggestions
+        onlymaxdiff: contents of :attr:`Aff.ONLYMAXDIFF <spyll.hunspell.data.aff.Aff.ONLYMAXDIFF>`
+                     (exlcudes not very good suggestions, see code)
     """
 
     seen = False

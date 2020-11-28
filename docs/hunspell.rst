@@ -27,12 +27,12 @@ Data formats and algorithms
 
 Every Hunspell dictionary consists of two text files:
 
-* ``<languagename>.dic``, containing words + some metainformation ("flags" and "data tags");
-* ``<languagename>.aff``, defining flag meanings ("word with this flag can have this suffix", "...can be at the end of compound words", "...should never be suggested" etc.), and lot of other spellchecking settings, like "what characters allowed in words", "what types of suggestions are allowed", etc.
+* ``<languagename>.dic`` (called ".dic file" further), containing words + some metainformation ("flags" and "data tags");
+* ``<languagename>.aff`` (called ".aff file" further), defining flag meanings ("word with this flag can have this suffix", "...can be at the end of compound words", "...should never be suggested" etc.), and lot of other spellchecking settings, like "what characters allowed in words", "what types of suggestions are allowed", etc.
 
 On **lookup**, Hunspell does several cycles:
 
-* check the full word itself, if it is already in the dictionary (to complicate matters even more, some words can be marked with "NEEDSAFFIX" flag, so they aren't correct without affixes)
+* check the full word itself, if it is already in the dictionary (to complicate matters even more, some words can be marked with ``NEEDSAFFIX`` flag, so they aren't correct without affixes)
 * look through all affixes (suffixes and prefixes), and checks if the word can be split into known affixes and known stem (and this stem is allowed to have those affixes)
 * if the dictionary settings allow that, try to split the word into several, and analyse if it is a compounding of several stems and affixes
 
@@ -40,10 +40,12 @@ On **suggest**, Hunspell does roughly this:
 
 * tries several different *permutations* of the misspelled word and looks if they would produce valid words;
 * calculates misspelled words similarity to all dictionary stems, and of the most similar stems tries to find the most similar forms with affixes;
-* (if the ``aff`` includes phonetic information) tries to find stems by phonetical similarity to misspelled words.
+* (if the .aff file includes phonetic information) tries to find stems by phonetical similarity to misspelled words.
 
 Code walkthrough
 ----------------
+
+Note that all the code is extensively commented, and "Show code" link is embedded into all method docs, so you can read the relevant code in-place.
 
 .. toctree::
    :maxdepth: 2

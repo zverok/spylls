@@ -115,7 +115,7 @@ class BreakPattern:
 @dataclass
 class Ignore:
     """
-    Contents of the ``IGNORE`` directive, chars to ignore on lookup/suggest, compiled with
+    Contents of the :attr:`Aff.IGNORE` directive, chars to ignore on lookup/suggest, compiled with
     ``str.maketrans``.
     """
     chars: str
@@ -228,7 +228,7 @@ class Affix:
 @dataclass
 class Prefix(Affix):
     """
-    :class:`Affix` at the beginning of the word.
+    :class:`Affix` at the beginning of the word, stored in :attr:`Aff.PFX` directive.
     """
 
     def __post_init__(self):
@@ -258,7 +258,7 @@ class Prefix(Affix):
 @dataclass
 class Suffix(Affix):
     """
-    :class:`Affix` at the end of the word.
+    :class:`Affix` at the end of the word, stored in :attr:`Aff.SFX` directive.
     """
 
     def __post_init__(self):
@@ -289,8 +289,9 @@ class Suffix(Affix):
 @dataclass
 class CompoundRule:
     """
-    Regexp-alike rule for generating compound words. It is a way of specifying compounding alternative
-    (and unrelated) to :attr:`Aff.COMPOUNDFLAG` and similar. Rules look this way:
+    Regexp-alike rule for generating compound words, content of :attr:`Aff.COMPOUNDRULE` directive.
+    It is a way of specifying compounding alternative (and unrelated) to :attr:`Aff.COMPOUNDFLAG` and
+    similar. Rules look this way:
 
     .. code-block:: text
 
@@ -363,7 +364,8 @@ class CompoundRule:
 @dataclass
 class CompoundPattern:
     """
-    Pattern to check whether compound word is correct. Format of the pattern:
+    Pattern to check whether compound word is correct, stored in :attr:`Aff.CHECKCOMPOUNDPATTERN` directive.
+    Format of the pattern:
 
     .. code-block:: text
 
@@ -552,10 +554,10 @@ class PhonetTable:
 @dataclass
 class Aff:
     """
-    The class contains all directives from ``*.aff`` file in its attributes.
+    The class contains all directives from .aff file in its attributes.
 
     Attribute **names** are exactly the same as directives they've read from
-    (they are upper-case, which is un-Pythonic, but allows to unambiguously related directives to attrs and
+    (they are upper-case, which is un-Pythonic, but allows to unambiguously relate directives to attrs and
     grep them in code).
 
     Attribute **values** are either appropriate primitive data types (strings, numbers, arrays etc),
@@ -566,6 +568,8 @@ class Aff:
     Attribute **docs** include explanations derived from
     `Hunspell's man page <https://www.manpagez.com/man/5/hunspell/>`_ (sometimes rephrased/abbreviated),
     plus links to relevant chunks of ``spyll`` code which uses the directive.
+
+    Note that **all** directives are optional, empty .aff file is a valid one.
 
     **General**
 
@@ -647,7 +651,7 @@ class Aff:
 
     Some other directives that are in docs, but are deprecated/not used (and never implemented by Spyll):
 
-    * `LEMMA_PRESENT`
+    * ``LEMMA_PRESENT``
 
     **Derived attributes**
 
@@ -686,7 +690,7 @@ class Aff:
     #: in :meth:`reader_dic <spyll.hunspell.readers.dic.read_dic>`
     SET: str = 'Windows-1252'
 
-    #: ``*.aff`` file declares one of the possible flag formats:
+    #: .aff file declares one of the possible flag formats:
     #:
     #: * ``short`` (default) -- each flag is one ASCII character
     #: * ``long`` -- each flag is two ASCII characters
@@ -694,7 +698,7 @@ class Aff:
     #: * ``UTF-8`` -- each flag is one UTF-8 character
     #:
     #: Flag format defines how flag sets attached to stems and affixes are parsed. For example,
-    #: ``*.dic`` file entry ``cat/ABCD`` can be considered having flags ``{"A", "B", "C", "D"}``
+    #: .dic file entry ``cat/ABCD`` can be considered having flags ``{"A", "B", "C", "D"}``
     #: (default flag format, "short"), or ``{"AB", "CD"}`` (flag format "long")
     #:
     #: *Usage*: Stored in :class:`readers.aff.Context <spyll.hunspell.readers.aff.Context>` and used
@@ -722,7 +726,8 @@ class Aff:
     #: in :meth:`reader_dic <spyll.hunspell.readers.dic.read_dic>`.
     IGNORE: Optional[Ignore] = None
 
-    #: Specify this language has German "sharp S" (ß), so this language is probably German ``:)``
+    #: Specify this language has German "sharp S" (ß), so this language is probably German
+    #: :)
     #:
     #: This declaration effect is that uppercase word with "ß" letter is considered correct (uppercase
     #: form of "ß" is "SS", but it is allowed to leave downcased "ß"). The effect can be prohibited
@@ -742,7 +747,7 @@ class Aff:
     #: Imaginary example (not from actual English dictionary!): let's say word "create" can have suffixes
     #: "-d", "-s", "-ion", and prefixes: "un-", "re-", "de-", but of all possible forms (created,
     #: creates, creation, uncreates, uncreation, ....) we decide "decreated" is not an existing word.
-    #: Then we mark (in ``*.dic`` file) word "create" with flag for all those suffixes and prefixes,
+    #: Then we mark (in .dic file) word "create" with flag for all those suffixes and prefixes,
     #: but also add separate word "decreated" to dictionary, marked with flag that specified
     #: in .aff's FORBIDDENWORD directive. Now, this word wouldn't be considered correct, but all other
     #: combinations would.
@@ -857,9 +862,9 @@ class Aff:
     #: Set max. number of n-gram suggestions. Value 0 switches off the n-gram suggestions (see also
     #: :attr:`MAXDIFF`).
     #:
-    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.husnpell.algo.suggest.Suggest.ngram_suggestions>`
+    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>`
     #: (to decide whether ``ngram_suggest`` should be called at all) and
-    #: :meth:`Suggest.suggest_internal <spyll.husnpell.algo.suggest.Suggest.suggest_internal>` (to limit
+    #: :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>` (to limit
     #: amount of ngram-based suggestions).
     MAXNGRAMSUGS: int = 4
 
@@ -869,16 +874,16 @@ class Aff:
     #: * 0 = fewer n-gram suggestions, but at least one;
     #: * 10 (max) = :attr:`MAXNGRAMSUGS` n-gram suggestions.
     #:
-    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.husnpell.algo.suggest.Suggest.ngram_suggestions>` where
-    #: it is passed to :mod:`ngram_suggest <spyll.husnpell.algo.ngram_suggest>` module, and used in
-    #: :meth:`detailed_affix_score <spyll.husnpell.algo.ngram_suggest.detailed_affix_score>`.
+    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>` where
+    #: it is passed to :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>` module, and used in
+    #: :meth:`detailed_affix_score <spyll.hunspell.algo.ngram_suggest.detailed_affix_score>`.
     MAXDIFF: int = -1
 
     #: Remove all bad n-gram suggestions (default mode keeps one, see :attr:`MAXDIFF`).
     #:
-    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.husnpell.algo.suggest.Suggest.ngram_suggestions>` where
-    #: it is passed to :mod:`ngram_suggest <spyll.husnpell.algo.ngram_suggest>` module, and used in
-    #: :meth:`filter_guesses <spyll.husnpell.algo.ngram_suggest.filter_guesses>`.
+    #: *Usage:* :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>` where
+    #: it is passed to :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>` module, and used in
+    #: :meth:`filter_guesses <spyll.hunspell.algo.ngram_suggest.filter_guesses>`.
     ONLYMAXDIFF: bool = False
 
     # **Stemming**
@@ -888,8 +893,8 @@ class Aff:
     #:
     #: Usage:
     #:
-    #: * in :meth:`suggest.Suggest.ngram_suggest` to pass to
-    #:   :mod:`ngram_suggest`
+    #: * in :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>`
+    #:   to pass to :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`
     #:   (and there to construct all possible forms).
     #: * also parsed into :attr:`prefixes_index` Trie, which then used in
     #:   :meth:`Lookup.deprefix <spyll.hunspell.algo.lookup.Lookup.deprefix>`
@@ -900,8 +905,8 @@ class Aff:
     #:
     #: Usage:
     #:
-    #: * in :meth:`suggest.Suggest.ngram_suggest` to pass to
-    #:   :mod:`ngram_suggest`
+    #: * in :meth:`Suggest.ngram_suggestions <spyll.hunspell.algo.suggest.Suggest.ngram_suggestions>`
+    #:   to pass to :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`
     #:   (and there to construct all possible forms).
     #: * also parsed into :attr:`suffixes_index` Trie, which then used in
     #:   :meth:`Lookup.desuffix <spyll.hunspell.algo.lookup.Lookup.desuffix>`
@@ -937,7 +942,7 @@ class Aff:
     #: Defines break points for breaking words and checking word parts separately. See :class:`BreakPattern`
     #: for format definition.
     #:
-    #: *Usage:* :meth:`Lookup.try_break <spyll.hunspell.algo.lookup.Lookup.try_break>`
+    #: *Usage:* :meth:`Lookup.break_word <spyll.hunspell.algo.lookup.Lookup.break_word>`
     BREAK: List[BreakPattern] = \
         field(default_factory=lambda: [BreakPattern('-'), BreakPattern('^-'), BreakPattern('-$')])
 
@@ -999,7 +1004,8 @@ class Aff:
     #:
     #: *Usage:* :meth:`Lookup.is_good_form <spyll.hunspell.algo.lookup.Lookup.is_good_form>`
     #: to compare form's compound position (or lack thereof) with the presence of the flag.
-    #: Also in :class:`Suggest` to produce list of the words suitable for ngram search.
+    #: Also in :class:`Suggest  <spyll.hunspell.algo.suggest.Suggest>` to produce list of the words
+    #: suitable for ngram search.
     ONLYINCOMPOUND: Optional[str] = None
 
     #: Prefixes are allowed at the beginning of compounds, suffixes are allowed at the end of compounds
@@ -1026,8 +1032,9 @@ class Aff:
     #: compound forms, according to the Dutch spelling rules for proper names.
     #:
     #: *Usage:* :meth:`Lookup.is_bad_compound <spyll.hunspell.algo.lookup.Lookup.is_bad_compound>`
+    #: and
     #: :meth:`Suggest.suggest_internal <spyll.hunspell.algo.suggest.Suggest.suggest_internal>` (if
-    #: this flag is present in the .aff-file, we check that maybe
+    #: this flag is present in the .aff file, we check that maybe
     #: just capitalization of misspelled word would make it right).
     FORCEUCASE: Optional[str] = None
 
@@ -1118,7 +1125,8 @@ class Aff:
     #: just a sequental number in the table). Now, in .dic-file, ``foo/1`` would be equivalent of
     #: ``foo/ABC``, meaning stem ``foo`` has flags ``A, B, C``.
     #:
-    #: *Usage:* Stored in :class:`readers.aff.Context` to decode flags on reading ``*.aff`` and ``*.dic``
+    #: *Usage:* Stored in :class:`readers.aff.Context <spyll.hunspell.readers.aff.Context>` to decode
+    #: flags on reading .aff and .dic files.
     AF: Dict[str, Set[str]] = field(default_factory=dict)
 
     #: Table of word data aliases. Logic of aiasing is the same as for :attr:`AM`.

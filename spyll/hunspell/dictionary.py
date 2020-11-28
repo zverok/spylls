@@ -21,7 +21,7 @@ class Dictionary:
         # from folder where en_US.aff and en_US.dic are present
         dictionary = Dictionary.from_files('/path/to/dictionary/en_US')
         # or, from Firefox/LibreOffice dictionary extension
-        dictionary = Dictionary.from_archive('/path/to/dictionary/en_US.odt')
+        dictionary = Dictionary.from_zip('/path/to/dictionary/en_US.odt')
         # or, from system folders (on Linux)
         dictionary = Dictionary.from_system('en_US')
 
@@ -151,7 +151,7 @@ class Dictionary:
         Probably works only on Linux.
 
         Args:
-            path: Language/dictionary name, like ``en_US``
+            name: Language/dictionary name, like ``en_US``
         """
 
         for folder in cls.PATHES:
@@ -172,6 +172,13 @@ class Dictionary:
         """
         Checks if the word is correct.
 
+        ::
+
+            >>> dictionary.lookup('spyll')
+            False
+            >>> dictionary.lookup('spell')
+            True
+
         Args:
             word: Word to check
         """
@@ -182,6 +189,18 @@ class Dictionary:
         """
         Suggests corrections for the misspelled word (in order of probability/similarity, best
         suggestions first), returns lazy generator of suggestions.
+
+        ::
+
+            >>> suggestions = dictionary.suggest('spyll')
+            <generator object Dictionary.suggest at 0x7f5c63e4a2d0>
+
+            >>> for suggestion in dictionary.suggest('spyll'):
+            ...    print(sugestion)
+            spell
+            spill
+            spy ll
+            spy-ll
 
         Args:
             word: Misspelled word

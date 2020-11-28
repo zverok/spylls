@@ -8,9 +8,9 @@ On a bird-eye view level, suggest does:
 * if no good suggestions found, tries "ngram-based" suggestions (calculating ngram-based distance to
   all dictionary words and select the closest ones), handled by
   :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`
-* metaphone-based suggestions, handled by :mod:`phonet_suggest <spyll.hunspell.algo.phonet_suggest>`
+* if possible, tries metaphone-based suggestions, handled by :mod:`phonet_suggest <spyll.hunspell.algo.phonet_suggest>`
 
-Note that spyll implementation takes two liberties comparing to hunspell:
+Note that Spyll's implementation takes two liberties comparing to Hunspell's:
 
 1. In Hunspell, all permutations-based logic is run twice: first, checks if any of the permutated variants
    is a valid non-compound word; then (if nothing good was found), for all the same permutations, checks
@@ -178,6 +178,9 @@ class Suggest:
 
         Internally, the method just calls :meth:`suggest_internal` (which returns instances of :class:`Suggestion`)
         and yields suggestion texts.
+
+        Args:
+            word: Word to check
         """
         yield from (suggestion.text for suggestion in self.suggest_internal(word))
 
@@ -195,6 +198,9 @@ class Suggest:
           :meth:`ngram_suggestions`, and phonetically similar suggestions with :meth:`phonet_suggestions`
 
         That's very simplified explanation, read the code!
+
+        Args:
+            word: Word to check
         """
 
         # Whether some suggestion (permutation of the word) is an existing and allowed word,
@@ -363,6 +369,9 @@ class Suggest:
         "Very good" suggestions: suggest to split word ("alot" => "a lot"), but for now only yield
         them as a *singular* word suggestion: if the dictionary has *exact* entry "a lot", it would
         be considered correct.
+
+        Args:
+            word: Word to mutate
         """
 
         for words in pmt.twowords(word):
@@ -380,6 +389,9 @@ class Suggest:
         * uppercase word;
         * replacements via :attr:`Aff.REP <spyll.hunspell.data.aff.Aff.REP>`-table (may produce
           :class:`MultiWordSuggestion` if REP table included replacement with a space)
+
+        Args:
+            word: Word to mutate
         """
 
         # suggestions for an uppercase word (html -> HTML)
@@ -406,10 +418,10 @@ class Suggest:
         """
         Permutations that are producing suggestions further from the original word:
 
-        * replacements by :attr`Aff.MAP` table (very similar chars, like ``aáã``)
+        * replacements by :attr:`Aff.MAP <spyll.hunspell.data.aff.Aff.MAP>` table (very similar chars, like ``aáã``)
         * adjacent char swapping
         * non-adjacent char swapping
-        * replacements by :attr`Aff.KEY` table (chars that are close on keyboard)
+        * replacements by :attr:`Aff.KEY <spyll.hunspell.data.aff.Aff.KEY>` table (chars that are close on keyboard)
         * removal of characters
         * insertion of characters
         * moving of singular character
@@ -419,6 +431,9 @@ class Suggest:
 
         Order is important: As the whole ``Suggest`` produces generator, client code may consume it
         one-by-one, so the first suggested means more likely.
+
+        Args:
+            word: Word to mutate
         """
 
         # MAP in aff file specifies related chars (for example, "ïi"), and mapchars produces all
@@ -478,6 +493,12 @@ class Suggest:
         misspelling, already found suggestions and settings from .aff file.
 
         See :mod:`ngram_suggest <spyll.hunspell.algo.ngram_suggest>`.
+
+        Args:
+            word: Misspelled word
+            handled: List of already handled (known) suggestions; it is reused in
+                     :meth:`ngram_suggest.filter_guesses <spyll.hunspell.algo.ngram_suggest.filter_guesses>`
+                     to decide whether we add "not really good" ngram-based suggestions to result
         """
         if self.aff.MAXNGRAMSUGS == 0:
             return
@@ -497,6 +518,9 @@ class Suggest:
         misspelling and settings from .aff file.
 
         See :mod:`phonet_suggest <spyll.hunspell.algo.phonet_suggest.phonet_suggest>`.
+
+        Args:
+            word: Misspelled word
         """
         if not self.aff.PHONE:
             return

@@ -43,7 +43,7 @@ from spyll.hunspell.algo.capitalization import Type as CapType
 @dataclass
 class Word:
     """
-    One word (stem) of a ``*.dic`` file.
+    One word (stem) of a .dic file.
 
     Each entry in the source contains something like:
 
@@ -55,14 +55,14 @@ class Word:
     ``*.aff`` file), and ``ph:phoo is:bar`` are additional data tags (``ph`` is the tag and ``foo``
     is the value). Both flags and tags can be absent.
 
-    Both flags and data tags can be also represented by numeric aliases defined in ``*.aff`` file
+    Both flags and data tags can be also represented by numeric aliases defined in .aff file
     (see :attr:`Aff.AF <spyll.hunspell.aff.Aff.AF>` and :attr:`Aff.AM <spyll.hunspell.aff.Aff.AM>`),
     this is handled on reading stage, see :meth:`read_dic <spyll.hunspell.readers.dic.read_dic>` docs
     for details.
 
     Meaning of data tags are discussed in `hunspell docs
     <https://manpages.debian.org/experimental/libhunspell-dev/hunspell.5.en.html#Optional_data_fields>`_.
-    Spyll, for now, provides speicial handling only for ``ph:`` field. The code probably means
+    Spyll, for now, provides special handling only for ``ph:`` field. The code probably means
     "phonetic", but the idea is that this field contains "alternative spellings" (or, rather, common
     misspellings) of the word. The simplest example is
 
@@ -197,6 +197,12 @@ class Dic:
         If any/all of the homonyms have specified flag. It is frequently necessary in lookup algo to
         check something like "...but if there is ANY dictionary entry with this stem and 'forbidden'
         flag...", or "...but if ALL dictionary entries with this stem marked as 'forbidden'..."
+
+        Args:
+            stem: Stem present in dictionary
+            flag: Flag to test
+            for_all: If ``True``, checks if **all** homonyms have this flag, if ``False``, checks if
+                     at least one.
         """
         homonyms = self.homonyms(stem)
         if not homonyms:
