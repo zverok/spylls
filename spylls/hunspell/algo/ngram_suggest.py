@@ -351,7 +351,7 @@ def filter_guesses(guesses: List[Tuple[float, str]], *, known: Set[str], onlymax
         # ngram-suggestions" at all.
         # (Another possible approach is to return pairs (suggestion, quality) from ngram_suggest,
         # and handle "how many good/normal/questionable do we want" in main suggest.py)
-        if not any(known_word in value for known_word in known):
+        if all(known_word not in value for known_word in known):
             found += 1
 
             yield value

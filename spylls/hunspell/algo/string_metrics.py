@@ -103,8 +103,8 @@ def lcslen(s1: str, s2: str) -> int:
 
     c = [[0 for j in range(n+1)] for i in range(m+1)]
 
-    for i in range(0, m):
-        for j in range(0, n):
+    for i in range(m):
+        for j in range(n):
             if s1[i] == s2[j]:
                 c[i][j] = c[i-1][j-1] + 1
             elif c[i-1][j] >= c[i][j-1]:

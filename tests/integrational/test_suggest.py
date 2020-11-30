@@ -18,7 +18,7 @@ def test(name):
     sug = list(map(lambda s: re.split(r',\s*', s), read_list(f'{name}.sug', ignoredot=False)))
     for i, words in enumerate(sug):
         # ph.sug is the only one with "," in the word :(
-        if words == ['Oh', 'my gosh!'] or words == ['OH', 'MY GOSH!']:
+        if words in [['Oh', 'my gosh!'], ['OH', 'MY GOSH!']]:
             sug[i] = [', '.join(words)]
 
     return [
