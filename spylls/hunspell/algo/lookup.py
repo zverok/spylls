@@ -497,16 +497,16 @@ class Lookup:
 
         Args:
             word: Word to produce forms from
-            compoundpos: If the affix form is analysed to be part of compound, specifies where in compound
+            compoundpos: If the affix form is analyzed to be part of compound, specifies where in compound
                          it will be (whether it can have suffixes/prefixes depends on that)
-            prefixflags: If the affix form is analysed to be part of compound, AND its position is
+            prefixflags: If the affix form is analyzed to be part of compound, AND its position is
                          such that prefixes aren't allowed by default (middle or ending), this list
                          can specify flags of prefixes that ARE allowed
-            suffixflags: If the affix form is analysed to be part of compound, AND its position is
+            suffixflags: If the affix form is analyzed to be part of compound, AND its position is
                          such that suffixes aren't allowed by default (beginning or middle), this list
                          can specify flags of suffixes that ARE allowed
-            forbidden_flags: If the affix form is analysed to be part of compound, specifies set of
-                             flags of suffixex/prefixes that are NOT allowed
+            forbidden_flags: If the affix form is analyzed to be part of compound, specifies set of
+                             flags of suffixes/prefixes that are NOT allowed
         """
 
         # "Whole word" is always existing option. Note that it might later be rejected in is_good_form
@@ -877,7 +877,7 @@ class Lookup:
         or there exists special COMPOUNDPATTERN prohibiting exactly this).
 
         Args:
-            compound: Form to check currectness of
+            compound: Form to check correctness of
             captype: Checked word capitalization type
         """
 

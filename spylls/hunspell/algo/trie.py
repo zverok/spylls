@@ -25,7 +25,7 @@ class Trie:
 
     **Important:** Profiling shows that search through Trie of suffixes/prefixes is the center of
     Spylls performance, that's why it is very primitive and fast implementation instead of some
-    library like `pygtrie <https://github.com/google/pygtrie>`_. Probably, by chosing fast (C)
+    library like `pygtrie <https://github.com/google/pygtrie>`_. Probably, by choosing fast (C)
     implementation of trie, the whole spylls can be make much faster.
     """
     def __init__(self, data=None):

@@ -110,8 +110,8 @@ class Word:
     data: Dict[str, List[str]]
 
     #: List of alternative word spellings, defined with ``ph:`` data tag, and
-    #: used by :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`. Not everythin specified
-    #: with ``ph:`` is stored here, see expanations in class docs.
+    #: used by :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`. Not everything specified
+    #: with ``ph:`` is stored here, see explanations in class docs.
     alt_spellings: List[str]
     #: One of :class:`capitalization.Type <spylls.hunspell.algo.capitalization.Type>` (no capitalization,
     #: initial letter capitalized, all letters, or mixed) analyzed on dictionary reading, will be useful on lookup.

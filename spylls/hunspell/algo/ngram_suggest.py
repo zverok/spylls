@@ -37,9 +37,9 @@ def ngram_suggest(misspelling: str, *,
     Internally:
 
     * calculates misspelling similarity to all dictionary word stems with :meth:`root_score`, and
-      choses the best ones
+      chooses the best ones
     * of those words, produces all forms possible with suffixes/prefixes by :meth:`forms_for`,
-      calculates their score against misspelling with :meth:`rough_affix_score` and choses the best ones,
+      calculates their score against misspelling with :meth:`rough_affix_score` and chooses the best ones,
       using threshold calculated in :meth:`detect_threshold`
     * calculates more precise (but more time-consuming) score for those with :meth:`precise_affix_score` and
       sorts by it
@@ -47,7 +47,7 @@ def ngram_suggest(misspelling: str, *,
 
     Args:
         misspelling: Misspelled word
-        dictionary_words: all entries from dictionary to iterate agains (without forbidden, ``ONLYINCOMPOUND``
+        dictionary_words: all entries from dictionary to iterate against (without forbidden, ``ONLYINCOMPOUND``
                           and such)
         prefixes: all prefixes from .aff file to try produce forms with
         suffixes: all suffixes from .aff file to try produce forms with
@@ -137,7 +137,7 @@ def ngram_suggest(misspelling: str, *,
 
 def root_score(word1: str, word2: str) -> float:
     """
-    Scoring, stage 1: Simple score for first dictionary words chosing: 3-gram score + longest start
+    Scoring, stage 1: Simple score for first dictionary words choosing: 3-gram score + longest start
     substring.
 
     Args:
@@ -319,7 +319,7 @@ def filter_guesses(guesses: List[Tuple[float, str]], *, known: Set[str], onlymax
         guesses: All possible suggestions
         known: Passed from main Suggest, list of already produced suggestions
         onlymaxdiff: contents of :attr:`Aff.ONLYMAXDIFF <spylls.hunspell.data.aff.Aff.ONLYMAXDIFF>`
-                     (exlcudes not very good suggestions, see code)
+                     (excludes not very good suggestions, see code)
     """
 
     seen = False

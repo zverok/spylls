@@ -3,7 +3,7 @@ from typing import Tuple
 
 def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
     """
-    Number of occurences of the exactly same characters in exactly same position.
+    Number of occurrences of the exactly same characters in exactly same position.
     Returns also boolean flag if the only difference in characters of two strings is exactly one
     swap ("paris" => "piras") -- both values are used in the same place of
     :meth:`ngram_suggest.precise_affix_score <spylls.hunspell.algo.ngram_suggest.precise_affix_score>`
@@ -49,7 +49,7 @@ def ngram(max_ngram_size: int, s1: str, s2: str, *,
       s2: string to compare
       weighted: substract from result for ngrams *not* contained
       longer_worse: add a penalty when second string is longer
-      any_mismatch: add a penalty for any string lengtht difference
+      any_mismatch: add a penalty for any string length difference
 
     FIXME: Actually, the last two settings do NOT participate in ngram counting by themselves, they
     are just adjusting the final score, but that's how it was structured in Hunspell.

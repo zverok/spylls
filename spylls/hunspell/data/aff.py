@@ -183,7 +183,7 @@ class Affix:
     * ...when applies, doesn't change the stem (0 = "", but it can be "...removes some part at the end of the stem")
     * ...when applies, adds "able" to the stem
     * ...and the whole form will have also flags "C", "D"
-    * ...condition of appplication is "any stem" (``.`` -- read it as regexp's "any char")
+    * ...condition of application is "any stem" (``.`` -- read it as regexp's "any char")
     * ...and the whole form would have data tags (morphology) ``ds:able``
 
     Then, if in the dictionary we have ``drink/X`` (can have the suffix marked by ``X``), the whole
@@ -852,7 +852,7 @@ class Aff:
     #: *Usage:* :mod:`phonet_suggest <spylls.hunspell.algo.phonet_suggest>`
     PHONE: Optional[PhonetTable] = None
 
-    #: Limits number of compound suggetions.
+    #: Limits number of compound suggestions.
     #: Currently, not used in Spylls. See Suggest class comments about Hunspell/Spylls difference in
     #: handling separate "compound cycle".
     MAXCPDSUGS: int = 0
@@ -1129,7 +1129,7 @@ class Aff:
     #: flags on reading .aff and .dic files.
     AF: Dict[str, Set[str]] = field(default_factory=dict)
 
-    #: Table of word data aliases. Logic of aiasing is the same as for :attr:`AM`.
+    #: Table of word data aliases. Logic of aliasing is the same as for :attr:`AM`.
     #:
     #: *Usage:* :meth:`read_dic <spylls.hunspell.readers.dic.read_dic>`
     AM: Dict[str, Set[str]] = field(default_factory=dict)

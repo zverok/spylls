@@ -14,7 +14,7 @@ MAX_ROOTS = 100
 
 def phonet_suggest(misspelling: str, *, dictionary_words: List[dic.Word], table: aff.PhonetTable) -> Iterator[str]:
     """
-    Phonetical suggestion algorithm provides suggestions based on phonetial (prononication) similarity.
+    Phonetical suggestion algorithm provides suggestions based on phonetical (prononication) similarity.
     It requires .aff file to define :attr:`PHONE <spylls.hunspell.data.aff.Aff.PHONE>` table --
     which, we should add, is *extremely* rare in known dictionaries.
 

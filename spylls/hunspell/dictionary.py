@@ -35,7 +35,7 @@ class Dictionary:
     Internal algorithm implementations :attr:`lookuper` and :attr:`suggester` are exposed in order
     to allow experimenting with the implementation::
 
-        # Produce all ways this word might be analysed by current dictionary
+        # Produce all ways this word might be analyzed by current dictionary
         for form in dictionary.lookuper.good_forms('building'):
             print(form)
 

@@ -20,7 +20,7 @@ Note that Spylls's implementation takes two liberties comparing to Hunspell's:
    word are accidentally joined, Hunspell can't sugest to split them (try with "11thhour": "11th" is
    compound word in English dictionary, and hunspell wouldn't suggest "11th hour", but Spylls would).
 2. In Hunspell, ngram suggestions (select all words from dictionary that ngram-similar => produce suggestions)
-   and phonetic suggestios (select all words from dictionary that phonetically similar => produce suggestions)
+   and phonetic suggestions (select all words from dictionary that phonetically similar => produce suggestions)
    are done in the same cycle, because they both iterate through entire dictionary. Spylls does it
    in two separate cycles, again, for the sake of clarity (note that dictionaries with metaphone
    transformation rules defined are extremely rare).

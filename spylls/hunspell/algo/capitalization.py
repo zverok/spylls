@@ -68,7 +68,7 @@ class Casing:
     def upper(self, word: str) -> str:   # pylint: disable=no-self-use
         """
         Uppercase the word. Redefined in :class:`TurkicCasing`, because in Turkic languages lowercase
-        "i" is uppercased as "İ", and uppercae "I" is downcased as "ı".
+        "i" is uppercased as "İ", and uppercase "I" is downcased as "ı".
 
         Args:
             word:
@@ -160,7 +160,7 @@ class Casing:
 class TurkicCasing(Casing):
     """
     Redefines :meth:`Casing.upper` and :meth:`Casing.lower`, because in Turkic languages lowercase
-    "i" is uppercased as "İ", and uppercae "I" is downcased as "ı"::
+    "i" is uppercased as "İ", and uppercase "I" is downcased as "ı"::
 
         >>> turkic = spylls.hunspell.algo.capitalization.TurkicCasing()
         >>> turkic.lower('Izmir'))

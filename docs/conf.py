@@ -37,7 +37,8 @@ extensions = [
     'sphinx_rtd_theme',
     'code_include.extension',
     'coderead',
-    'sphinx.ext.linkcode'
+    'sphinx.ext.linkcode',
+    # 'sphinxcontrib.spelling'
 ]
 
 autodoc_typehints = 'description'
