@@ -61,7 +61,7 @@ Reading the code
 Completeness
 ------------
 
-Generally, **Spylls** thrives for the *full* port, handling all possible quirks and rare options, that's the idea of the project. (Would be rather easy to make dictionary reader + word lookup working for most simple cases, but that would bring no value.)
+Generally, **Spylls** strives for the *full* port, handling all possible quirks and rare options, that's the idea of the project. (Would be rather easy to make dictionary reader + word lookup working for most simple cases, but that would bring no value.)
 
 The current state of the port:
 
