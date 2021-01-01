@@ -56,7 +56,7 @@ def ngram_suggest(misspelling: str, *,
                      (exlcudes not very good suggestions, see :meth:`filter_guesses`)
     """
 
-    root_scores: List[Tuple[float, str, data.dic.Word]] = []
+    root_scores: List[Tuple[float, data.dic.Word]] = []
 
     # First, find MAX_ROOTS candidate dictionary entries, by calculating stem score against the
     # misspelled word.
@@ -78,9 +78,9 @@ def ngram_suggest(misspelling: str, *,
 
         # Pythons stdlib heapq used to always keep only MAX_ROOTS of best results
         if len(root_scores) > MAX_ROOTS:
-            heapq.heappushpop(root_scores, (score, word.stem, word))
+            heapq.heappushpop(root_scores, (score, word))
         else:
-            heapq.heappush(root_scores, (score, word.stem, word))
+            heapq.heappush(root_scores, (score, word))
 
     roots = heapq.nlargest(MAX_ROOTS, root_scores)
 
@@ -95,7 +95,7 @@ def ngram_suggest(misspelling: str, *,
     # Produced structure is (score, word_variant_to_calculate_score, word_form_to_suggest)
     # The second item is, again, to support alternative spellings suggested in dictionary by ``ph:``
     # tag.
-    for (_, _, root) in roots:
+    for (_, root) in roots:
         if root.alt_spellings:
             # If any of alternative spelling passes the threshold
             for variant in root.alt_spellings:

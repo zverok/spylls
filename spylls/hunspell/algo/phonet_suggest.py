@@ -20,7 +20,8 @@ def phonet_suggest(misspelling: str, *, dictionary_words: List[dic.Word], table:
 
     Internally:
 
-    * selects words from dictionary similarly to :meth:`ngram_suggest <spylls.hunspell.algo.ngram_suggest.ngram_suggest>`
+    * selects words from dictionary similarly to
+      :meth:`ngram_suggest <spylls.hunspell.algo.ngram_suggest.ngram_suggest>`
       (and even reuses its :meth:`root_score <spylls.hunspell.algo.ngram_suggest.root_score>`)
     * and scores their phonetic representations (calculated with :meth:`metaphone`) with phonetic
       representation of misspelling

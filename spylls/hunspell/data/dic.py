@@ -120,6 +120,14 @@ class Word:
     def __repr__(self):
         return f"Word({self.stem} /{','.join(self.flags)})"
 
+    def __lt__(self, other):
+        """
+        Only Word < Other needs redefining -- for using in heappush in ngram_suggest
+        """
+        if self.stem != other.stem:
+            return self.stem < other.stem
+        return self.flags < other.flags
+
 
 @dataclass
 class Dic:
