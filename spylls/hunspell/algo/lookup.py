@@ -654,8 +654,6 @@ class Lookup:
 
         root_flags = form.in_dictionary.flags
         all_flags = form.flags()
-        # # TODO: Should be guessed on dictionary loading
-        # root_capitalization = aff.casing.guess(form.in_dictionary.stem)
 
         # If the stem has NOSUGGEST flag, it shouldn't be considered an existing word when called
         # from ``Suggest`` (in other cases allow_nosuggest is True). This allows, for example, to
