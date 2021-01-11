@@ -5,6 +5,8 @@ Spylls: Hunspell ported to Python
 
 Hunspell is a long-living, complicated, almost undocumented piece of software, and it was our feeling that the significant part of human knowledge is somehow "locked" in a form of a large C++ project. That's how **Spylls** was born: as an attempt to "unlock" it, via well-structured and well-documented implementation in a high-level language.
 
+**Follow the explanatory blog post series: `part1 <https://zverok.github.io/blog/2021-01-05-spellchecker-1.html>`_, `part2 <https://zverok.github.io/blog/2021-01-09-spellchecker-2.html>`_, TBC...**
+
 Usage as a library
 ------------------
 
