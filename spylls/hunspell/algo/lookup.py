@@ -180,6 +180,7 @@ class Lookup:
     def __call__(self, word: str, *,
                  capitalization: bool = True,
                  allow_nosuggest: bool = True,
+                 allow_iconv: bool = True,
                  allow_break: bool = True) -> bool:
         """
         The outermost word correctness check.
@@ -214,7 +215,7 @@ class Lookup:
         # UTF chars with diacritics (which might have several different forms), and such.
         # See data.aff.ConvTable_ for the full algorithm (it is more complex than just replace one
         # substring with another).
-        if self.aff.ICONV:
+        if self.aff.ICONV and allow_iconv:
             word = self.aff.ICONV(word)
 
         # Remove characters that should be ignored (for example, in Arabic and Hebrew, vowels should

@@ -204,7 +204,7 @@ class Suggest:
         # Whether some suggestion (permutation of the word) is an existing and allowed word,
         # just delegates to Lookup
         def is_good_suggestion(word, capitalization=False, allow_break=True):
-            return self.lookup(word, allow_nosuggest=False, capitalization=capitalization, allow_break=allow_break)
+            return self.lookup(word, allow_nosuggest=False, capitalization=capitalization, allow_iconv=False, allow_break=allow_break)
 
         # For some set of suggestions, produces only good ones:
         def filter_suggestions(suggestions):
@@ -278,10 +278,10 @@ class Suggest:
             if check_inclusion and any(previous.lower() in text.lower() for previous in handled):
                 return
 
-            handled.add(text)
             # Finally, OCONV table in .aff-file might specify what chars to replace in suggestions
             # (for example, "'" to proper typographic "’", or common digraphs)
             text = self.aff.OCONV(text) if self.aff.OCONV else text
+            handled.add(text)
 
             # And here we are!
             yield suggestion.replace(text=text)
