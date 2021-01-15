@@ -266,7 +266,7 @@ class Suffix(Affix):
         condition = self.condition.replace('-', '\\-')
         self.cond_regexp = re.compile(condition + '$')
 
-        cond_parts = re.findall(r'(\[.+\]|[^\[])', condition)
+        cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
         if self.strip:
             cond_parts = cond_parts[:-len(self.strip)]
 
