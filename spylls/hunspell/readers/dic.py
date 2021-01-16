@@ -1,7 +1,7 @@
 from collections import defaultdict
 import re
 
-from typing import List, Dict
+from typing import List, Dict, Set, Optional
 
 from spylls.hunspell.data import dic
 from spylls.hunspell.data.aff import Aff, RepPattern
@@ -16,6 +16,7 @@ COUNT_REGEXP = re.compile(r'^\d+(\s+|$)')   # should start with digits, but can 
 SPACES_REGEXP = re.compile(r"\s+")
 MORPH_REGEXP = re.compile(r'^(\w{2}:\S*|\d+)$')
 SLASH_REGEXP = re.compile(r'(?<!\\)/')
+TAG_REGEXP = re.compile(r'[ \t]\w{2}:')
 
 
 def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
@@ -36,33 +37,25 @@ def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
         if num == 1 and COUNT_REGEXP.match(line):
             continue
 
-        word_parts = []
-        data: Dict[str, List[str]] = defaultdict(list)
-
-        parts = SPACES_REGEXP.split(line)
-
         # Each line is ``<stem>/<flags> <data tags>``
         # Stem can have spaces, data tags are separated from stem by spaces
 
-        for i, part in enumerate(parts):
-            # The only way to understand what's the next part:
-            if ':' in part and i != 0:
-                # If it has "foo:bar" form, it is data tag
-                tag, _, content = part.partition(':')
-                # TODO: in ph2.dic, there is "ph:" construct (without contents), what does it means?..
-                if content:
-                    data[tag].append(content)
-            elif part.isdigit() and i != 0:
-                # If it is just numeric AND not the first part in string, it is "morphology alias"
-                # (defined in .aff file list of data tags corresponding to some number)
-                # So we just mutate the list of parts we are currently processing, so those fetched
-                # by numeric alias would be handled.
-                parts.extend(aff.AM[part])
-            else:
-                # ...otherwise, it is still part of the word
-                word_parts.append(part)
+        tags_match = TAG_REGEXP.search(line)
+        tags_start: Optional[int] = None
+        if tags_match:
+            tags_start = tags_match.start()
 
-        word = ' '.join(word_parts)
+        old_tags_start = line.find("\t")
+        if old_tags_start != -1 and (not tags_start or tags_start > old_tags_start):
+            tags_start = old_tags_start
+
+        if tags_start:
+            word = line[:tags_start]
+            data = parse_data(line[tags_start:], aff.AM)
+        else:
+            word = line
+            data = {}
+
         # Now, the "word" part is "stem/flags". Flags are optional, and to complicate matters further:
         #
         # * if the word STARTS with "/" -- it is not empty stem + flags, but "word starting with /";
@@ -127,3 +120,25 @@ def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
         result.append(word_obj, lower=lower)
 
     return result
+
+def parse_data(text: str, aliases: Dict[str, Set[str]]) -> Dict[str, List[str]]:
+    data: Dict[str, List[str]] = defaultdict(list)
+
+    parts = SPACES_REGEXP.split(text)
+    for tag_str in parts:
+        if ':' in tag_str:
+            # If it has "foo:bar" form, it is data tag
+            tag, _, content = tag_str.partition(':')
+            # TODO: in ph2.dic, there is "ph:" construct (without contents), what does it means?..
+            if content:
+                data[tag].append(content)
+        elif tag_str.isdigit() and aliases:
+            # If it is just numeric, it is "morphology alias"
+            # (defined in .aff file list of data tags corresponding to some number)
+            # So we just mutate the list of tags we are currently processing, so those fetched
+            # by numeric alias would be handled.
+            parts.extend(aliases[tag_str])
+        else:
+            pass
+
+    return data

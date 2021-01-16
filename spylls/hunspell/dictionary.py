@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import glob
 import zipfile
+import os
 
 from typing import Iterator
 
@@ -113,6 +114,9 @@ class Dictionary:
         Args:
             path: Should be just ``/some/path/some_name``.
         """
+
+        if path == 'en_US' and not os.path.exists(path + '.aff'):
+            path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'en', 'en_US')
 
         aff, context = readers.read_aff(FileReader(path + '.aff'))
         dic = readers.read_dic(FileReader(path + '.dic', encoding=context.encoding), aff=aff, context=context)

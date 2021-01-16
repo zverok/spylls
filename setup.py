@@ -12,6 +12,7 @@ setuptools.setup(
     long_description=long_description,
     url="https://github.com/zverok/spylls",
     packages=setuptools.find_packages(),
+    package_data={"": ["*.aff", "*.dic"]},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
