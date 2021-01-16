@@ -268,7 +268,14 @@ class Suggest:
             if is_forbidden(text):
                 return
 
+            # Finally, OCONV table in .aff-file might specify what chars to replace in suggestions
+            # (for example, "'" to proper typographic "’", or common digraphs)
+            text = self.aff.OCONV(text) if self.aff.OCONV else text
+
             # If we already seen this suggestion, nothing to do
+            # Note that this should happen AFTER the OCONV: it sometimes changes the content significantly.
+            # For example, Dutch dictionary recodes "ij" into ligature (one character representing this
+            # two letters) to enforce proper capitalization (and decodes it back on OCONV).
             if text in handled:
                 return
 
@@ -279,9 +286,7 @@ class Suggest:
             if check_inclusion and any(previous.lower() in text.lower() for previous in handled):
                 return
 
-            # Finally, OCONV table in .aff-file might specify what chars to replace in suggestions
-            # (for example, "'" to proper typographic "’", or common digraphs)
-            text = self.aff.OCONV(text) if self.aff.OCONV else text
+            # Remember we seen it
             handled.add(text)
 
             # And here we are!

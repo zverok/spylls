@@ -197,6 +197,7 @@ class Lookup:
 
             capitalization: if ``False``, check ONLY exactly this capitalization
             allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
+            allow_iconv: if ``False``, don't use ``ICONV`` table to prepare word
             allow_break: if ``False``, don't try to break word by dashes and check separately
         """
 

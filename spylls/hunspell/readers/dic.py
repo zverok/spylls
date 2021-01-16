@@ -38,7 +38,9 @@ def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
             continue
 
         # Each line is ``<stem>/<flags> <data tags>``
-        # Stem can have spaces, data tags are separated from stem by spaces
+        # Stem can have spaces, so the indication of "here the data tags start" is:
+        # * either space character, followed by text in format "xy:something" (exactly two-letter tag, colon, data)
+        # * or _tab_ (and exactly tab) character, and then some data
 
         tags_match = TAG_REGEXP.search(line)
         tags_start: Optional[int] = None
@@ -51,6 +53,7 @@ def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
 
         if tags_start:
             word = line[:tags_start]
+            # If tags were present, parse them
             data = parse_data(line[tags_start:], aff.AM)
         else:
             word = line
@@ -123,6 +126,27 @@ def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
 
 
 def parse_data(text: str, aliases: Dict[str, Set[str]]) -> Dict[str, List[str]]:
+    """
+    Parse data tags after stem.
+    There can be *anything* in this part of the data, but parsed and processed are:
+
+    1. tags in format ``"xy:<something>"`` -- two chars of tag, then its value without spaces
+    2. numeric aliases, decoded via :attr:`AM <spylls.hunspell.data.aff.Aff.AM>` directive (the alias
+       is just expanded into several tags).
+
+    The rest is just dropped. Note that one tag can have several values:
+
+    .. code-block:: text
+
+        witch ph:wich ph:whith
+
+    (Read as: the stem "witch" has two values for data tag "ph", specifying which ways it can be
+    misspelled.)
+
+    Args:
+        text: part of the dictionary line after the stem
+        aliases: content of :attr:`AM <spylls.hunspell.data.aff.Aff.AM>` directive from aff-file
+    """
     data: Dict[str, List[str]] = defaultdict(list)
 
     parts = SPACES_REGEXP.split(text)
