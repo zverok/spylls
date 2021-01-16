@@ -37,7 +37,7 @@ Usage as a library
   print(dictionary.lookup('spylls'))
   # False
   for suggestion in dictionary.suggest('spylls'):
-    print(sugestion)
+      print(sugestion)
   # spells
   # spills
 
@@ -102,7 +102,7 @@ Actually, what Norvig's implementation is demonstrating is *one of the possible 
 Where do I get the dictionaries?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Two main sources of Hunspell-compatible dictionaries are `Firefox dictionaries <https://addons.mozilla.org/en-US/firefox/language-tools/>`_, `LibreOffice Dictionaries <https://extensions.libreoffice.org/?Tags%5B%5D=50>`_, `OpenOffice Dictionaries <https://extensions.openoffice.org/en/search?f%5B0%5D=field_project_tags%3A157>`_. All of those are downloadable as "extensions" (``.xpi`` for Firefox, ``.oxt`` for Libre/OpenOffice). "Extensions" are actually just ``.zip`` archives, which you can unpack and extract ``.aff``/``.dic`` files, but for convenience, Spylls can work with archives too:
+The main sources of Hunspell-compatible dictionaries are `Firefox dictionaries <https://addons.mozilla.org/en-US/firefox/language-tools/>`_, `LibreOffice Dictionaries <https://extensions.libreoffice.org/?Tags%5B%5D=50>`_, `OpenOffice Dictionaries <https://extensions.openoffice.org/en/search?f%5B0%5D=field_project_tags%3A157>`_. All of those are downloadable as "extensions" (``.xpi`` for Firefox, ``.oxt`` for Libre/OpenOffice). "Extensions" are actually just ``.zip`` archives, which you can unpack and extract ``.aff``/``.dic`` files, but for convenience, Spylls can work with archives too:
 
 .. code-block:: python
 

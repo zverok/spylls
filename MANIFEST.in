@@ -1,0 +1,3 @@
+include *.rst
+recursive-include spylls *.aff
+recursive-include spylls *.dic

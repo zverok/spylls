@@ -18,17 +18,14 @@ Usage as a library
 
   from spylls.hunspell import Dictionary
 
-  # from folder where en_US.aff and en_US.dic are present
-  dictionary = Dictionary.from_files('/path/to/dictionary/en_US')
-  # or, from Firefox/LibreOffice dictionary extension
-  dictionary = Dictionary.from_archive('/path/to/dictionary/en_US.odt')
-  # or, from system folders (on Linux)
-  dictionary = Dictionary.from_system('en_US')
+  # en_US dictionary is distributed with spylls
+  # See docs to load other dictionaries
+  dictionary = Dictionary.from_files('en_US')
 
   print(dictionary.lookup('spylls'))
   # False
   for suggestion in dictionary.suggest('spylls'):
-    print(suggestion)
+      print(suggestion)
   # spells
   # spills
 
