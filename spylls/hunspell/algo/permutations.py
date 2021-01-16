@@ -73,8 +73,7 @@ def mapchars(word: str, maptable: List[Set[str]]) -> Iterator[str]:
                         for variant in mapchars_internal(replaced, pos + 1):
                             yield variant
 
-    for variant in mapchars_internal(word):
-        yield variant
+    yield from mapchars_internal(word)
 
 
 def swapchar(word: str) -> Iterator[str]:
@@ -86,7 +85,7 @@ def swapchar(word: str) -> Iterator[str]:
     if len(word) < 2:
         return
 
-    for i in range(0, len(word) - 1):
+    for i in range(len(word) - 1):
         yield word[:i] + word[i+1] + word[i+1] + word[i+2:]
 
     # try double swaps for short words
@@ -102,7 +101,7 @@ def longswapchar(word: str) -> Iterator[str]:
     Produces permutations with non-adjacent chars swapped (up to 4 chars distance)
     """
 
-    for first in range(0, len(word) - 2):
+    for first in range(len(word) - 2):
         for second in range(first + 2, min(first + MAX_CHAR_DISTANCE, len(word))):
             yield word[:first] + word[second] + word[first+1:second] + word[first] + word[second+1:]
 
@@ -140,7 +139,7 @@ def extrachar(word: str) -> Iterator[str]:
     if len(word) < 2:
         return
 
-    for i in range(0, len(word)):
+    for i in range(len(word)):
         yield word[:i] + word[i+1:]
 
 
@@ -157,7 +156,7 @@ def forgotchar(word: str, trystring: str) -> Iterator[str]:
         return
 
     for c in trystring:
-        for i in range(0, len(word)):
+        for i in range(len(word)):
             yield word[:i] + c + word[i:]
 
 
@@ -174,7 +173,7 @@ def movechar(word: str) -> Iterator[str]:
         for topos in range(frompos + 3, min(len(word), frompos + MAX_CHAR_DISTANCE + 1)):
             yield word[:frompos] + word[frompos+1:topos] + char + word[topos:]
 
-    for frompos in reversed(range(0, len(word))):
+    for frompos in reversed(range(len(word))):
         for topos in reversed(range(max(0, frompos - MAX_CHAR_DISTANCE + 1), frompos - 1)):
             yield word[:topos] + word[frompos] + word[topos:frompos] + word[frompos+1:]
 
@@ -189,7 +188,7 @@ def badchar(word: str, trystring: str) -> Iterator[str]:
         return
 
     for c in trystring:
-        for i in reversed(range(0, len(word))):
+        for i in reversed(range(len(word))):
             if word[i] == c:
                 continue
             yield word[:i] + c + word[i+1:]

@@ -204,7 +204,8 @@ class Suggest:
         # Whether some suggestion (permutation of the word) is an existing and allowed word,
         # just delegates to Lookup
         def is_good_suggestion(word, capitalization=False, allow_break=True):
-            return self.lookup(word, allow_nosuggest=False, capitalization=capitalization, allow_iconv=False, allow_break=allow_break)
+            return self.lookup(word, capitalization=capitalization,
+                               allow_nosuggest=False, allow_iconv=False, allow_break=allow_break)
 
         # For some set of suggestions, produces only good ones:
         def filter_suggestions(suggestions):

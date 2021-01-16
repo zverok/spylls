@@ -121,6 +121,7 @@ def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
 
     return result
 
+
 def parse_data(text: str, aliases: Dict[str, Set[str]]) -> Dict[str, List[str]]:
     data: Dict[str, List[str]] = defaultdict(list)
 

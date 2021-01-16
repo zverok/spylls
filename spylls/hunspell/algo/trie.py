@@ -50,12 +50,11 @@ class Trie:
 
     def lookup(self, path):
         for _, leaf in self.traverse(self.root, path):
-            for payload in leaf.payloads:
-                yield payload
+            yield from leaf.payloads
 
     def traverse(self, cur, path, traversed=[]):
         yield (traversed, cur)
         if not path or path[0] not in cur.children:
             return
-        for p, leaf in self.traverse(cur.children[path[0]], path[1:], [*traversed, path[0]]):
-            yield (p, leaf)
+
+        yield from self.traverse(cur.children[path[0]], path[1:], [*traversed, path[0]])
