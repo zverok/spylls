@@ -786,7 +786,7 @@ class Aff:
     #: *Usage:*
     #: :meth:`Suggest.questionable_permutations <spylls.hunspell.algo.suggest.Suggest.questionable_permutations>`
     #: to pass to :meth:`permutations.badcharkey <spylls.hunspell.algo.permutations.badcharkey>`.
-    KEY: str = ''
+    KEY: str = 'qwertyuiop|asdfghjkl|zxcvbnm'
 
     #: List of all characters that can be used in words, *in order of probability* (most probable first),
     #: used on permutation for suggestions (trying to add missing, or replace erroneous character).
