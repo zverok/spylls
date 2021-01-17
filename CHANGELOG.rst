@@ -10,3 +10,4 @@ Changelog
 * Fix #7 (loading of morphology aliases)
 * Bundle SCOWL en_US dictionary with Spylls for easier showcasing/experimenting
 * Improve docs
+* Significantly fix suggestion algorithm (simplify, and implement suggestion count limitation)

@@ -55,6 +55,8 @@ from spylls.hunspell.algo.capitalization import Type as CapType
 from spylls.hunspell.algo import ngram_suggest, phonet_suggest, permutations as pmt
 
 MAXPHONSUGS = 2
+MAXSUGGESTIONS = 15
+GOOD_PERMUTATIONS = ['spaceword', 'uppercase', 'replchars']
 
 
 @dataclass
@@ -96,7 +98,7 @@ class MultiWordSuggestion:
 
     #: Whether those words are allowed to be joined by dash. We should disallow it if the multi-word
     #: suggestion was produced by :attr:`Aff.REP <spylls.hunspell.data.aff.Aff.REP>` table, see
-    #: :meth:`Suggest.good_permutations` for details.
+    #: :meth:`Suggest.permutations` for details.
     allow_dash: bool = True
 
     def stringify(self, separator=' '):
@@ -129,14 +131,9 @@ class Suggest:
     .. automethod:: __call__
     .. automethod:: suggest_internal
 
-    **Permutation-based suggestions**
+    **Suggestion types**
 
-    .. automethod:: very_good_permutations
-    .. automethod:: good_permutations
-    .. automethod:: questionable_permutations
-
-    **Other suggestions**
-
+    .. automethod:: permutations
     .. automethod:: ngram_suggestions
     .. automethod:: phonet_suggestions
     """
@@ -188,10 +185,9 @@ class Suggest:
 
         * generates possible misspelled word cases (for ex., "KIttens" in dictionary might've been
           'KIttens', 'kIttens', 'kittens', or 'Kittens')
-        * produces word permutations with :meth:`good_permutations`, :meth:`very_good_permutations` and
-          :meth:`questionable_permutations` (with the help of :mod:`permutations <spylls.hunspell.algo.permutations>`
-          module), checks them with :class:`Lookup <spylls.hunspell.algo.lookup.Lookup>`,
-          and decides if that's maybe enough
+        * produces word permutations with :meth:`permutations` (with the help of
+          :mod:`permutations <spylls.hunspell.algo.permutations>` module), checks them with
+          :class:`Lookup <spylls.hunspell.algo.lookup.Lookup>`, and decides if that's maybe enough
         * but if it is not (and if .aff settings allow), ngram-based suggestions are produced with
           :meth:`ngram_suggestions`, and phonetically similar suggestions with :meth:`phonet_suggestions`
 
@@ -241,9 +237,9 @@ class Suggest:
         # Method is quite lengthy, but is nested because updates and reuses ``handled`` local var
         def handle_found(suggestion, *, check_inclusion=False):
             text = suggestion.text
+
             # If any of the homonyms has KEEPCASE flag, we shouldn't coerce it from the base form.
             # But CHECKSHARPS flag presence changes the meaning of KEEPCASE...
-
             if (self.aff.KEEPCASE and self.dic.has_flag(text, self.aff.KEEPCASE) and not
                     (self.aff.CHECKSHARPS and 'ß' in text)):
                 # Don't try to change text's case
@@ -298,11 +294,8 @@ class Suggest:
         # if the word is "MsDonalds", good capitalizations (what it might've been in dictionary) are
         # "msdonalds" (full lowercase) "msDonalds" (first letter lowercased), or maybe "Msdonalds"
         # (only first letter capitalized). Note that "MSDONALDS" (it should've been all caps) is not
-        # produced as a possible good form, but checked separately in good_permutations
+        # produced as a possible good form, but checked separately in permutations
         captype, variants = self.aff.casing.corrections(word)
-
-        good = False
-        very_good = False
 
         # Check a special case: if it is possible that words would be possible to be capitalized
         # on compounding, then we check capitalized form of the word. If it is correct, that's the
@@ -313,41 +306,51 @@ class Suggest:
                     yield from handle_found(Suggestion(capitalized.capitalize(), 'forceucase'))
                     return  # No more need to check anything
 
+        good_permutations_found = False
+        enough_permutations_found = False
+
         # Now, for all capitalization variant
         for idx, variant in enumerate(variants):
             # If it is different from original capitalization, and is good, we suggest it
             if idx > 0 and is_good_suggestion(variant):
                 yield from handle_found(Suggestion(variant, 'case'))
 
-            # Now check if any of the good permutations would be yielded
-            for suggestion in filter_suggestions(self.good_permutations(variant)):
+            # Now we take all possible permutations of the word, and filter those that are correct
+            # words
+            for suggestion in filter_suggestions(self.permutations(variant)):
+                # Then, for each of those correct suggestions,
+                # we run them through handle_found (which performs some final transformations and
+                # checks, and may handle 1 or 0 suggestions; 0 in the case it was already seen or
+                # is a forbidden word)
                 for res in handle_found(suggestion):
-                    # ...and if so, return them and set good flag
-                    good = True
+                    # yield it to user
                     yield res
+                    # remember if any "good" permutation was found -- in this case we don't need
+                    # ngram suggestions
+                    good_permutations_found = good_permutations_found or (res.source in GOOD_PERMUTATIONS)
 
-            # Now check if any of the VERY good permutations would be yielded
-            # (yes, the order in hunspell is this: what we are calling here "very good permutations"
-            # is tried AFTER just "good" permutations; but they weight more, see below)
-            for suggestion in filter_suggestions(self.very_good_permutations(variant)):
-                for res in handle_found(suggestion):
-                    very_good = True
-                    yield res
+                    # We might break from the medhot immediately if the suggestion is to split word
+                    # with space, and this phrase is _in the dictionary as a whole_: "alot" => "a lot".
+                    # Then we don't need ANY other suggestions. This is a trick to enforce suggesting
+                    # to break commonly misspelled phrases withot oversuggesting
+                    if res.source == 'spaceword':
+                        return
 
-            # ...if any _very_ good permutation was found, nothing to check anymore
-            if very_good:
-                return
+                    # Also we stop after 15 permutation-based suggestions (but still may produce
+                    # ngram-based ones if permutation-based were not particularly good),
+                    if len(handled) > MAXSUGGESTIONS:
+                        enough_permutations_found = True
+                        break
+                if enough_permutations_found:
+                    break
+            if enough_permutations_found:
+                break
 
-            # ...but now we'll check "questionable" permutations (which might produce quite unlikely words) --
-            # even if "good" permutations were present; but good permutations would be earlier in the list
-            for suggestion in filter_suggestions(self.questionable_permutations(variant)):
-                yield from handle_found(suggestion)
-
-        if very_good or good:
+        if good_permutations_found:
             return
 
-        # If there was no "good" or "very good" permutations that were valid words, we might try
-        # ngram-based suggestion algorithm: it is slower, but able to find severely misspelled words
+        # If there was no good permutations that were valid words, we might try
+        # ngram-based suggestion algorithm: it is slower, but able to correct severely misspelled words
 
         ngrams_seen = 0
         for sug in self.ngram_suggestions(word, handled=handled):
@@ -368,36 +371,21 @@ class Suggest:
             if phonet_seen >= MAXPHONSUGS:
                 break
 
-    def very_good_permutations(self, word: str) -> Iterator[Suggestion]:
+    def permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         """
-        "Very good" suggestions: suggest to split word ("alot" => "a lot"), but for now only yield
-        them as a *singular* word suggestion: if the dictionary has *exact* entry "a lot", it would
-        be considered correct.
+        Produces all possible word permutations in a form of :class:`Suggestion` or :class:`MultiWordSuggestion`.
+        Note that:
+
+        * order is important, that's the order user will receive the suggestions (and the further the
+          suggestion type in the order, the more probably it would be dropped due to suggestion count
+          limit)
+        * suggestion "source" tag is important: :meth:`suggest_internal` uses it to distinguish between
+          good and questionble permutations (if there were any good ones, ngram suggestion wouldn't
+          be used)
 
         Args:
             word: Word to mutate
         """
-
-        for words in pmt.twowords(word):
-            yield Suggestion(' '.join(words), 'spaceword')
-
-            if self.use_dash:
-                # "alot" => "a-lot", but make sure it would be checked as a whole word (see allow_break
-                # usage in Lookup)
-                yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
-
-    def good_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
-        """
-        Good permutations (that produces words not very different from the initial one):
-
-        * uppercase word;
-        * replacements via :attr:`Aff.REP <spylls.hunspell.data.aff.Aff.REP>`-table (may produce
-          :class:`MultiWordSuggestion` if REP table included replacement with a space)
-
-        Args:
-            word: Word to mutate
-        """
-
         # suggestions for an uppercase word (html -> HTML)
         yield Suggestion(self.aff.casing.upper(word), 'uppercase')
 
@@ -418,27 +406,13 @@ class Suggest:
             else:
                 yield Suggestion(suggestion, 'replchars')
 
-    def questionable_permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
-        """
-        Permutations that are producing suggestions further from the original word:
+        for words in pmt.twowords(word):
+            yield Suggestion(' '.join(words), 'spaceword')
 
-        * replacements by :attr:`Aff.MAP <spylls.hunspell.data.aff.Aff.MAP>` table (very similar chars, like ``aáã``)
-        * adjacent char swapping
-        * non-adjacent char swapping
-        * replacements by :attr:`Aff.KEY <spylls.hunspell.data.aff.Aff.KEY>` table (chars that are close on keyboard)
-        * removal of characters
-        * insertion of characters
-        * moving of singular character
-        * replacement of chars by all chars in alphabet
-        * removal of possible two-char doubling ("vacacation => vacation")
-        * splitting of word into two
-
-        Order is important: As the whole ``Suggest`` produces generator, client code may consume it
-        one-by-one, so the first suggested means more likely.
-
-        Args:
-            word: Word to mutate
-        """
+            if self.use_dash:
+                # "alot" => "a-lot", but make sure it would be checked as a whole word (see allow_break
+                # usage in Lookup)
+                yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
 
         # MAP in aff file specifies related chars (for example, "ïi"), and mapchars produces all
         # changes of the word with related chars replaced. For example, "naive" produces "naïve".
