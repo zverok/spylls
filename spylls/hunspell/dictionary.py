@@ -33,6 +33,12 @@ class Dictionary:
         # spells
         # spills
 
+    Note that for easyness of experimentation, ``en_US`` dictionary from `SCOWL <http://wordlist.aspell.net/>_
+    is distributed with Spylls, so this will work without any additional dictionary installation::
+
+        from spylls.hunspell import Dictionary
+        en = Dictionary.from_files('en_US')
+
     Internal algorithm implementations :attr:`lookuper` and :attr:`suggester` are exposed in order
     to allow experimenting with the implementation::
 
@@ -77,9 +83,11 @@ class Dictionary:
     #: Contents of ``*.dic``
     dic: data.dic.Dic
 
-    #: Instance of ``Lookup``, can be used for experimenting, see :mod:`algo.lookup <spylls.hunspell.algo.lookup>`.
+    #: Instance of :class:`Lookup <spylls.hunspell.algo.lookup.Lookup>`, can be used for experimenting,
+    #: see :mod:`algo.lookup <spylls.hunspell.algo.lookup>`.
     lookuper: lookup.Lookup
-    #: Instance of ``Suggest``, can be used for experimenting, see :mod:`algo.suggest <spylls.hunspell.algo.suggest>`.
+    #: Instance of :class:`Suggest <spylls.hunspell.algo.suggest.Suggest>`, can be used for experimenting,
+    #: see :mod:`algo.suggest <spylls.hunspell.algo.suggest>`.
     suggester: suggest.Suggest
 
     # TODO: Firefox dictionaries path
@@ -110,6 +118,12 @@ class Dictionary:
     def from_files(cls, path: str) -> Dictionary:
         """
         Read dictionary from pair of files ``/some/path/some_name.aff`` and ``/some/path/some_name.dic``.
+
+        For easyness of experimentation, ``en_US`` dictionary from `SCOWL <http://wordlist.aspell.net/>_
+        is distributed with Spylls, so this will work without any additional dictionary installation::
+
+            from spylls.hunspell import Dictionary
+            en = Dictionary.from_files('en_US')
 
         Args:
             path: Should be just ``/some/path/some_name``.
