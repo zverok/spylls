@@ -1,7 +1,12 @@
 Changelog
 =========
 
-0.1.2 (unreleased)
+(unreleased)
+------------
+
+* TBD
+
+0.1.2 - 2021-01-21
 ------------------
 
 * Fix #4 (sorting fail in ``ngram_suggest``, manifested in Marathi dictionaries)
