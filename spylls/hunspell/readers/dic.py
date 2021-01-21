@@ -14,7 +14,6 @@ from spylls.hunspell.algo.capitalization import Type as CapType
 
 COUNT_REGEXP = re.compile(r'^\d+(\s+|$)')   # should start with digits, but can have whatever further
 SPACES_REGEXP = re.compile(r"\s+")
-MORPH_REGEXP = re.compile(r'^(\w{2}:\S*|\d+)$')
 SLASH_REGEXP = re.compile(r'(?<!\\)/')
 TAG_REGEXP = re.compile(r'[ \t]\w{2}:')
 

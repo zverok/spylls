@@ -784,15 +784,15 @@ class Aff:
     #: English keyboard might be ``qwertyuiop|asdfghjkl|zxcvbnm``
     #:
     #: *Usage:*
-    #: :meth:`Suggest.permutations <spylls.hunspell.algo.suggest.Suggest.permutations>`
+    #: :meth:`Suggest.edits <spylls.hunspell.algo.suggest.Suggest.edits>`
     #: to pass to :meth:`permutations.badcharkey <spylls.hunspell.algo.permutations.badcharkey>`.
     KEY: str = 'qwertyuiop|asdfghjkl|zxcvbnm'
 
     #: List of all characters that can be used in words, *in order of probability* (most probable first),
-    #: used on permutation for suggestions (trying to add missing, or replace erroneous character).
+    #: used on edits for suggestions (trying to add missing, or replace erroneous character).
     #:
     #: *Usage:*
-    #: :meth:`Suggest.permutations <spylls.hunspell.algo.suggest.Suggest.permutations>`
+    #: :meth:`Suggest.edits <spylls.hunspell.algo.suggest.Suggest.edits>`
     #: to pass to :meth:`permutations.badchar <spylls.hunspell.algo.permutations.badchar>` and
     #: :meth:`permutations.forgotchar <spylls.hunspell.algo.permutations.forgotchar>`. Note that,
     #: obscurely enough, Suggest checks this option to
@@ -806,7 +806,7 @@ class Aff:
     #: *Table* of replacements for typical typos (like "shun"->"tion") to try on suggest. See :class:`RepPattern`
     #: for details of format.
     #:
-    #: *Usage:* :meth:`Suggest.permutations <spylls.hunspell.algo.suggest.Suggest.permutations>` to pass to
+    #: *Usage:* :meth:`Suggest.edits <spylls.hunspell.algo.suggest.Suggest.edits>` to pass to
     #: :meth:`permutations.replchars <spylls.hunspell.algo.permutations.replchars>`.
     #: Note that the table populated from aff's ``REP`` directive, *and* from dic's file ``ph:``
     #: tags (see :class:`Word <spylls.hunspell.data.dic.Word>` and
@@ -818,7 +818,7 @@ class Aff:
     #: grouped by parentheses: ``MAP ß(ss)`` (German "sharp s" and "ss" sequence are more or less the same).
     #:
     #: *Usage:*
-    #: :meth:`Suggest.permutations <spylls.hunspell.algo.suggest.Suggest.permutations>`
+    #: :meth:`Suggest.edits <spylls.hunspell.algo.suggest.Suggest.edits>`
     #: to pass to :meth:`permutations.mapchars <spylls.hunspell.algo.permutations.mapchars>`.
     MAP: List[Set[str]] = field(default_factory=list)
 
@@ -827,7 +827,7 @@ class Aff:
     #: all).
     #:
     #: *Usage:*
-    #: :meth:`Suggest.permutations <spylls.hunspell.algo.suggest.Suggest.permutations>`
+    #: :meth:`Suggest.edits <spylls.hunspell.algo.suggest.Suggest.edits>`
     NOSPLITSUGS: bool = False
 
     #: Table for metaphone transformations. Format is borrowed from aspell and described

@@ -156,7 +156,7 @@ def forgotchar(word: str, trystring: str) -> Iterator[str]:
         return
 
     for c in trystring:
-        for i in range(len(word)):
+        for i in range(len(word) + 1):
             yield word[:i] + c + word[i:]
 
 

@@ -3,7 +3,7 @@ The main "suggest correction for this misspelling" module.
 
 On a bird-eye view level, suggest does:
 
-* tries small word changes (remove letters, insert letters, swap letters) and checks (with the help
+* tries small word "edits" (remove letters, insert letters, swap letters) and checks (with the help
   of :mod:`lookup  <spylls.hunspell.algo.lookup>`) there are any valid ones
 * if no good suggestions found, tries "ngram-based" suggestions (calculating ngram-based distance to
   all dictionary words and select the closest ones), handled by
@@ -12,8 +12,8 @@ On a bird-eye view level, suggest does:
 
 Note that Spylls's implementation takes two liberties comparing to Hunspell's:
 
-1. In Hunspell, all permutations-based logic is run twice: first, checks if any of the permutated variants
-   is a valid non-compound word; then (if nothing good was found), for all the same permutations, checks
+1. In Hunspell, all edits-generation logic is run twice: first, checks if any of the edits
+   is a valid non-compound word; then (if nothing good was found), for all the same edits, checks
    if maybe it is a valid compound word. It is done this way because checking whether word is correct
    *not regarding compounding* is much faster. We ignore this optimization in the name of clarity
    of the algorithm -- and on the way make suggestions better in edge cases: when compound and non-compound
@@ -56,7 +56,7 @@ from spylls.hunspell.algo import ngram_suggest, phonet_suggest, permutations as 
 
 MAXPHONSUGS = 2
 MAXSUGGESTIONS = 15
-GOOD_PERMUTATIONS = ['spaceword', 'uppercase', 'replchars']
+GOOD_EDITS = ['spaceword', 'uppercase', 'replchars']
 
 
 @dataclass
@@ -68,18 +68,12 @@ class Suggestion:
 
     #: Actual suggestion text
     text: str
-    #: Code specifying how suggestion was produced, useful for debugging, typically same as the method
-    #: of the permutation which led to this suggestion, like "badchar", "twowords", "phonet" etc.
-    source: str
-
-    #: If ``False``, then checking suggestion validity should be without trying to break it on dashes
-    #: (or similar chars, depending on the language). This is used, for example, to check "very good"
-    #: suggestions: "foobar" (misspeling) => "foo-bar" considered "very good" ONLY if the dictionary
-    #: contains "foo-bar" itself, not "foo" and "bar".
-    allow_break: bool = True
+    #: How suggestion was produced, useful for debugging, typically same as the method
+    #: of the editing which led to this suggestion, like "badchar", "twowords", "phonet" etc.
+    kind: str
 
     def __repr__(self):
-        return f"Suggestion[{self.source}]({self.text})"
+        return f"Suggestion[{self.kind}]({self.text})"
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
@@ -98,7 +92,7 @@ class MultiWordSuggestion:
 
     #: Whether those words are allowed to be joined by dash. We should disallow it if the multi-word
     #: suggestion was produced by :attr:`Aff.REP <spylls.hunspell.data.aff.Aff.REP>` table, see
-    #: :meth:`Suggest.permutations` for details.
+    #: :meth:`Suggest.edits` for details.
     allow_dash: bool = True
 
     def stringify(self, separator=' '):
@@ -133,7 +127,7 @@ class Suggest:
 
     **Suggestion types**
 
-    .. automethod:: permutations
+    .. automethod:: edits
     .. automethod:: ngram_suggestions
     .. automethod:: phonet_suggestions
     """
@@ -185,7 +179,7 @@ class Suggest:
 
         * generates possible misspelled word cases (for ex., "KIttens" in dictionary might've been
           'KIttens', 'kIttens', 'kittens', or 'Kittens')
-        * produces word permutations with :meth:`permutations` (with the help of
+        * produces word edits with :meth:`edits` (with the help of
           :mod:`permutations <spylls.hunspell.algo.permutations>` module), checks them with
           :class:`Lookup <spylls.hunspell.algo.lookup.Lookup>`, and decides if that's maybe enough
         * but if it is not (and if .aff settings allow), ngram-based suggestions are produced with
@@ -199,9 +193,10 @@ class Suggest:
 
         # Whether some suggestion (permutation of the word) is an existing and allowed word,
         # just delegates to Lookup
-        def is_good_suggestion(word, capitalization=False, allow_break=True):
-            return self.lookup(word, capitalization=capitalization,
-                               allow_nosuggest=False, allow_iconv=False, allow_break=allow_break)
+        def is_good_suggestion(word, capitalization=False):
+            # Note that instead of using Lookup's main method, we just see if there is any good forms
+            # of this exact word, avoiding ICONV and trying to break word by dashes.
+            return any(self.lookup.good_forms(word, capitalization=capitalization, allow_nosuggest=False))
 
         # For some set of suggestions, produces only good ones:
         def filter_suggestions(suggestions):
@@ -209,7 +204,7 @@ class Suggest:
                 # For multiword suggestion,
                 if isinstance(suggestion, MultiWordSuggestion):
                     # ...if all of the words is correct
-                    if all(is_good_suggestion(word, allow_break=False) for word in suggestion.words):
+                    if all(is_good_suggestion(word) for word in suggestion.words):
                         # ...we just convert it to plain text suggestion "word1 word2"
                         yield suggestion.stringify()
                         if suggestion.allow_dash:
@@ -217,7 +212,7 @@ class Suggest:
                             yield suggestion.stringify('-')
                 else:
                     # Singleword suggestion is just yielded if it is good
-                    if is_good_suggestion(suggestion.text, allow_break=suggestion.allow_break):
+                    if is_good_suggestion(suggestion.text):
                         yield suggestion
 
         # The suggestion is considered forbidden if there is ANY homonym in dictionary with flag
@@ -294,7 +289,7 @@ class Suggest:
         # if the word is "MsDonalds", good capitalizations (what it might've been in dictionary) are
         # "msdonalds" (full lowercase) "msDonalds" (first letter lowercased), or maybe "Msdonalds"
         # (only first letter capitalized). Note that "MSDONALDS" (it should've been all caps) is not
-        # produced as a possible good form, but checked separately in permutations
+        # produced as a possible good form, but checked separately in ``edits``
         captype, variants = self.aff.casing.corrections(word)
 
         # Check a special case: if it is possible that words would be possible to be capitalized
@@ -306,8 +301,8 @@ class Suggest:
                     yield from handle_found(Suggestion(capitalized.capitalize(), 'forceucase'))
                     return  # No more need to check anything
 
-        good_permutations_found = False
-        enough_permutations_found = False
+        good_edits_found = False
+        enough_edits_found = False
 
         # Now, for all capitalization variant
         for idx, variant in enumerate(variants):
@@ -315,9 +310,9 @@ class Suggest:
             if idx > 0 and is_good_suggestion(variant):
                 yield from handle_found(Suggestion(variant, 'case'))
 
-            # Now we take all possible permutations of the word, and filter those that are correct
+            # Now we take all possible edits of the word, and filter those that are correct
             # words
-            for suggestion in filter_suggestions(self.permutations(variant)):
+            for suggestion in filter_suggestions(self.edits(variant)):
                 # Then, for each of those correct suggestions,
                 # we run them through handle_found (which performs some final transformations and
                 # checks, and may handle 1 or 0 suggestions; 0 in the case it was already seen or
@@ -325,31 +320,53 @@ class Suggest:
                 for res in handle_found(suggestion):
                     # yield it to user
                     yield res
-                    # remember if any "good" permutation was found -- in this case we don't need
+                    # remember if any "good" edits was found -- in this case we don't need
                     # ngram suggestions
-                    good_permutations_found = good_permutations_found or (res.source in GOOD_PERMUTATIONS)
+                    good_edits_found = good_edits_found or (res.kind in GOOD_EDITS)
 
-                    # We might break from the medhot immediately if the suggestion is to split word
+                    # We might break from the method immediately if the suggestion is to split word
                     # with space, and this phrase is _in the dictionary as a whole_: "alot" => "a lot".
                     # Then we don't need ANY other suggestions. This is a trick to enforce suggesting
                     # to break commonly misspelled phrases withot oversuggesting
-                    if res.source == 'spaceword':
+                    if res.kind == 'spaceword':
                         return
 
-                    # Also we stop after 15 permutation-based suggestions (but still may produce
-                    # ngram-based ones if permutation-based were not particularly good),
+                    # Also we stop after 15 edits-based suggestions (but still may produce
+                    # ngram-based ones if edits-based were not particularly good),
                     if len(handled) > MAXSUGGESTIONS:
-                        enough_permutations_found = True
+                        enough_edits_found = True
                         break
-                if enough_permutations_found:
+                if enough_edits_found:
                     break
-            if enough_permutations_found:
+            if enough_edits_found:
                 break
 
-        if good_permutations_found:
+        if good_edits_found:
             return
 
-        # If there was no good permutations that were valid words, we might try
+        # One additional pass at suggesting: if the word contains dashes, and there were no dash-containing
+        # suggestions, we should try to spellcheck it separately... But only one misspelled part is allowed.
+        if '-' in word and not any('-' in sug for sug in handled):
+            chunks = word.split('-')
+            for idx, chunk in enumerate(chunks):
+                # If this chunk of the word is misspelled...
+                if not is_good_suggestion(chunk):
+                    # ...try all suggestions for this separate chunk
+                    for sug in self(chunk):
+                        candidate = '-'.join([*chunks[:idx], sug, *chunks[idx+1:]])
+                        # And check if the whole word with this chunk replaced is a good word. Note that
+                        # we use lookup's main method here, which will also break it into words by
+                        # dashes. It is done (instead of just checking chunk-by-chunk), because there
+                        # are ambiguities how to split: if we are fixing "quas-Afro-American"->"quasi-Afro-American",
+                        # and "Afro-American" is present in the dictionary as a whole word, it is better
+                        # to delegate search for the right breaking to the Lookup.
+                        if self.lookup(candidate):
+                            yield Suggestion(candidate, 'dashes')
+                    # after only one misspelled chunk, we stop the search anyways, whether we found some
+                    # sugestions or not
+                    break
+
+        # If there was no good edits that were valid words, we might try
         # ngram-based suggestion algorithm: it is slower, but able to correct severely misspelled words
 
         ngrams_seen = 0
@@ -371,16 +388,16 @@ class Suggest:
             if phonet_seen >= MAXPHONSUGS:
                 break
 
-    def permutations(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
+    def edits(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         """
-        Produces all possible word permutations in a form of :class:`Suggestion` or :class:`MultiWordSuggestion`.
+        Produces all possible word edits in a form of :class:`Suggestion` or :class:`MultiWordSuggestion`.
         Note that:
 
         * order is important, that's the order user will receive the suggestions (and the further the
           suggestion type in the order, the more probably it would be dropped due to suggestion count
           limit)
         * suggestion "source" tag is important: :meth:`suggest_internal` uses it to distinguish between
-          good and questionble permutations (if there were any good ones, ngram suggestion wouldn't
+          good and questionble edits (if there were any good ones, ngram suggestion wouldn't
           be used)
 
         Args:
@@ -410,9 +427,8 @@ class Suggest:
             yield Suggestion(' '.join(words), 'spaceword')
 
             if self.use_dash:
-                # "alot" => "a-lot", but make sure it would be checked as a whole word (see allow_break
-                # usage in Lookup)
-                yield Suggestion('-'.join(words), 'spaceword', allow_break=False)
+                # "alot" => "a-lot"
+                yield Suggestion('-'.join(words), 'spaceword')
 
         # MAP in aff file specifies related chars (for example, "ïi"), and mapchars produces all
         # changes of the word with related chars replaced. For example, "naive" produces "naïve".

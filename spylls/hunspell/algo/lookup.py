@@ -179,9 +179,7 @@ class Lookup:
 
     def __call__(self, word: str, *,
                  capitalization: bool = True,
-                 allow_nosuggest: bool = True,
-                 allow_iconv: bool = True,
-                 allow_break: bool = True) -> bool:
+                 allow_nosuggest: bool = True) -> bool:
         """
         The outermost word correctness check.
 
@@ -197,8 +195,6 @@ class Lookup:
 
             capitalization: if ``False``, check ONLY exactly this capitalization
             allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
-            allow_iconv: if ``False``, don't use ``ICONV`` table to prepare word
-            allow_break: if ``False``, don't try to break word by dashes and check separately
         """
 
         # The word is considered correct, if it can be deconstructed into a "good form" (the form
@@ -216,7 +212,7 @@ class Lookup:
         # UTF chars with diacritics (which might have several different forms), and such.
         # See data.aff.ConvTable_ for the full algorithm (it is more complex than just replace one
         # substring with another).
-        if self.aff.ICONV and allow_iconv:
+        if self.aff.ICONV:
             word = self.aff.ICONV(word)
 
         # Remove characters that should be ignored (for example, in Arabic and Hebrew, vowels should
@@ -232,11 +228,6 @@ class Lookup:
         # If the whole word is correct
         if is_correct(word):
             return True
-
-        # ``allow_break=False`` might've been passed from Suggest_ and mean we shouldn't try to
-        # break word.
-        if not allow_break:
-            return False
 
         # ``try_break`` recursively produces all possible lists of word breaking by break patterns
         # (like dashes).
