@@ -261,7 +261,7 @@ def forms_for(word: data.dic.Word, all_prefixes, all_suffixes, *, similar_to: st
     the ``candidate`` can have. Note that there is no comprehensive flag checks (like "this prefix
     is prohibited with suffix with this flag"). Probably main suggest's code should check it
     (e.g. use ``filter_guesses`` (in
-    :meth:`suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>`)
+    :meth:`suggestions <spylls.hunspell.algo.suggest.Suggest.suggestions>`)
     for ngram-based suggestions, too).
 
     Args:

@@ -50,7 +50,7 @@ class Dictionary:
         # AffixForm(building = build + Suffix(ing: G×, on [[^e]]$))
 
         # Internal suggest method, showing information about suggestion method
-        for suggestion in dictionary.suggester.suggest_internal('spylls'):
+        for suggestion in dictionary.suggester.suggestions('spylls'):
             print(suggestion)
 
         # Suggestion[badchar](spells)

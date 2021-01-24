@@ -763,7 +763,7 @@ class Aff:
     #:      may be capitalized and uppercased, but uppercased forms of these words may not contain "ß",
     #:      only "SS".
     #:
-    #: *Usage:* :meth:`Suggest.suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>`
+    #: *Usage:* :meth:`Suggest.suggestions <spylls.hunspell.algo.suggest.Suggest.suggestions>`
     #: to produce suggestions in proper case,
     #: :meth:`Lookup.is_good_form <spylls.hunspell.algo.lookup.Lookup.is_good_form>`.
     KEEPCASE: Optional[str] = None
@@ -864,7 +864,7 @@ class Aff:
     #:
     #: *Usage:* :meth:`Suggest.ngram_suggestions <spylls.hunspell.algo.suggest.Suggest.ngram_suggestions>`
     #: (to decide whether ``ngram_suggest`` should be called at all) and
-    #: :meth:`Suggest.suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>` (to limit
+    #: :meth:`Suggest.suggestions <spylls.hunspell.algo.suggest.Suggest.suggestions>` (to limit
     #: amount of ngram-based suggestions).
     MAXNGRAMSUGS: int = 4
 
@@ -1033,7 +1033,7 @@ class Aff:
     #:
     #: *Usage:* :meth:`Lookup.is_bad_compound <spylls.hunspell.algo.lookup.Lookup.is_bad_compound>`
     #: and
-    #: :meth:`Suggest.suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>` (if
+    #: :meth:`Suggest.suggestions <spylls.hunspell.algo.suggest.Suggest.suggestions>` (if
     #: this flag is present in the .aff file, we check that maybe
     #: just capitalization of misspelled word would make it right).
     FORCEUCASE: Optional[str] = None
@@ -1107,7 +1107,7 @@ class Aff:
     #: Output conversion table (what to do with suggestion before returning it to the user). See :class:`ConvTable`
     #: for format description.
     #:
-    #: *Usage:* :meth:`Suggest.suggest_internal <spylls.hunspell.algo.suggest.Suggest.suggest_internal>`
+    #: *Usage:* :meth:`Suggest.suggestions <spylls.hunspell.algo.suggest.Suggest.suggestions>`
     OCONV: Optional[ConvTable] = None
 
     # **Aliasing**

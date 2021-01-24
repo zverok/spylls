@@ -113,7 +113,7 @@ class Suggest:
         >>> [*suggest('spylls')]
         ['spells', 'spills']
 
-        >>> for suggestion in suggest.suggest_internal('spylls'):
+        >>> for suggestion in suggest.suggestions('spylls'):
         ...    print(suggestion)
         Suggestion[badchar](spell)
         Suggestion[badchar](spill)
@@ -123,7 +123,7 @@ class Suggest:
     **Main methods**
 
     .. automethod:: __call__
-    .. automethod:: suggest_internal
+    .. automethod:: suggestions
 
     **Suggestion types**
 
@@ -165,15 +165,15 @@ class Suggest:
             >>> [*suggester('badcat')]
             ['bad cat', 'bad-cat', 'baccarat']
 
-        Internally, the method just calls :meth:`suggest_internal` (which returns instances of :class:`Suggestion`)
+        Internally, the method just calls :meth:`suggestions` (which returns instances of :class:`Suggestion`)
         and yields suggestion texts.
 
         Args:
             word: Word to check
         """
-        yield from (suggestion.text for suggestion in self.suggest_internal(word))
+        yield from (suggestion.text for suggestion in self.suggestions(word))
 
-    def suggest_internal(self, word: str) -> Iterator[Suggestion]:  # pylint: disable=too-many-statements
+    def suggestions(self, word: str) -> Iterator[Suggestion]:  # pylint: disable=too-many-statements
         """
         Main suggestion search loop. What it does, in general, is:
 
@@ -193,10 +193,10 @@ class Suggest:
 
         # Whether some suggestion (permutation of the word) is an existing and allowed word,
         # just delegates to Lookup
-        def is_good_suggestion(word, capitalization=False):
+        def is_good_suggestion(word):
             # Note that instead of using Lookup's main method, we just see if there is any good forms
             # of this exact word, avoiding ICONV and trying to break word by dashes.
-            return any(self.lookup.good_forms(word, capitalization=capitalization, allow_nosuggest=False))
+            return any(self.lookup.good_forms(word, capitalization=False, allow_nosuggest=False))
 
         # For some set of suggestions, produces only good ones:
         def filter_suggestions(suggestions):
@@ -396,7 +396,7 @@ class Suggest:
         * order is important, that's the order user will receive the suggestions (and the further the
           suggestion type in the order, the more probably it would be dropped due to suggestion count
           limit)
-        * suggestion "source" tag is important: :meth:`suggest_internal` uses it to distinguish between
+        * suggestion "source" tag is important: :meth:`suggestions` uses it to distinguish between
           good and questionble edits (if there were any good ones, ngram suggestion wouldn't
           be used)
 
