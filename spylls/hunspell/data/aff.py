@@ -853,9 +853,9 @@ class Aff:
     PHONE: Optional[PhonetTable] = None
 
     #: Limits number of compound suggestions.
-    #: Currently, not used in Spylls. See Suggest class comments about Hunspell/Spylls difference in
-    #: handling separate "compound cycle".
-    MAXCPDSUGS: int = 0
+    #: *Usage:* :meth:`Suggest.suggestions <spylls.hunspell.algo.suggest.Suggest.suggestions>`
+    #: to limit number of edit-based suggestions which are compound words.
+    MAXCPDSUGS: int = 3
 
     # *NGram suggestions*:
 

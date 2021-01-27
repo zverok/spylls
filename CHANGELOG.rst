@@ -4,7 +4,9 @@ Changelog
 (unreleased)
 ------------
 
-* TBD
+* Fix bug in ``permutations.swapchars`` (it didn't work at all... funny how Hunspell's test suit never pointed at it)
+* Return to Hunspell's way to produce edit suggestions: first, only non-compound ones, and then compound ones. Clever Spylls' "optimization" considered harmful
+* Bundle a few more dictionaries to play with
 
 0.1.2 - 2021-01-21
 ------------------

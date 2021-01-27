@@ -86,7 +86,7 @@ def swapchar(word: str) -> Iterator[str]:
         return
 
     for i in range(len(word) - 1):
-        yield word[:i] + word[i+1] + word[i+1] + word[i+2:]
+        yield word[:i] + word[i+1] + word[i] + word[i+2:]
 
     # try double swaps for short words
     # ahev -> have, owudl -> would

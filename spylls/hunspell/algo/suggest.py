@@ -10,20 +10,12 @@ On a bird-eye view level, suggest does:
   :mod:`ngram_suggest <spylls.hunspell.algo.ngram_suggest>`
 * if possible, tries metaphone-based suggestions, handled by :mod:`phonet_suggest <spylls.hunspell.algo.phonet_suggest>`
 
-Note that Spylls's implementation takes two liberties comparing to Hunspell's:
-
-1. In Hunspell, all edits-generation logic is run twice: first, checks if any of the edits
-   is a valid non-compound word; then (if nothing good was found), for all the same edits, checks
-   if maybe it is a valid compound word. It is done this way because checking whether word is correct
-   *not regarding compounding* is much faster. We ignore this optimization in the name of clarity
-   of the algorithm -- and on the way make suggestions better in edge cases: when compound and non-compound
-   word are accidentally joined, Hunspell can't sugest to split them (try with "11thhour": "11th" is
-   compound word in English dictionary, and hunspell wouldn't suggest "11th hour", but Spylls would).
-2. In Hunspell, ngram suggestions (select all words from dictionary that ngram-similar => produce suggestions)
-   and phonetic suggestions (select all words from dictionary that phonetically similar => produce suggestions)
-   are done in the same cycle, because they both iterate through entire dictionary. Spylls does it
-   in two separate cycles, again, for the sake of clarity (note that dictionaries with metaphone
-   transformation rules defined are extremely rare).
+Note that Spylls's implementation takes one liberty comparing to Hunspell's:
+In Hunspell, ngram suggestions (select all words from dictionary that ngram-similar => produce suggestions)
+and phonetic suggestions (select all words from dictionary that phonetically similar => produce suggestions)
+are done in the same cycle, because they both iterate through entire dictionary. Spylls does it
+in two separate cycles, again, for the sake of clarity (note that dictionaries with metaphone
+transformation rules defined are extremely rare).
 
 To follow algorithm details, start reading from :meth:`Suggest.__call__`
 
@@ -136,13 +128,6 @@ class Suggest:
         self.dic = dic
         self.lookup = lookup
 
-        # Yeah, that's how hunspell defines whether words can be split by dash in this language:
-        # either dash is explicitly mentioned in TRY directive, or TRY directive indicates the
-        # language uses Latinic script. So dictionaries omiting TRY directive, or for languages with,
-        # say, Cyrillic script not including "-" in it, will never suggest "foobar" => "foo-bar",
-        # even if it is the perfectly normal way to spell.
-        self.use_dash = '-' in self.aff.TRY or 'a' in self.aff.TRY
-
         # TODO: also NONGRAMSUGGEST and ONLYUPCASE
         bad_flags = {*filter(None, [self.aff.FORBIDDENWORD, self.aff.NOSUGGEST, self.aff.ONLYINCOMPOUND])}
 
@@ -197,23 +182,6 @@ class Suggest:
             # Note that instead of using Lookup's main method, we just see if there is any good forms
             # of this exact word, avoiding ICONV and trying to break word by dashes.
             return any(self.lookup.good_forms(word, capitalization=False, allow_nosuggest=False))
-
-        # For some set of suggestions, produces only good ones:
-        def filter_suggestions(suggestions):
-            for suggestion in suggestions:
-                # For multiword suggestion,
-                if isinstance(suggestion, MultiWordSuggestion):
-                    # ...if all of the words is correct
-                    if all(is_good_suggestion(word) for word in suggestion.words):
-                        # ...we just convert it to plain text suggestion "word1 word2"
-                        yield suggestion.stringify()
-                        if suggestion.allow_dash:
-                            # ...and "word1-word2" if allowed
-                            yield suggestion.stringify('-')
-                else:
-                    # Singleword suggestion is just yielded if it is good
-                    if is_good_suggestion(suggestion.text):
-                        yield suggestion
 
         # The suggestion is considered forbidden if there is ANY homonym in dictionary with flag
         # FORBIDDENWORD. Besides marking swearing words, this feature also allows to include in
@@ -302,7 +270,6 @@ class Suggest:
                     return  # No more need to check anything
 
         good_edits_found = False
-        enough_edits_found = False
 
         # Now, for all capitalization variant
         for idx, variant in enumerate(variants):
@@ -310,36 +277,43 @@ class Suggest:
             if idx > 0 and is_good_suggestion(variant):
                 yield from handle_found(Suggestion(variant, 'case'))
 
-            # Now we take all possible edits of the word, and filter those that are correct
-            # words
-            for suggestion in filter_suggestions(self.edits(variant)):
-                # Then, for each of those correct suggestions,
-                # we run them through handle_found (which performs some final transformations and
-                # checks, and may handle 1 or 0 suggestions; 0 in the case it was already seen or
-                # is a forbidden word)
-                for res in handle_found(suggestion):
-                    # yield it to user
-                    yield res
-                    # remember if any "good" edits was found -- in this case we don't need
-                    # ngram suggestions
-                    good_edits_found = good_edits_found or (res.kind in GOOD_EDITS)
+            # Now we do two rounds:
+            # * generate edits and check whether they are valid non-compound words,
+            # * generate the same edits again and check whether they are valid compound words
+            #
+            # The reason of splitting the checks is: a) optimization (checking whether the word is
+            # a valid compound is much more pricey) and b) suggestion quality (it is considered that
+            # non-compound words are more probable).
+            # There are cases when this algorithm brings problems: for example, "11thhour" will NOT
+            # suggest "11th hour" -- because "11th" is compound word, and "hour" is not, but we
+            # first check whether the splitting is correct assuming all words are non-compound, and
+            # then check whether it is correct assuming both are compound. That's how it is in Hunspell,
+            # and Spylls doesn't tries to fix that.
 
-                    # We might break from the method immediately if the suggestion is to split word
-                    # with space, and this phrase is _in the dictionary as a whole_: "alot" => "a lot".
-                    # Then we don't need ANY other suggestions. This is a trick to enforce suggesting
-                    # to break commonly misspelled phrases withot oversuggesting
-                    if res.kind == 'spaceword':
-                        return
+            nocompound = False
 
-                    # Also we stop after 15 edits-based suggestions (but still may produce
-                    # ngram-based ones if edits-based were not particularly good),
-                    if len(handled) > MAXSUGGESTIONS:
-                        enough_edits_found = True
-                        break
-                if enough_edits_found:
-                    break
-            if enough_edits_found:
-                break
+            # 1. Only generate suggestions that are correct NOT COMPOUND words.
+            for suggestion in self.edit_suggestions(variant, handle_found, limit=MAXSUGGESTIONS, compounds=False):
+                yield suggestion
+                # remember if any "good" edits was found -- in this case we don't need
+                # ngram suggestions
+                good_edits_found = good_edits_found or (suggestion.kind in GOOD_EDITS)
+                # If any of those kinds are found, we don't need to try _any_ compound suggestions
+                if suggestion.kind in ['uppercase', 'replchars', 'mapchars']:
+                    nocompound = True
+                # We might break from the method immediately if the suggestion is to split word
+                # with space, and this phrase is _in the dictionary as a whole_: "alot" => "a lot".
+                # Then we don't need ANY other suggestions. This is a trick to enforce suggesting
+                # to break commonly misspelled phrases withot oversuggesting
+                if suggestion.kind == 'spaceword':
+                    return
+
+            # 2. Only generate suggestions that are correct COMPOUND words
+            if not nocompound:
+                for suggestion in self.edit_suggestions(variant, handle_found,
+                                                        limit=self.aff.MAXCPDSUGS, compounds=True):
+                    yield suggestion
+                    good_edits_found = good_edits_found or (suggestion.kind in GOOD_EDITS)
 
         if good_edits_found:
             return
@@ -388,6 +362,45 @@ class Suggest:
             if phonet_seen >= MAXPHONSUGS:
                 break
 
+    def edit_suggestions(self, word: str, handle_found, *, compounds: bool, limit: int) -> Iterator[Suggestion]:
+        def is_good_suggestion(word):
+            # Note that instead of using Lookup's main method, we just see if there is any good forms
+            # of this exact word, avoiding ICONV and trying to break word by dashes.
+            if compounds:
+                return any(self.lookup.good_forms(word, capitalization=False, allow_nosuggest=False, affix_forms=False))
+            return any(self.lookup.good_forms(word, capitalization=False, allow_nosuggest=False, compound_forms=False))
+
+        # For some set of suggestions, produces only good ones:
+        def filter_suggestions(suggestions):
+            for suggestion in suggestions:
+                # For multiword suggestion,
+                if isinstance(suggestion, MultiWordSuggestion):
+                    # ...if all of the words is correct
+                    if all(is_good_suggestion(word) for word in suggestion.words):
+                        # ...we just convert it to plain text suggestion "word1 word2"
+                        yield suggestion.stringify()
+                        if suggestion.allow_dash:
+                            # ...and "word1-word2" if allowed
+                            yield suggestion.stringify('-')
+                else:
+                    # Singleword suggestion is just yielded if it is good
+                    if is_good_suggestion(suggestion.text):
+                        yield suggestion
+
+        count = 0
+
+        for suggestion in filter_suggestions(self.edits(word)):
+            # Then, for each of those correct suggestions,
+            # we run them through handle_found (which performs some final transformations and
+            # checks, and may handle 1 or 0 suggestions; 0 in the case it was already seen or
+            # is a forbidden word)
+            for res in handle_found(suggestion):
+                yield res
+                count += 1
+
+                if count > limit:
+                    return
+
     def edits(self, word: str) -> Iterator[Union[Suggestion, MultiWordSuggestion]]:
         """
         Produces all possible word edits in a form of :class:`Suggestion` or :class:`MultiWordSuggestion`.
@@ -426,7 +439,7 @@ class Suggest:
         for words in pmt.twowords(word):
             yield Suggestion(' '.join(words), 'spaceword')
 
-            if self.use_dash:
+            if self.use_dash():
                 # "alot" => "a-lot"
                 yield Suggestion('-'.join(words), 'spaceword')
 
@@ -478,7 +491,7 @@ class Suggest:
             # Try split word by space in all possible positions
             # NOSPLITSUGS option in aff prohibits it, it is important, say, for Scandinavian languages
             for suggestion_pair in pmt.twowords(word):
-                yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.use_dash)
+                yield MultiWordSuggestion(suggestion_pair, 'twowords', allow_dash=self.use_dash())
 
     def ngram_suggestions(self, word: str, handled: Set[str]) -> Iterator[str]:
         """
@@ -520,3 +533,13 @@ class Suggest:
             return
 
         yield from phonet_suggest.phonet_suggest(word, dictionary_words=self.words_for_ngram, table=self.aff.PHONE)
+
+    def use_dash(self) -> bool:
+        """
+        Yeah, that's how hunspell defines whether words can be split by dash in this language:
+        either dash is explicitly mentioned in TRY directive, or TRY directive indicates the
+        language uses Latinic script. So dictionaries omiting TRY directive, or for languages with,
+        say, Cyrillic script not including "-" in it, will never suggest "foobar" => "foo-bar",
+        even if it is the perfectly normal way to spell.
+        """
+        return '-' in self.aff.TRY or 'a' in self.aff.TRY

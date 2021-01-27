@@ -114,6 +114,12 @@ class Dictionary:
         "/usr/lib/openoffice.org2.0/share/dict/ooo"
     ]
 
+    DISTRIBUTED = {
+        'en_US': 'en',
+        'ru': 'ru',
+        'sv_SE': 'sv'
+    }
+
     @classmethod
     def from_files(cls, path: str) -> Dictionary:
         """
@@ -129,8 +135,8 @@ class Dictionary:
             path: Should be just ``/some/path/some_name``.
         """
 
-        if path == 'en_US' and not os.path.exists(path + '.aff'):
-            path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'en', 'en_US')
+        if path in cls.DISTRIBUTED and not os.path.exists(path + '.aff'):
+            path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', cls.DISTRIBUTED[path], path)
 
         aff, context = readers.read_aff(FileReader(path + '.aff'))
         dic = readers.read_dic(FileReader(path + '.dic', encoding=context.encoding), aff=aff, context=context)

@@ -21,7 +21,7 @@ To run Spyll's tests against those, you can run ``poetry run python tests/integr
 Changes made to Hunspell fixtures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Basiclly, ``tests/integrational/fixtures/`` contain all tests from Hunspell repo, with the changes described below.
+Basically, ``tests/integrational/fixtures/`` contain all tests from Hunspell repo, with the changes described below.
 
 Add test cases:
 
@@ -31,22 +31,6 @@ Add test cases:
 Add empty lines: Hunspell's tests just check "entire list of suggestions" vs "entire list of expected suggestions"; Spyll's is more fine-grained and test line-by-line (for this word, that suggestion expected), it requires correspondence of lines in ``*.wrong`` o those in ``*.sug``, so when for some "wrong" word there should be no suggestions, ``*.sug`` file should contain an empty line. Such changes were added to:
 
 * ngram_utf_fix.sug
-* opentaal_forbiddenword1.sug
-* opentaal_forbiddenword2.sug
-* ph2.sug
-
-Next set of changes related to the fact that Spyll's approach to suggest is a bit simpler than Hunspells, as explained in ``Suggest`` class docs:
-
-  In Hunspell, all permutations-based logic is run twice: first, checks if any of the permutated variants
-  is a valid non-compound word; then (if nothing good was found), for all the same permutations, checks
-  if maybe it is a valid compound word. It is done this way because checking whether word is correct
-  *not regarding compounding* is much faster. We ignore this optimization in the name of clarity
-  of the algorithm -- and on the way make suggestions better in edge cases: when compound and non-compound
-  word are accidentally joined, Hunspell can't sugest to split them (try with "11thhour": "11th" is
-  compound word in English dictionary, and hunspell wouldn't suggest "11th hour", but Spyll would).
-
-So, Spyll's suggest is actually better! Changes related to it are introduced in:
-
 * opentaal_forbiddenword1.sug
 * opentaal_forbiddenword2.sug
 * ph2.sug

@@ -188,13 +188,14 @@ class Lookup:
         If there is none, also tries to break word by break-points (like dashes) with :meth:`break_word`,
         and check each part separately.
 
-        Boolean flags are used when the Lookup is called from :class:`Suggest <spylls.hunspell.algo.suggest.Suggest>`.
-
         Args:
             word: Word to check
 
             capitalization: if ``False``, check ONLY exactly this capitalization
-            allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
+            allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag.
+                             Used when the Lookup is called from
+                             :class:`Suggest <spylls.hunspell.algo.suggest.Suggest>`.
+
         """
 
         # The word is considered correct, if it can be deconstructed into a "good form" (the form
@@ -261,7 +262,9 @@ class Lookup:
 
     def good_forms(self, word: str, *,
                    capitalization: bool = True,
-                   allow_nosuggest: bool = True) -> Iterator[WordForm]:
+                   allow_nosuggest: bool = True,
+                   affix_forms: bool = True,
+                   compound_forms: bool = True) -> Iterator[WordForm]:
         """
         The main producer of correct word forms (e.g. ways the proposed string might correspond to our
         dictionary/affixes). If there is at least one, the word is correctly spelled. There could be
@@ -280,11 +283,17 @@ class Lookup:
         * for each of them, tries to find good affixed forms with :meth:`affix_forms`
         * ...and then good compound forms with :meth:`compound_forms`
 
+        Boolean flags are used when the Lookup is called from :class:`Suggest <spylls.hunspell.algo.suggest.Suggest>`.
+
         Args:
             word: Word to check
 
             capitalization: if ``False``, produces forms with ONLY exactly this capitalization
             allow_nosuggest: if ``False``, don't consider correct words with ``NOSUGGEST`` flag
+            affix_forms: if ``False``, only compound suggestions are returned (used in suggest's
+                         two-step edit suggestion generation)
+            compound_forms: if ``False``, only non-compound suggestions are returned (used in suggest's
+                         two-step edit suggestion generation)
         """
 
         # "capitalization" might be ``False`` if it is passed from ``Suggest``, meaning "check only
@@ -310,24 +319,26 @@ class Lookup:
 
         # Now, for each of capitalization variants possible
         for variant in variants:
-            # ...we yield all possible affix forms
-            for form in self.affix_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest):
-                # There is one funny condition in Hunspell for German words:
-                # * generally, "ß" is capitalized as "SS"
-                # * ...but allowed to be non-capitalized in uppercase words (STRAßE)
-                # * ...but there is a special clause for this situation: if the word in dictionary
-                #   is marked with "KEEPCASE" flag, the "STRAßE" is NOT allowed, only "STRASSE"
-                # ...and we can check it only this late.
-                # Fun fact: no known German dictionary uses this trick, actually...
-                if (self.aff.CHECKSHARPS and self.aff.KEEPCASE and        # pylint: disable=too-many-boolean-expressions
-                        'ß' in form.in_dictionary.stem and self.aff.KEEPCASE in form.flags() and   # type: ignore
-                        captype == CapType.ALL and 'ß' in word):
-                    continue
+            if affix_forms:
+                # ...we yield all possible affix forms
+                for form in self.affix_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest):
+                    # There is one funny condition in Hunspell for German words:
+                    # * generally, "ß" is capitalized as "SS"
+                    # * ...but allowed to be non-capitalized in uppercase words (STRAßE)
+                    # * ...but there is a special clause for this situation: if the word in dictionary
+                    #   is marked with "KEEPCASE" flag, the "STRAßE" is NOT allowed, only "STRASSE"
+                    # ...and we can check it only this late.
+                    # Fun fact: no known German dictionary uses this trick, actually...
+                    if (self.aff.CHECKSHARPS and self.aff.KEEPCASE and  # pylint: disable=too-many-boolean-expressions
+                            'ß' in form.in_dictionary.stem and self.aff.KEEPCASE in form.flags() and   # type: ignore
+                            captype == CapType.ALL and 'ß' in word):
+                        continue
 
-                yield form
+                    yield form
 
-            # ...and then all possible compound forms
-            yield from self.compound_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
+            if compound_forms:
+                # ...and then all possible compound forms
+                yield from self.compound_forms(variant, captype=captype, allow_nosuggest=allow_nosuggest)
 
     def affix_forms(self,
                     word: str,
