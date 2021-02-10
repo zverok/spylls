@@ -5,7 +5,7 @@ with open("README.rst", "r") as fh:
 
 setuptools.setup(
     name="spylls",
-    version="0.1.3",
+    version="0.1.4",
     author="Victor Shepelev",
     author_email="zverok.offline@gmail.com",
     description="Hunspell ported to pure Python",

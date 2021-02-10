@@ -516,7 +516,8 @@ class Suggest:
                     prefixes=self.aff.PFX, suffixes=self.aff.SFX,
                     known={*(word.lower() for word in handled)},
                     maxdiff=self.aff.MAXDIFF,
-                    onlymaxdiff=self.aff.ONLYMAXDIFF)
+                    onlymaxdiff=self.aff.ONLYMAXDIFF,
+                    has_phonetic=(self.aff.PHONE is not None))
 
     def phonet_suggestions(self, word: str) -> Iterator[str]:
         """

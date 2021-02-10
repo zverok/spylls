@@ -30,7 +30,8 @@ def ngram_suggest(misspelling: str, *,
                   dictionary_words: List[data.dic.Word],
                   prefixes: Dict[str, List[data.aff.Prefix]],
                   suffixes: Dict[str, List[data.aff.Suffix]],
-                  known: Set[str], maxdiff: int, onlymaxdiff: bool = False) -> Iterator[str]:
+                  known: Set[str], maxdiff: int, onlymaxdiff: bool = False,
+                  has_phonetic: bool = False) -> Iterator[str]:
     """
     Try to suggest all possible variants for misspelling based on ngram-similarity.
 
@@ -54,6 +55,9 @@ def ngram_suggest(misspelling: str, *,
         maxdiff: contents of :attr:`Aff.MAXDIFF <spylls.hunspell.data.aff.Aff.MAXDIFF>` (changes amount of suggestions)
         onlymaxdiff: contents of :attr:`Aff.ONLYMAXDIFF <spylls.hunspell.data.aff.Aff.ONLYMAXDIFF>`
                      (exlcudes not very good suggestions, see :meth:`filter_guesses`)
+        has_phonetic: whether there are :attr:`Aff.PHONE <spylls.hunspell.data.aff.Aff.PHONE>`
+                      definitions present (it changes ngram thresholds a bit, in order to produce
+                      less ngrams)
     """
 
     root_scores: List[Tuple[float, data.dic.Word]] = []
@@ -118,7 +122,7 @@ def ngram_suggest(misspelling: str, *,
 
     # Now, calculate more precise scores for all good suggestions
     guesses2 = [
-        (precise_affix_score(misspelling, compared.lower(), fact, base=score), real)
+        (precise_affix_score(misspelling, compared.lower(), fact, base=score, has_phonetic=has_phonetic), real)
         for (score, compared, real) in guesses
     ]
 
@@ -167,14 +171,14 @@ def rough_affix_score(word1: str, word2: str) -> float:
     )
 
 
-def precise_affix_score(word1: str, word2: str, diff_factor: float, *, base: float) -> float:
+def precise_affix_score(word1: str, word2: str, diff_factor: float, *, base: float, has_phonetic: bool) -> float:
     """
     Scoring, stage 3: Hardcore final score for affixed forms!
 
     It actually produces score of one of 3 groups:
 
-    * > 1000: if the words are actually same with different casing (shouldn't happen when called from
-      suggest, it should've already handled that!)
+    * > 1000: if the words are actually same with different casing (surprisingly enough, not all of
+      those are caught in the "editing" suggest; example: "unesco's" => "UNESCO's")
     * < -100: if the word difference is too much (what is "too much" defined by ``diff_factor``), only
       one of those questionable suggestions would be returned
     * -100...1000: just a normal suggestion score, defining its sorting position
@@ -186,6 +190,9 @@ def precise_affix_score(word1: str, word2: str, diff_factor: float, *, base: flo
         word2: possible suggestion
         diff_factor: factor changing amount of suggestions (:attr:`Aff.MAXDIFF <spylls.hunspell.data.aff.Aff.MAXDIFF>`)
         base: initial score of word1 against word2
+        has_phonetic: whether there are :attr:`Aff.PHONE <spylls.hunspell.data.aff.Aff.PHONE>`
+                      definitions present (it changes ngram thresholds a bit, in order to produce
+                      less ngrams)
     """
 
     lcs = sm.lcslen(word1, word2)
@@ -200,13 +207,9 @@ def precise_affix_score(word1: str, word2: str, diff_factor: float, *, base: flo
     # increase score by length of common start substring
     result += sm.leftcommonsubstring(word1, word2)
 
-    cps, is_swap = sm.commoncharacterpositions(word1, word2.lower())
     # Add 1 if there were _any_ occurence of "same chars in same positions" in two words
-    if cps:
+    if sm.commoncharacters(word1, word2.lower()):
         result += 1
-    # Add 10 if the only difference of two words is "exactly two characters swapped"
-    if is_swap:
-        result += 10
 
     # Add regular four-gram weight
     result += sm.ngram(4, word1, word2, any_mismatch=True)
@@ -223,7 +226,16 @@ def precise_affix_score(word1: str, word2: str, diff_factor: float, *, base: flo
     # possible ngrams" and 0 meaninig "avoid most of the questionable ngrams"); with MAXDIFF=10 the
     # factor would be 0, and this branch will be avoided; with MAXDIFF=0 the factor would be 2, and
     # lots of "slihtly similar" words would be dropped into "questionable" bag.
-    if bigrams < (len(word1) + len(word2)) * diff_factor:
+    #
+    # In a presence of ``PHONE`` definitions table in aff-file (used for phonetic similarity search),
+    # the threshold is a bit different. NB: I (zverok) believe it is a bug in Hunspell, because this
+    # threshold difference probably (?) meant to produce _less_ questionable ngram suggestions in
+    # a presence of phonetic ones, but actually produces more (branches confused?)
+    if has_phonetic:
+        questionable_limit = len(word2) * diff_factor
+    else:
+        questionable_limit = (len(word1) + len(word2)) * diff_factor
+    if bigrams < questionable_limit:
         result -= 1000
 
     return result

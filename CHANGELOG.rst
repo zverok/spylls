@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.1.4 - 2021-02-10
+------------------
+
+* Add ``PHONE`` table to English dictionary to demonstrate phonetical algorithms
+* Enhance (or, rather, make it more Hunspell-alike) ngram suggestions in presence of ``PHONE`` definitions
+* Simplify a bit
+
+
 0.1.3 - 2021-01-28
 ------------------
 

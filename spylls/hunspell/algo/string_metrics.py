@@ -1,30 +1,10 @@
-from typing import Tuple
 
-
-def commoncharacterpositions(s1: str, s2: str) -> Tuple[int, bool]:
+def commoncharacters(s1: str, s2: str) -> int:
     """
     Number of occurrences of the exactly same characters in exactly same position.
-    Returns also boolean flag if the only difference in characters of two strings is exactly one
-    swap ("paris" => "piras") -- both values are used in the same place of
-    :meth:`ngram_suggest.precise_affix_score <spylls.hunspell.algo.ngram_suggest.precise_affix_score>`
     """
 
-    num = 0
-    diffpos = []
-
-    for (i, (c1, c2)) in enumerate(zip(s1, s2)):
-        if c1 == c2:
-            num += 1
-        else:
-            diffpos.append(i)
-
-    if len(diffpos) == 2:   # two string differ only by exactly two chars swaped
-        p1, p2 = diffpos    # pylint: disable=unbalanced-tuple-unpacking
-        is_swap = len(s1) == len(s2) and s1[p1] == s2[p2] and s1[p2] == s2[p1]
-    else:
-        is_swap = False
-
-    return (num, is_swap)
+    return sum(c1 == c2 for c1, c2 in zip(s1, s2))
 
 
 def leftcommonsubstring(s1: str, s2: str) -> int:
@@ -77,6 +57,7 @@ def ngram(max_ngram_size: int, s1: str, s2: str, *,
                     # ...and decrease once more if it was the beginning or end of first string
                     ns -= 1
         nscore += ns
+        # there is no need to check for 4-gram if there were only one 3-gram
         if ns < 2 and not weighted:
             break
 
