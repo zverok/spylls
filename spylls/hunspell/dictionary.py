@@ -33,7 +33,7 @@ class Dictionary:
         # spells
         # spills
 
-    Note that for easyness of experimentation, ``en_US`` dictionary from `SCOWL <http://wordlist.aspell.net/>_
+    Note that for easyness of experimentation, ``en_US`` dictionary from `SCOWL <http://wordlist.aspell.net/>`_
     is distributed with Spylls, so this will work without any additional dictionary installation::
 
         from spylls.hunspell import Dictionary
@@ -125,7 +125,7 @@ class Dictionary:
         """
         Read dictionary from pair of files ``/some/path/some_name.aff`` and ``/some/path/some_name.dic``.
 
-        For easyness of experimentation, ``en_US`` dictionary from `SCOWL <http://wordlist.aspell.net/>_
+        For easyness of experimentation, ``en_US`` dictionary from `SCOWL <http://wordlist.aspell.net/>`_
         is distributed with Spylls, so this will work without any additional dictionary installation::
 
             from spylls.hunspell import Dictionary
