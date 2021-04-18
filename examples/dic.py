@@ -1,7 +1,7 @@
 import pathlib
 path = pathlib.Path(__file__).parent  / 'en_US'
 
-from spyll.hunspell import Dictionary
+from spylls.hunspell import Dictionary
 
 dictionary = Dictionary.from_files(str(path))
 
