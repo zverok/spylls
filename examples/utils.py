@@ -1,7 +1,7 @@
 import re
 import os.path
 
-from spyll.hunspell.algo import capitalization as cap
+from spylls.hunspell.algo import capitalization as cap
 
 regular = cap.Casing()
 

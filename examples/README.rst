@@ -1,6 +1,6 @@
 The folder contains some examples of ``spyll`` usage.
 
-**To use it as a library** (only lookup/suggest), all you need is demonstrated in ``basic.py``: Basic usage of ``spyll.hunspell.Dictionary`` (external API) for lookup and suggest
+**To use it as a library** (only lookup/suggest), all you need is demonstrated in ``basic.py``: Basic usage of ``spylls.hunspell.Dictionary`` (external API) for lookup and suggest
 
 **Access to some internal objects** is demonstrated in:
 
