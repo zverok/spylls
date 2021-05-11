@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.1.5 - 2021-05-12
+------------------
+
+* Fix bug in loading some dictionary affixes
+* Bundle ``unmunch.py`` script (naive, more like a demo)
+* Add Patreon link :)
+
 0.1.4 - 2021-02-10
 ------------------
 

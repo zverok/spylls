@@ -263,8 +263,7 @@ class Suffix(Affix):
 
     def __post_init__(self):
         # "-" does NOT have a special regex-meaning, while might happen as a regular word char (for ex., hu_HU)
-        condition = self.condition.replace('-', '\\-')
-        self.cond_regexp = re.compile(condition + '$')
+        self.cond_regexp = re.compile(self.condition.replace('-', '\\-') + '$')
 
         cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
         if self.strip:
@@ -275,6 +274,7 @@ class Suffix(Affix):
         else:
             cond = ''
 
+        cond = cond.replace('-', '\\-')
         self.lookup_regexp = re.compile(cond + self.add + '$')
         self.replace_regexp = re.compile(self.add + '$')
 
