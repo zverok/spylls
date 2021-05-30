@@ -5,9 +5,6 @@ Spylls: Hunspell ported to Python
 
 **Follow the explanatory blog post series:** `on my blog <https://zverok.github.io/spellchecker.html>`_, `on Medium <https://medium.com/spylls-rebuilding-the-spellchecker>`_, or `subscribe to my mailing list <https://zverok.github.io/subscribe.html>`_.
 
-.. image:: https://img.shields.io/badge/patreon-donate-blue.svg
-   :target: https://www.patreon.com/zverok
-
 Reasons
 -------
 
