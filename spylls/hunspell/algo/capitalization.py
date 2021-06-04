@@ -108,14 +108,12 @@ class Casing:
         """
         captype = self.guess(word)
 
-        if captype == Type.NO:
+        if captype in [Type.NO, Type.HUH]:
             result = [word]
         elif captype == Type.INIT:
             result = [word, *self.lower(word)]
         elif captype == Type.HUHINIT:
             result = [word, *self.lowerfirst(word)]
-        elif captype == Type.HUH:
-            result = [word]
         elif captype == Type.ALL:
             result = [word, *self.lower(word), *self.capitalize(word)]
 
@@ -135,13 +133,11 @@ class Casing:
 
         if captype == Type.NO:
             result = [word]
-        elif captype == Type.INIT:
+        elif captype in [Type.INIT, Type.HUH]:
             result = [word, *self.lower(word)]
         elif captype == Type.HUHINIT:
             result = [word, *self.lowerfirst(word), *self.lower(word), *self.capitalize(word)]
             # TODO: also here and below, consider the theory FooBar meant Foo Bar
-        elif captype == Type.HUH:
-            result = [word, *self.lower(word)]
         elif captype == Type.ALL:
             result = [word, *self.lower(word), *self.capitalize(word)]
 
