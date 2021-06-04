@@ -83,7 +83,10 @@ class Casing:
         Args:
             word:
         """
-        return (self.upper(word[0]) + lower for lower in self.lower(word[1:]))
+        if len(word) == 1:
+            return iter(self.upper(word[0]))
+        else:
+            return (self.upper(word[0]) + lower for lower in self.lower(word[1:]))
 
     def lowerfirst(self, word: str) -> Iterator[str]:
         """
