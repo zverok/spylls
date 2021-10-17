@@ -1,6 +1,15 @@
 Changelog
 =========
 
+0.1.6 - 2021-10-17
+------------------
+
+* Fix several problems in code and comments pointed out by Daniel Höh (thanks!);
+* Fix for single-letter words capitalization (thanks `@vletard <https://github.com/vletard>`_!);
+* Change licence to MPL. It was `pointed <https://github.com/wooorm/nspell/issues/11#issuecomment-915802969>`_ to me that Spylls, being an "explantory rewrite" of Hunspell, can't have a permissive MIT license;
+* Bundle ``unmunch.py`` script (now for real);
+* Remove Patreon link, as Patreon's admins decided to demote me to "user" from "creator" for not posting my work on Patreon directly and not receiving any donations.
+
 0.1.5 - 2021-05-12
 ------------------
 

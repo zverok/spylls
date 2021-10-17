@@ -10,7 +10,7 @@ Reasons
 
 Spellchecking is a notoriously hard task that looks easy. The MVP everybody starts from is "just look if the word in the known list, and if it is not, calculate Levenstein distance to know what's the most similar one and suggest it", but things get complicated very quickly once you start working with real texts, and languages other than English.
 
-There are some modern approaches to spell and grammar checking, which are based on machine learning, can recognize context, and do a lot of other interesting stuff. But "classic", dictionary-based spellcheckers are still the most widespread solution, with **Hunspell** being the most widespread of all. It is embedded into Chrome, Firefox, OpenOffice, Adobe's products, Linux, and macOS distributions; there are Hunspell-compatible dictionaries for most of the human languages.
+There are some modern approaches to spell and grammar checking, that are based on machine learning, can recognize context, and do a lot of other interesting stuff. But "classic", dictionary-based spellcheckers are still the most widespread solution, with **Hunspell** being the most widespread of all. It is embedded into Chrome, Firefox, OpenOffice, Adobe's products, Linux, and macOS distributions; there are Hunspell-compatible dictionaries for most of the human languages.
 
 At the same time, Hunspell is a long-living, complicated, almost undocumented piece of software, and it was our feeling that the significant part of human knowledge is somehow "locked" in a form of a large C++ project. That's how **Spylls** was born: as an attempt to "unlock" it, via well-structured and well-documented implementation in a high-level language.
 
@@ -18,7 +18,7 @@ Design choices
 --------------
 
 * **Spylls** is implemented in Python, as a most widespread high-level language of the 2020s (besides EcmaScript, but I just can't do it... for personal reasons);
-* The code is as "vanilla Python" as possible, so it should be reasonably readable for a developer in any modern language; the most Python-specific feature used is a method returning generators (instead of arrays);
+* The code is as "vanilla Python" as possible, so it should be reasonably readable for a developer in any modern language; the most Python-specific feature used is methods returning generators (instead of arrays);
 * Code is structured in a (reasonably) low amount of classes with (reasonably) large methods, exposing the imperative nature of Hunspell's algorithms; probably "very OO" or "very functional" approach could've made code more appealing for some, but I tried to communicate the algorithms themselves (for possible reimplementations in other languages and architectures), not my views on how to code;
 * ...At the same time, it doesn't try to reproduce Hunspell's structure of classes, method names, and calls, but rather express "what it does" in the most simple/straightforward ways.
 
@@ -70,7 +70,7 @@ The current state of the port:
 * Of **34** Hunspell's suggest tests, **3 are "pending"** (mostly due to handling of dots, which is related to tokenization)
 * spylls is confirmed to at least read successfully all dictionaries available in Firefox and LibreOffice official dictionary repositories
 
-So, it is, like ~80% theoretically complete and ~95% pragmatically complete.
+So, it is, like, ~80% theoretically complete and ~95% pragmatically complete.
 
 On the other hand, I haven't used it extensively in a large production project or tried to spellcheck large texts in all supported languages, so there still might be some weird behavior in edge cases, not covered by Hunspell's tests. Also, it should be noted there are a lot of ``TODO:`` and ``FIXME:`` in the code, frequently signifying places where Hunspell's code was more complicated (simplifications not manifesting in failing tests, but probably slightly changing edge case behavior).
 
@@ -116,18 +116,19 @@ Other ports
 
 Here only "pure" ports of Hunspell to other languages are listed, not wrappers around the original Hunspell (of which there are plenty):
 
-* .NET: `WeCantSpell <https://github.com/aarondandy/WeCantSpell.Hunspell>`_
-* JS: `nspell <https://github.com/wooorm/nspell>`_ (only some directives)
-* C++: `nuspell <https://github.com/nuspell/nuspell>`_ (weirdly, pretends to be an independent project with no relations to anything, while at the same time seeming to support the same format of aff/dic, and striving to conform to Hunspell's test suite)
+* .NET: `WeCantSpell <https://github.com/aarondandy/WeCantSpell.Hunspell>`_;
+* JS: `nspell <https://github.com/wooorm/nspell>`_ (only some directives);
+* JS/TS: `espells <https://github.com/Monkatraz/espells>`_ is a "post-Spylls" port that was ported from Spylls and then enhanced and extended;
+* C++: `nuspell <https://github.com/nuspell/nuspell>`_ (weirdly, pretends to be an independent project with no relations to anything, while at the same time seeming to support the same format of aff/dic, and striving to conform to Hunspell's test suite).
 
 Some other approaches to spellchecking
 --------------------------------------
 
 * `aspell <https://github.com/GNUAspell/aspell>`_, while being in some sense a "grandparent" of Hunspell, is said to `sometimes provide better suggestions <https://battlepenguin.com/tech/aspell-and-hunspell-a-tale-of-two-spell-checkers/>`_;
-* `morphologik <https://github.com/morfologik/morfologik-stemming>`_: stemmer/POS-tagger/spellchecker used by `LanguageTool <https://languagetool.org/>`_; it uses a very interesting technique of encoding dictionaries with FSA, making dictionary lookup much more effective than Hunspell's;
+* `morphologik <https://github.com/morfologik/morfologik-stemming>`_: stemmer/POS-tagger/spellchecker used by `LanguageTool <https://languagetool.org/>`_; it uses a very interesting technique of encoding dictionaries with FSA, making dictionary lookup much more efficient than Hunspell's;
 * `voikko <https://voikko.puimula.org/>`_, developed for Finnish, which Hunspell can't handle too well due to its complicated affixes;
-* `SymSpell <https://github.com/wolfgarbe/SymSpell>`_: very fast algorithm (relying on the availability of a full list of all language's words)
-* `JamSpell <https://github.com/bakwc/JamSpell>`_: machine learning-based one
+* `SymSpell <https://github.com/wolfgarbe/SymSpell>`_: very fast algorithm (relying on the availability of a full list of all language's words);
+* `JamSpell <https://github.com/bakwc/JamSpell>`_: machine learning-based one.
 
 Author
 ------

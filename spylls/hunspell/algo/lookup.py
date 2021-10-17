@@ -226,12 +226,9 @@ class Lookup:
         if NUMBER_REGEXP.fullmatch(word):
             return True
 
-        # If the whole word is correct
-        if is_correct(word):
-            return True
-
         # ``try_break`` recursively produces all possible lists of word breaking by break patterns
-        # (like dashes).
+        # (like dashes). "The whole word" is yielded as a first alternative, so if the whole word is
+        # correct, the loop will return early.
         for parts in self.break_word(word):
             # If all parts in this variant of the breaking is correct, the whole word considered correct.
             if all(is_correct(part) for part in parts if part):

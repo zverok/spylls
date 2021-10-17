@@ -428,7 +428,7 @@ class Suggest:
         # for space).
         #
         # ...in this case we should suggest both "<word1> <word2>" as one dictionary entry, and
-        # "<word1>" "<word1>" as a sequence -- but clarifying this sequence might NOT be joined by "-"
+        # "<word1>" "<word2>" as a sequence -- but clarifying this sequence might NOT be joined by "-"
         for suggestion in pmt.replchars(word, self.aff.REP):
             if isinstance(suggestion, list):
                 yield Suggestion(' '.join(suggestion), 'replchars')

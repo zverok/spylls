@@ -96,8 +96,8 @@ def read_dic(source: BaseReader, *, aff: Aff, context: Context) -> dic.Dic:
                 #   REP Wendsay Wednesday
                 # hunspell handles it by just `if (captype==INITCAP)`...
                 if pattern.endswith('*'):
-                    # If it is ``pretty ph:prit*`` -- it means pair ``(prit, prett)`` should be added
-                    # to REP-table
+                    # If it is ``pretty ph:prity*`` -- it means pair ``(prit, prett)`` should be added
+                    # to REP-table (stripping the last character both from word, and alternative)
                     aff.REP.append(RepPattern(pattern[:-2], word[:-1]))
                 elif '->' in pattern:
                     # If it is ``happy ph:hepi->happi`` -- it means pair ``(hepi, happi)`` should be added

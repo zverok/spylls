@@ -45,4 +45,7 @@ Project Links
 License
 -------
 
-MIT licensed. See the bundled `LICENSE <https://github.com/spylls/spylls/blob/master/LICENSE>`_ file for more details.
+MPL 2.0. See the bundled `LICENSE <https://github.com/spylls/spylls/blob/master/LICENSE>`_ file for more details.
+Note that being an "explanatory rewrite", spylls should considered a derivative work of Hunspell, and so would be all of its ports/rewrites.
+
+We are incredibly grateful to Hunspell's original authors and current maintainers for all the hard work they've put into the most used spellchecker in the world!
