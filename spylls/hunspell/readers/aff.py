@@ -246,10 +246,15 @@ def read_value(source: BaseReader, directive: str, *values, context: Context) ->
         ]
     if directive in ['SFX', 'PFX']:
         flag, crossproduct, count, *_ = values
-        return [
-            make_affix(directive, flag, crossproduct, *line, context=context)
-            for line in _read_array(int(count))
-        ]
+        try:
+            return [
+                make_affix(directive, flag, crossproduct, *line, context=context)
+                for line in _read_array(int(count))
+            ]
+        except ValueError as error:
+            print(f"Error at: directive, values: {directive}, {values}")
+            print(f"Maybe wrong count of rules?")
+            raise error
     if directive == 'CHECKCOMPOUNDPATTERN':
         return [
             aff.CompoundPattern(left, right, rest[0] if rest else None)
