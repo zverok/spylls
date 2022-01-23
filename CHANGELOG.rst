@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.1.7 - 2021-01-23
+------------------
+
+* Simplify suffixes/prefixes checking, making it also more robust (Solving the `issues <https://github.com/zverok/spylls/issues/18#issuecomment-1013728978>`_ with modern Ukrainian dictionaries)
+
+
 0.1.6 - 2021-10-17
 ------------------
 
