@@ -566,12 +566,11 @@ class Lookup:
                 all(f not in suffix.flags for f in forbidden_flags)
             )
 
-        # We are selecting suffixes that have flags and settings, and their regexp pattern match
-        # the provided word.
+        # We are selecting suffixes that have flags and settings.
         possible_suffixes = (
             suffix
             for suffix in self.aff.suffixes_index.lookup(word[::-1])
-            if good_suffix(suffix) and suffix.lookup_regexp.search(word)
+            if good_suffix(suffix)
         )
 
         # With all of those suffixes, we are producing AffixForms of the word passed
@@ -580,6 +579,9 @@ class Lookup:
             # stem (named ``strip``). For example, suffix might be declared as ``(strip=y, add=ier)``,
             # then to restore the original stem from word "prettier" we must remove "ier" and add back "y"
             stem = suffix.replace_regexp.sub(suffix.strip, word)
+            # Even with matching flags, the suffix's condition still might prohibit this form
+            if not suffix.cond_regexp.search(stem):
+                continue
 
             yield AffixForm(word, stem, suffix=suffix)
 
@@ -609,11 +611,14 @@ class Lookup:
         possible_prefixes = (
             prefix
             for prefix in self.aff.prefixes_index.lookup(word)
-            if good_prefix(prefix) and prefix.lookup_regexp.search(word)
+            if good_prefix(prefix)
         )
 
         for prefix in possible_prefixes:
             stem = prefix.replace_regexp.sub(prefix.strip, word)
+
+            if not prefix.cond_regexp.search(stem):
+                continue
 
             yield AffixForm(word, stem, prefix=prefix)
 

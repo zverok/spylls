@@ -233,18 +233,7 @@ class Prefix(Affix):
 
     def __post_init__(self):
         # "-" does NOT have a special regex-meaning, while might happen as a regular word char (for ex., hu_HU)
-        condition = self.condition.replace('-', '\\-')
-        self.cond_regexp = re.compile('^' + condition)
-
-        cond_parts = re.findall(r'(\[.+\]|[^\[])', condition)
-        cond_parts = cond_parts[len(self.strip):]
-
-        if cond_parts and cond_parts != ['.']:
-            cond = '(?=' + ''.join(cond_parts) + ')'
-        else:
-            cond = ''
-
-        self.lookup_regexp = re.compile('^' + self.add + cond)
+        self.cond_regexp = re.compile('^' + self.condition.replace('-', '\\-'))
         self.replace_regexp = re.compile('^' + self.add)
 
     def __repr__(self):
@@ -264,18 +253,6 @@ class Suffix(Affix):
     def __post_init__(self):
         # "-" does NOT have a special regex-meaning, while might happen as a regular word char (for ex., hu_HU)
         self.cond_regexp = re.compile(self.condition.replace('-', '\\-') + '$')
-
-        cond_parts = re.findall(r'(\[.+\]|[^\[])', self.condition)
-        if self.strip:
-            cond_parts = cond_parts[:-len(self.strip)]
-
-        if cond_parts and cond_parts != ['.']:
-            cond = '(' + ''.join(cond_parts) + ')'
-        else:
-            cond = ''
-
-        cond = cond.replace('-', '\\-')
-        self.lookup_regexp = re.compile(cond + self.add + '$')
         self.replace_regexp = re.compile(self.add + '$')
 
     def __repr__(self):
