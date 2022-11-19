@@ -36,7 +36,7 @@ Usage as a library
   print(dictionary.lookup('spylls'))
   # False
   for suggestion in dictionary.suggest('spylls'):
-      print(sugestion)
+      print(suggestion)
   # spells
   # spills
 
