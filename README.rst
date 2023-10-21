@@ -1,7 +1,7 @@
 Spylls: Hunspell ported to Python
 =================================
 
-.. image: https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner-direct-single.svg
+.. image:: https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner-direct-single.svg
    :target: https://stand-with-ukraine.pp.ua
 
 **Spylls** is an effort of porting prominent spellcheckers into clear, well-structured, well-documented Python. It is intended to be useful both as a library and as some kind of "reference (or investigatory, if you will) implementation". Currently, only `Hunspell <https://github.com/hunspell/hunspell>`_ is ported.
