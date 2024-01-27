@@ -22,7 +22,7 @@ import coderead
 # -- Project information -----------------------------------------------------
 
 project = 'Spylls'
-copyright = '2020, Victor Shepelev'
+copyright = '2020-2024, Victor Shepelev'
 author = 'Victor Shepelev'
 
 
