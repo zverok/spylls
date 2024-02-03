@@ -72,6 +72,28 @@ def unmunch(word, aff):
         if not (aff.NEEDAFFIX and aff.NEEDAFFIX in suffix.flags):
             result.add(suffixed)
 
+        if suffix.crossproduct:
+            additional_prefixes = [
+                prefix
+                for flag in suffix.flags
+                for prefix in aff.PFX.get(flag, [])
+                if prefix.crossproduct and not prefix in prefixes and prefix.cond_regexp.search(suffixed)
+            ]
+            for prefix in prefixes + additional_prefixes:
+                root = suffixed[0:-len(prefix.strip)] if prefix.strip else suffixed
+                prefixed = prefix.add + root
+                result.add(prefixed)
+
+                secondary_prefixes = [
+                    prefix2
+                    for flag in prefix.flags
+                    for prefix2 in aff.PFX.get(flag, [])
+                    if prefix2.crossproduct and prefix2.cond_regexp.search(prefixed)
+                ]
+                for prefix2 in secondary_prefixes:
+                    root = prefixed[0:-len(prefix2.strip)] if prefix2.strip else prefixed
+                    result.add(prefix2.add + root)
+
         secondary_suffixes = [
             suffix2
             for flag in suffix.flags
@@ -116,24 +138,25 @@ result = set()
 
 if options.word:
     lookup = options.word
-    print(f"Unmunching only words with stem {lookup}")
+    print(f"Unmunching only words with stem {lookup}", file=sys.stderr)
 else:
     lookup = None
-    print(f"Unmunching the whole dictionary")
+    print(f"Unmunching the whole dictionary", file=sys.stderr)
 
-print('')
+print('', file=sys.stderr)
 
 for word in dictionary.dic.words:
     if not lookup or word.stem == lookup:
         if lookup:
-            print(f"Unmunching {word}")
+            print(f"Unmunching {word}", file=sys.stderr)
+            pass
         if options.immediate:
             for word in sorted(unmunch(word, dictionary.aff)):
                 print(word)
         else:
             result.update(unmunch(word, dictionary.aff))
 
-print('')
+print('', file=sys.stderr)
 
 if not options.immediate:
     for word in sorted(result):
